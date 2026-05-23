@@ -93,3 +93,75 @@ Current recording implementation starts from the menu bar UI or Auto-start Engin
 Settings currently cover recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
 
 Active settings are persisted locally with `UserDefaults`. MVP defaults keep system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Audio quality, microphone device selection, hotkey capture, add marker, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
+
+## Run The App
+
+From the repository root:
+
+```sh
+scripts/build_macos.sh
+open -n apps/macos/.build/app/TOrbitRecorder.app
+```
+
+The app runs as a menu bar app. Use the menu bar icon for Start Recording, Stop Recording, Open Recordings Folder, Settings, and Quit.
+
+## Manual MVP End-To-End Check
+
+Before the first recording, grant permissions to `TOrbitRecorder` in macOS System Settings:
+
+- Privacy & Security -> Microphone
+- Privacy & Security -> Screen & System Audio Recording
+
+Manual full recording pass:
+
+1. Build and open the app with the commands above.
+2. Open Settings and confirm Recording has system audio and mixed preview enabled.
+3. Click Start Recording from the menu bar item or main panel.
+4. Speak into the microphone and play audible audio from another macOS app.
+5. Record for longer than the short-recording threshold. The MVP default is 60 seconds; use at least 65 seconds for the normal post-call tagging path.
+6. Click Stop Recording.
+7. Confirm the session folder contains:
+
+```text
+source/mic.m4a
+source/system.m4a
+export/mixed.m4a
+metadata.json
+```
+
+8. Confirm the post-call tagging panel opens.
+9. Add title, category, participant text, tags, and status, then save.
+10. Confirm the recording appears in Recordings List.
+11. Filter by a saved tag.
+12. Click Open in Finder on the recording row and confirm the recording folder opens.
+
+Short recording check:
+
+1. Start a new recording.
+2. Stop before 60 seconds with default settings.
+3. Confirm status is `short_recording`, the session is under `Inbox/Short/`, and post-call tagging is not opened automatically.
+
+Permission error check:
+
+1. Revoke Microphone or Screen & System Audio Recording permission for `TOrbitRecorder` in System Settings.
+2. Quit and reopen the app.
+3. Start recording.
+4. Confirm the UI shows an error state and the logs explain the blocked permission.
+
+## Smoke Tests
+
+Microphone smoke test for the current terminal process:
+
+```sh
+swift run --package-path apps/macos TOrbitRecorderMicSmokeTest --duration 10 --root apps/macos/.build/e2e/mic
+```
+
+If this prints `authorization_status=not_determined`, `denied`, or `restricted`, the terminal process does not have microphone permission. Run the app manually and grant permission to `TOrbitRecorder`, or grant microphone access to the terminal process before re-running the CLI smoke test.
+
+System audio smoke test:
+
+```sh
+swift run --package-path apps/macos TOrbitRecorderSystemAudioSmokeTest --duration 10 --root apps/macos/.build/e2e/system
+```
+
+Play audio from another macOS app while this command runs. The command writes `source/system.m4a` and fails explicitly if ScreenCaptureKit cannot start or if no samples are captured.

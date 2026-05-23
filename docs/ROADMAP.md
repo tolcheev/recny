@@ -19,6 +19,18 @@ Scope:
 - Mixed `m4a` export.
 - Logs for lifecycle and failures.
 
+Still outside the MVP:
+
+- Telegram integration.
+- T-Orbit sync.
+- AI transcription.
+- Screen recording.
+- Windows client.
+- Browser URL or meeting-room detection.
+- Cloud upload and external storage.
+- Retention/autodelete.
+- Encryption.
+
 ## Next: Local Library Polish
 
 Goal: make local recordings easier to browse and manage beyond the MVP list.
@@ -56,6 +68,8 @@ Candidate work:
 - Local/remote file link tracking.
 - Storage health checks.
 
+Screen recording remains outside the audio-only MVP and needs a separate permission, UI, storage, and privacy design before implementation.
+
 ## Future: T-Orbit Sync
 
 Goal: connect recordings to T-Orbit workflows without moving capture logic into the backend.
@@ -92,3 +106,13 @@ Candidate work:
 - Cross-platform metadata compatibility.
 
 Windows is not in MVP.
+
+## Issue Backlog
+
+The GitHub issue tracker should carry separate follow-up issues for:
+
+- Telegram integration.
+- T-Orbit sync.
+- AI transcription.
+- Screen recording.
+- Windows client.
