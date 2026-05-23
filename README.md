@@ -73,3 +73,11 @@ tests/              Integration fixtures and test assets
 - Add logs for recorder lifecycle events and failures.
 - Update docs for every behavior change.
 - Validate with `swift test` and `xcodebuild` when the relevant project files exist.
+
+## Build macOS MVP Shell
+
+```sh
+scripts/build_macos.sh
+```
+
+The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`.
