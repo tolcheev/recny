@@ -6,17 +6,60 @@
 ~/Recordings/TOrbitRecorder/
 ```
 
-## Recording Directory
+The MVP stores all recordings locally. The recording folder plus `metadata.json` is the canonical record.
 
-Each recording should live in its own directory under the default root.
-
-Suggested directory name:
+## Directory Layout
 
 ```text
-YYYY-MM-DDTHH-mm-ssZ-<session-id>/
+~/Recordings/TOrbitRecorder/
+  Inbox/
+    Unsorted/
+    Short/
+    Failed/
+  Library/
+    YYYY/
+      MM/
+        YYYY-MM-DD_HH-mm_source_audio/
+          source/
+            mic.m4a
+            system.m4a
+          export/
+            mixed.m4a
+          metadata.json
+  db/
+    app.sqlite
+  logs/
 ```
 
-## Required Files
+## Inbox
+
+`Inbox/` is for recordings that are not ready for the main library.
+
+- `Inbox/Unsorted/`: valid recordings without a final category.
+- `Inbox/Short/`: recordings below the short-session threshold.
+- `Inbox/Failed/`: sessions where required capture, writing, or export failed.
+
+## Library
+
+`Library/YYYY/MM/` stores completed recordings.
+
+Session directory format:
+
+```text
+YYYY-MM-DD_HH-mm_source_audio/
+```
+
+Examples of `source`:
+
+- `zoom`
+- `google-meet`
+- `facetime`
+- `manual`
+- `unknown`
+
+If two sessions would produce the same folder name, append a short stable id suffix.
+
+## Required Session Files
 
 ```text
 source/mic.m4a
@@ -25,20 +68,117 @@ export/mixed.m4a
 metadata.json
 ```
 
-## Metadata
+Failed sessions may have missing audio files, but `metadata.json` should be written whenever possible.
 
-`metadata.json` should include at least:
+## SQLite Index
 
-- session id
-- start time
-- end time
-- duration
-- app version
-- capture sources
-- file paths relative to the recording directory
-- recorder lifecycle status
-- error details when capture fails
+`db/app.sqlite` is reserved for a later local index.
 
-## Local State
+MVP rules:
 
-SQLite may be used for local indexes and app state. Heavy audio files remain as local files in the MVP.
+- The app must not require SQLite to recover a recording.
+- `metadata.json` remains the source of truth for a session.
+- SQLite may be introduced later for fast search, tags, categories, and library views.
+
+## Metadata Schema
+
+`metadata.json` MVP fields:
+
+```json
+{
+  "id": "rec_2026-05-23_14-30-00_ab12cd",
+  "schema_version": 1,
+  "owner_id": "local:vlad",
+  "workspace_id": "local:t-orbit-recorder",
+  "mentor_id": "local:vlad",
+  "title": "Student call",
+  "started_at": "2026-05-23T14:30:00Z",
+  "ended_at": "2026-05-23T15:12:18Z",
+  "duration_sec": 2538,
+  "recording_mode": "audio_only",
+  "source": {
+    "app": "Zoom",
+    "bundle_id": "us.zoom.xos",
+    "trigger": "app_active",
+    "rule_id": "local.enabled_app.zoom"
+  },
+  "audio_tracks": [
+    {
+      "kind": "microphone",
+      "relative_path": "source/mic.m4a",
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "sample_rate": 48000,
+      "channels": 1,
+      "status": "completed",
+      "error": null
+    },
+    {
+      "kind": "system",
+      "relative_path": "source/system.m4a",
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "sample_rate": 48000,
+      "channels": 2,
+      "status": "completed",
+      "error": null
+    },
+    {
+      "kind": "mixed",
+      "relative_path": "export/mixed.m4a",
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "sample_rate": 48000,
+      "channels": 2,
+      "status": "completed",
+      "error": null
+    }
+  ],
+  "participants": [],
+  "tags": [],
+  "category": "student_call",
+  "status": "completed",
+  "ai_status": "not_started",
+  "sync_status": "local_only"
+}
+```
+
+## Field Notes
+
+- `owner_id`, `workspace_id`, and `mentor_id` may use local placeholder ids in MVP.
+- `participants` is an array because future versions may attach leads, students, or interview participants.
+- `tags` exists now but editing tags is later.
+- `ai_status` exists now but AI is later.
+- `sync_status` exists now but T-Orbit sync is later.
+
+## Suggested Status Values
+
+Recording `status`:
+
+- `recording`
+- `completed`
+- `short`
+- `failed`
+- `permission_blocked`
+
+AI `ai_status`:
+
+- `not_started`
+- `queued`
+- `processing`
+- `completed`
+- `failed`
+
+For MVP, use `not_started`.
+
+Sync `sync_status`:
+
+- `local_only`
+- `pending`
+- `synced`
+- `failed`
+
+For MVP, use `local_only`.

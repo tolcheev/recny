@@ -2,38 +2,72 @@
 
 ## In Scope
 
-- Native macOS menu bar app.
-- Automatic recording start based on local app/activity rules.
-- Microphone audio capture.
-- System audio capture where macOS permissions and APIs allow it.
-- Mixed audio export.
-- Per-recording metadata.
-- Local storage only.
-- Basic lifecycle logs.
+- Native macOS desktop app.
+- Menu bar first user experience.
+- macOS Sequoia support.
+- Apple Silicon support, with MacBook M4 Pro as the primary validation machine.
+- Audio-only recording.
+- Automatic recording start.
+- Microphone capture.
+- Full system audio capture.
+- Separate microphone and system source files.
+- Mixed `m4a` export.
+- `metadata.json` next to every session.
+- Local storage under `~/Recordings/TOrbitRecorder/`.
+- Local logs for lifecycle events and failures.
+- Basic failure classification into `Inbox/Failed/`.
+- Basic short recording classification into `Inbox/Short/`.
 
-## Out of Scope
+## Out Of Scope For MVP
 
 - Screen recording.
 - Cloud upload.
 - T-Orbit backend sync.
-- AI transcription, summaries, or tagging.
-- Telegram integration.
+- AI transcription, summaries, insights, or recommendations.
+- Tags as an editable product feature.
+- SQLite index as a required workflow.
 - Windows support.
+- Telegram integration.
+- External storage integration.
 - Encryption.
 - Retention or autodelete.
+- Team permissions.
 
-## Constraints
+## Later But Planned
 
-- Use Swift and SwiftUI for the desktop client.
-- Use AVFoundation and ScreenCaptureKit for native capture work.
-- Use SQLite for local structured state when needed.
+- SQLite index at `~/Recordings/TOrbitRecorder/db/app.sqlite`.
+- Tags and categories as editable library features.
+- Screen recording.
+- Uploading heavy files to external storage.
+- T-Orbit metadata sync.
+- AI module for mentor workflows.
+- Windows client for students.
+- Automatic interview recording workflows.
+
+## MVP Constraints
+
 - Do not use Electron.
-- Do not add heavy dependencies for MVP.
-- Do not fake audio capture in tests or prototypes.
+- Do not add heavy dependencies.
+- Prefer Swift, SwiftUI, AVFoundation, ScreenCaptureKit, SQLite.
+- Keep the recording engine separate from UI.
+- Do not fake audio capture.
+- Stop and document macOS permission or API blockers.
+- Keep all heavy files local in MVP.
+
+## Acceptance Checklist
+
+- Starting a supported call can start recording automatically.
+- Microphone audio is written to `source/mic.m4a`.
+- System audio is written to `source/system.m4a`.
+- Mixed audio is written to `export/mixed.m4a`.
+- `metadata.json` is created with the MVP schema.
+- Logs explain start, stop, success, short recording, and failure cases.
+- The app can run without T-Orbit backend availability.
 
 ## Validation
 
-When implementation begins, validate with:
+When implementation exists:
 
-- `swift test` for Swift packages where possible.
-- `xcodebuild` for the macOS app once a full Xcode install is active.
+- Run `swift test` for packages.
+- Run `xcodebuild` for the macOS app when a full Xcode installation is active.
+- Manually validate microphone and system audio capture on the target MacBook M4 Pro.
