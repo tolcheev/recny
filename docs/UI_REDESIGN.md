@@ -22,6 +22,29 @@ The app now uses a recorder-first information architecture:
 
 The main window deliberately avoids database controls, raw technical status, recovery details, long paths, and permanent tag fields.
 
+## Menu Bar Behavior
+
+TOrbitRecorder is controlled primarily from the macOS menu bar. The menu exposes:
+
+- Show Window
+- Start Recording / Stop Recording
+- Play Last Recording
+- Open Last Recording Folder
+- Open Library
+- Settings
+- Diagnostics
+- Quit
+
+`Show Window` activates the app and brings the existing main window forward instead of creating duplicate windows. Closing the main window with the red close button does not quit the app; it keeps running in the menu bar and can be reopened from `Show Window`.
+
+The menu bar icon reflects recorder state:
+
+- idle: neutral record icon
+- recording: filled red record icon when the recording indicator is enabled
+- error: orange error icon
+
+If Quit is selected while recording is active, the app asks for confirmation before stopping the recording and quitting.
+
 ## Main Window States
 
 ### Idle
@@ -109,3 +132,4 @@ The design keeps native macOS styling, supports light/dark mode through system c
 - Library uses simple title search and collapsed filters; advanced saved views are out of scope.
 - Diagnostics test recording requires local macOS microphone and Screen & System Audio Recording permissions.
 - macOS may require quitting and reopening the exact app bundle after enabling Screen & System Audio Recording permission, especially when switching between `.build`, `dist`, and `/Applications` builds.
+- `Show Dock icon` defaults on for MVP. Turning it off switches the app to menu-bar-only accessory behavior; use the menu bar icon to bring windows back.

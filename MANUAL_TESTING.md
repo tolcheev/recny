@@ -24,6 +24,38 @@ The app runs as a menu bar app. Use the menu bar icon or the main panel for Show
 
 Settings, Library, and Diagnostics open as separate app windows. If a window is behind other apps, use the menu bar item again; the app should activate and bring that window forward.
 
+## Menu Bar And Window Behavior
+
+1. Open `dist/TOrbitRecorder.app`.
+2. Confirm the menu bar item is visible.
+3. Choose menu bar -> Show Window.
+4. Confirm the existing main window comes to front and the app becomes active.
+5. Close the main window with the red close button.
+6. Confirm the app does not quit and the menu bar item remains visible.
+7. Choose Show Window again.
+8. Confirm the same main window returns without duplicate main windows.
+
+Recording state:
+
+- Idle shows a neutral record icon.
+- Recording shows a filled red record icon when `Show recording indicator` is enabled.
+- Error shows an orange error icon.
+
+Quit while recording:
+
+1. Start Recording.
+2. Choose menu bar -> Quit, or press Cmd+Q while the app is active.
+3. Confirm the app shows `Recording is active. Stop and quit?`.
+4. Choose Cancel and confirm recording continues.
+5. Choose Quit again, then Stop and Quit.
+6. Confirm the recording stops before the app quits.
+
+Dock behavior:
+
+- Settings -> Privacy / Behavior -> Show Dock icon defaults on for MVP.
+- Turning it off switches the app to menu-bar-only accessory behavior.
+- If the Dock icon is hidden, use the menu bar item to reopen the main window.
+
 ## Preflight
 
 1. Quit any old `TOrbitRecorder` instance.

@@ -13,13 +13,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var playLastItem: NSMenuItem?
     private var openLastFolderItem: NSMenuItem?
     private var fallbackMainWindow: NSWindow?
+    private var isTerminatingAfterRecordingStop = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        applyActivationPolicy()
         configureStatusItem()
         bindState()
         appState.startAutoStartMonitoring()
         AppLogger.app.info("TOrbitRecorder launched")
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard appState.status == .recording,
+              !isTerminatingAfterRecordingStop
+        else {
+            return .terminateNow
+        }
+
+        confirmStopAndQuit()
+        return .terminateCancel
     }
 
     private func configureStatusItem() {
@@ -133,6 +149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 Task { @MainActor in
+                    self?.applyActivationPolicy()
                     self?.refreshMenuState()
                 }
             }
@@ -170,6 +187,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         default:
             nil
         }
+    }
+
+    private func applyActivationPolicy() {
+        NSApp.setActivationPolicy(appState.privacySettings.showDockIcon ? .regular : .accessory)
     }
 
     @objc private func showWindow() {
@@ -266,5 +287,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func quit() {
         AppLogger.app.info("TOrbitRecorder quit requested")
         NSApp.terminate(nil)
+    }
+
+    private func confirmStopAndQuit() {
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Recording is active. Stop and quit?"
+        alert.informativeText = "TOrbitRecorder will stop the current recording before quitting."
+        alert.addButton(withTitle: "Stop and Quit")
+        alert.addButton(withTitle: "Cancel")
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            AppLogger.app.info("Quit cancelled while recording is active")
+            return
+        }
+
+        Task {
+            do {
+                try await appState.stopRecording()
+                AppLogger.app.info("Active recording stopped before quit")
+                isTerminatingAfterRecordingStop = true
+                NSApp.terminate(nil)
+            } catch {
+                isTerminatingAfterRecordingStop = false
+                AppLogger.recording.error("Failed to stop recording before quit: \(String(describing: error), privacy: .public)")
+                showMainWindow()
+            }
+        }
     }
 }

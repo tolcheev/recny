@@ -19,6 +19,7 @@ struct AppSettingsTests {
         #expect(settings.privacy.localOnlyMode)
         #expect(settings.privacy.showRecordingIndicator)
         #expect(settings.privacy.showFocusModeReminder)
+        #expect(settings.privacy.showDockIcon)
         #expect(settings.hotkeys.startStopHotkey == "")
         #expect(settings.hotkeys.addMarkerHotkey == "")
     }
@@ -39,6 +40,7 @@ struct AppSettingsTests {
         )
         settings.storage.rootFolderPath = "/tmp/TOrbitRecorderCustom"
         settings.privacy.showRecordingIndicator = false
+        settings.privacy.showDockIcon = false
 
         AppSettingsStore.save(settings, defaults: defaults)
         let loaded = AppSettingsStore.load(defaults: defaults)
@@ -53,6 +55,28 @@ struct AppSettingsTests {
         #expect(loaded.autoStart.shortRecordingThresholdSeconds == 90)
         #expect(loaded.storage.rootFolderPath == "/tmp/TOrbitRecorderCustom")
         #expect(loaded.privacy.showRecordingIndicator == false)
+        #expect(loaded.privacy.showDockIcon == false)
+    }
+
+    @Test
+    func privacySettingsDecodeOldPayloadWithDockIconDefaultOn() throws {
+        let json = """
+        {
+          "localOnlyMode": true,
+          "showRecordingIndicator": false,
+          "showFocusModeReminder": true
+        }
+        """
+
+        let settings = try JSONDecoder().decode(
+            PrivacySettings.self,
+            from: try #require(json.data(using: .utf8))
+        )
+
+        #expect(settings.localOnlyMode)
+        #expect(settings.showRecordingIndicator == false)
+        #expect(settings.showFocusModeReminder)
+        #expect(settings.showDockIcon)
     }
 
     private static func makeDefaults() throws -> UserDefaults {

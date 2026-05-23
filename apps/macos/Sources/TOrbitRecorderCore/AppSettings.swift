@@ -68,15 +68,33 @@ public struct PrivacySettings: Codable, Equatable, Sendable {
     public var localOnlyMode: Bool
     public var showRecordingIndicator: Bool
     public var showFocusModeReminder: Bool
+    public var showDockIcon: Bool
 
     public init(
         localOnlyMode: Bool = true,
         showRecordingIndicator: Bool = true,
-        showFocusModeReminder: Bool = true
+        showFocusModeReminder: Bool = true,
+        showDockIcon: Bool = true
     ) {
         self.localOnlyMode = localOnlyMode
         self.showRecordingIndicator = showRecordingIndicator
         self.showFocusModeReminder = showFocusModeReminder
+        self.showDockIcon = showDockIcon
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case localOnlyMode
+        case showRecordingIndicator
+        case showFocusModeReminder
+        case showDockIcon
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.localOnlyMode = try container.decodeIfPresent(Bool.self, forKey: .localOnlyMode) ?? true
+        self.showRecordingIndicator = try container.decodeIfPresent(Bool.self, forKey: .showRecordingIndicator) ?? true
+        self.showFocusModeReminder = try container.decodeIfPresent(Bool.self, forKey: .showFocusModeReminder) ?? true
+        self.showDockIcon = try container.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? true
     }
 }
 

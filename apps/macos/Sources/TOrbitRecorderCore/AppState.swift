@@ -383,6 +383,11 @@ public final class AppState: ObservableObject {
         saveSettings()
     }
 
+    public func setShowDockIcon(_ isEnabled: Bool) {
+        privacySettings.showDockIcon = isEnabled
+        saveSettings()
+    }
+
     public func setStorageRoot(_ url: URL) {
         outputFolderURL = url
         storageSettings.rootFolderPath = url.path(percentEncoded: false)

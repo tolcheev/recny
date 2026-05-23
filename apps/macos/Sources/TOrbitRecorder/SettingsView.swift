@@ -198,7 +198,7 @@ struct SettingsView: View {
     }
 
     private var privacySection: some View {
-        SettingsSection(title: "Privacy") {
+        SettingsSection(title: "Privacy / Behavior") {
             Toggle("Local-only mode", isOn: .constant(appState.privacySettings.localOnlyMode))
                 .disabled(true)
 
@@ -213,6 +213,18 @@ struct SettingsView: View {
                     set: { appState.setShowRecordingIndicator($0) }
                 )
             )
+
+            Toggle(
+                "Show Dock icon",
+                isOn: Binding(
+                    get: { appState.privacySettings.showDockIcon },
+                    set: { appState.setShowDockIcon($0) }
+                )
+            )
+
+            Text("When off, TOrbitRecorder stays as a menu bar app. Use the menu bar item to show the window again.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             Toggle("Show Focus Mode reminder", isOn: .constant(appState.privacySettings.showFocusModeReminder))
                 .disabled(true)
