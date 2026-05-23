@@ -202,7 +202,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
 
     private func selectMicrophoneInput(settings: RecordingRuntimeSettings) throws -> MicrophoneDeviceSelection {
         let devices = MicrophoneDeviceProvider.availableInputDevices()
-        guard let selection = MicrophoneDeviceResolver.resolve(
+        guard let selection = DevicePriorityResolver.resolve(
             devices: devices,
             preferredDeviceID: settings.preferredMicrophoneDeviceID
         ) else {

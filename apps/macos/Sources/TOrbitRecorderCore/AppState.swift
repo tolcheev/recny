@@ -591,7 +591,7 @@ public final class AppState: ObservableObject {
         devices: [MicrophoneInputDevice],
         preferredDeviceID: String?
     ) -> MicrophoneDeviceSelection? {
-        MicrophoneDeviceResolver.resolve(
+        DevicePriorityResolver.resolve(
             devices: devices,
             preferredDeviceID: preferredDeviceID
         )

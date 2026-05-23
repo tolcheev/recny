@@ -128,7 +128,7 @@ Active settings are persisted locally with `UserDefaults`. MVP defaults keep mic
 
 ## Microphone Input Policy
 
-`Auto, recommended` selects only the microphone input device and does not change the macOS output device. Priority is:
+`Auto, recommended` is resolved by the core `DevicePriorityResolver`. It selects only the microphone input device and does not change the macOS output device. Priority is:
 
 1. External microphones such as Shure MV7, Hollyland, USB microphones, and audio interfaces.
 2. Built-in MacBook microphone.

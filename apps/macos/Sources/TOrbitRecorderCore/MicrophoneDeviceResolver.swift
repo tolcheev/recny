@@ -30,7 +30,14 @@ public struct MicrophoneDeviceSelection: Equatable, Sendable {
     }
 }
 
-public enum MicrophoneDeviceResolver {
+public enum DevicePriorityCategory: Int, Sendable {
+    case preferredExternal = 0
+    case builtIn = 1
+    case otherInput = 2
+    case bluetoothHeadset = 3
+}
+
+public enum DevicePriorityResolver {
     public static let autoRecommendedID = ""
     public static let bluetoothFallbackWarning = "Only Bluetooth headset microphone is available. Recording quality may be degraded."
 
@@ -64,6 +71,22 @@ public enum MicrophoneDeviceResolver {
             .map { selection(for: $0, hasNonBluetoothAlternative: false) }
     }
 
+    public static func category(for device: MicrophoneInputDevice) -> DevicePriorityCategory {
+        if isPreferredExternal(device) {
+            return .preferredExternal
+        }
+
+        if isBuiltIn(device) {
+            return .builtIn
+        }
+
+        if isBluetoothHeadset(device) {
+            return .bluetoothHeadset
+        }
+
+        return .otherInput
+    }
+
     public static func isBluetoothHeadset(_ device: MicrophoneInputDevice) -> Bool {
         let name = normalize(device.name)
         return [
@@ -91,29 +114,13 @@ public enum MicrophoneDeviceResolver {
     }
 
     private static func sortByPriority(_ lhs: MicrophoneInputDevice, _ rhs: MicrophoneInputDevice) -> Bool {
-        let lhsPriority = priority(for: lhs)
-        let rhsPriority = priority(for: rhs)
-        if lhsPriority != rhsPriority {
-            return lhsPriority < rhsPriority
+        let lhsCategory = category(for: lhs)
+        let rhsCategory = category(for: rhs)
+        if lhsCategory != rhsCategory {
+            return lhsCategory.rawValue < rhsCategory.rawValue
         }
 
         return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-    }
-
-    private static func priority(for device: MicrophoneInputDevice) -> Int {
-        if isPreferredExternal(device) {
-            return 0
-        }
-
-        if isBuiltIn(device) {
-            return 1
-        }
-
-        if isBluetoothHeadset(device) {
-            return 3
-        }
-
-        return 0
     }
 
     private static func isPreferredExternal(_ device: MicrophoneInputDevice) -> Bool {
@@ -144,6 +151,21 @@ public enum MicrophoneDeviceResolver {
 
     private static func normalize(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+}
+
+public enum MicrophoneDeviceResolver {
+    public static let autoRecommendedID = DevicePriorityResolver.autoRecommendedID
+    public static let bluetoothFallbackWarning = DevicePriorityResolver.bluetoothFallbackWarning
+
+    public static func resolve(
+        devices: [MicrophoneInputDevice],
+        preferredDeviceID: String?
+    ) -> MicrophoneDeviceSelection? {
+        DevicePriorityResolver.resolve(
+            devices: devices,
+            preferredDeviceID: preferredDeviceID
+        )
     }
 }
 

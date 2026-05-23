@@ -32,7 +32,7 @@ Any capture limitation must be represented as a real failure state. Tests may us
 
 ## Microphone Input Policy
 
-The recorder selects a microphone input device deterministically before starting the microphone track. It must not change the macOS system output device.
+The recorder selects a microphone input device deterministically before starting the microphone track. This policy lives in `DevicePriorityResolver` in the core package. It must not change the macOS system output device.
 
 Default selection is `Auto, recommended`:
 

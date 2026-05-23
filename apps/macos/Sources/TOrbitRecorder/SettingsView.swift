@@ -36,11 +36,11 @@ struct SettingsView: View {
             Picker(
                 "Preferred microphone",
                 selection: Binding(
-                    get: { appState.recordingSettings.microphoneDeviceID ?? MicrophoneDeviceResolver.autoRecommendedID },
+                    get: { appState.recordingSettings.microphoneDeviceID ?? DevicePriorityResolver.autoRecommendedID },
                     set: { appState.setPreferredMicrophoneDeviceID($0) }
                 )
             ) {
-                Text("Auto, recommended").tag(MicrophoneDeviceResolver.autoRecommendedID)
+                Text("Auto, recommended").tag(DevicePriorityResolver.autoRecommendedID)
                 ForEach(appState.availableMicrophoneDevices) { device in
                     Text(device.name).tag(device.id)
                 }
