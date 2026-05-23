@@ -82,6 +82,20 @@ SQLite at `db/app.sqlite` mirrors local recording metadata for the MVP recording
 
 The local index contains `recordings`, `tags`, and `recording_tags`. When the database is empty, the storage layer can rebuild it by scanning `Library/` and `Inbox/` for `metadata.json`.
 
+### Settings Layer
+
+Owns local user preferences stored on the Mac.
+
+MVP settings include:
+
+- recording toggles: system audio and mixed preview enabled by default
+- auto-start rules: enabled flag, whitelist, blacklist, cooldown, minimum detection duration, and short-recording threshold
+- storage root folder with open, choose, and reset-to-default actions
+- hotkey placeholders kept disabled until global hotkey handling exists
+- privacy controls for local-only mode, recording indicator, and Focus Mode reminder
+
+The Settings UI must not expose a working-looking control without backing runtime behavior. Non-MVP controls stay disabled until implemented.
+
 ### Protocol Layer
 
 Owns stable data contracts:
@@ -106,7 +120,8 @@ The protocol package should allow future T-Orbit sync without forcing backend co
 7. Saving post-call tags updates `metadata.json` and `db/app.sqlite`.
 8. Recordings can be filtered locally by date, status, source app, title, and tag.
 9. The recordings list can open a folder, play `export/mixed.m4a`, edit title/tags, and delete a local record with confirmation.
-10. Logs record lifecycle and failures.
+10. Settings changes update the local app state and are persisted locally.
+11. Logs record lifecycle and failures.
 
 ## Future Integration Boundary
 

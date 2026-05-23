@@ -72,11 +72,11 @@ If any required permission or capture path fails, the engine must write failure 
 5. Validate source files with existence and size checks.
 6. Create `export/mixed.m4a` from the available source tracks.
 7. Compute duration and file sizes where possible.
-8. Classify short sessions when below the configured threshold.
+8. Classify short sessions when below the configured short-recording threshold.
 9. Write final `metadata.json`.
 10. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
 
-Recordings shorter than 60 seconds are finalized with metadata status `short_recording`, moved under `Inbox/Short/`, and kept indexed for review. Failed finalization uses `failed` and `Inbox/Failed/` when metadata can be written.
+Recordings shorter than the configured short-recording threshold are finalized with metadata status `short_recording`, moved under `Inbox/Short/`, and kept indexed for review. The MVP default threshold is 60 seconds and can be changed from Settings. Failed finalization uses `failed` and `Inbox/Failed/` when metadata can be written.
 11. Emit a final lifecycle log event.
 
 ## Crash Recovery

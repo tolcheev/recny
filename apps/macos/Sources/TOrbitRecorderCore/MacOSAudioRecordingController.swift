@@ -9,13 +9,18 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
     private var microphoneRecorder: AVAudioRecorder?
     private var systemAudioRecorder: ScreenCaptureKitSystemAudioRecorder?
     private let mixedAudioPreviewGenerator: MixedAudioPreviewGenerator
+    private var runtimeSettings = RecordingRuntimeSettings()
 
     public override init() {
         self.mixedAudioPreviewGenerator = MixedAudioPreviewGenerator()
         super.init()
     }
 
-    public func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
+    public func startRecording(
+        outputFolder: URL,
+        source: RecordingSource,
+        settings: RecordingRuntimeSettings
+    ) async throws -> RecordingControllerUpdate {
         guard startedAt == nil else {
             throw RecordingControllerError.alreadyRecording
         }
@@ -38,11 +43,17 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         )
         micRecorder.delegate = self
 
-        let systemRecorder = ScreenCaptureKitSystemAudioRecorder()
-        try await systemRecorder.start(outputURL: systemSegmentURL)
+        let systemRecorder: ScreenCaptureKitSystemAudioRecorder?
+        if settings.systemAudioEnabled {
+            let recorder = ScreenCaptureKitSystemAudioRecorder()
+            try await recorder.start(outputURL: systemSegmentURL)
+            systemRecorder = recorder
+        } else {
+            systemRecorder = nil
+        }
 
         guard micRecorder.prepareToRecord(), micRecorder.record() else {
-            _ = try? await systemRecorder.stop()
+            _ = try? await systemRecorder?.stop()
             throw RecordingControllerError.recorderSetupFailed("AVAudioRecorder failed to start")
         }
 
@@ -51,13 +62,14 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         self.store = store
         self.microphoneRecorder = micRecorder
         self.systemAudioRecorder = systemRecorder
+        self.runtimeSettings = settings
 
-        AppLogger.recording.info("Microphone and system audio recording started")
+        AppLogger.recording.info("Microphone recording started. system_audio_enabled=\(settings.systemAudioEnabled, privacy: .public), mixed_preview_enabled=\(settings.mixedPreviewEnabled, privacy: .public)")
 
         return RecordingControllerUpdate(
             status: .recording,
             micStatus: .recording,
-            systemAudioStatus: .recording,
+            systemAudioStatus: settings.systemAudioEnabled ? .recording : .idle,
             startedAt: startDate,
             duration: 0,
             session: session
@@ -68,8 +80,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         guard let startedAt,
               let activeSession,
               let store,
-              let microphoneRecorder,
-              let systemAudioRecorder
+              let microphoneRecorder
         else {
             throw RecordingControllerError.notRecording
         }
@@ -79,12 +90,16 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
 
         microphoneRecorder.stop()
 
-        let systemResult: Result<SystemAudioRecordingResult, Error>
-        do {
-            systemResult = .success(try await systemAudioRecorder.stop())
-        } catch {
-            AppLogger.recording.error("System audio stop failed: \(String(describing: error), privacy: .public)")
-            systemResult = .failure(error)
+        let systemResult: Result<SystemAudioRecordingResult, Error>?
+        if let systemAudioRecorder {
+            do {
+                systemResult = .success(try await systemAudioRecorder.stop())
+            } catch {
+                AppLogger.recording.error("System audio stop failed: \(String(describing: error), privacy: .public)")
+                systemResult = .failure(error)
+            }
+        } else {
+            systemResult = nil
         }
 
         let endedAt = Date()
@@ -96,7 +111,9 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         let systemSegmentURL = activeSession.segmentsURL.appendingPathComponent("system-0001.m4a")
 
         try finalizeSegmentIfUsable(from: micSegmentURL, to: micURL)
-        try finalizeSegmentIfUsable(from: systemSegmentURL, to: systemURL)
+        if runtimeSettings.systemAudioEnabled {
+            try finalizeSegmentIfUsable(from: systemSegmentURL, to: systemURL)
+        }
 
         var audioTracks: [AudioTrackMetadata] = []
         audioTracks.append(
@@ -110,65 +127,103 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 bitrate: AVFoundationMicrophoneRecordingController.bitrate
             )
         )
-        audioTracks.append(
-            await sourceTrackMetadata(
-                kind: "system",
-                relativePath: "source/system.m4a",
-                url: systemURL,
-                fallbackDuration: systemResult.successValue?.duration ?? duration,
-                sampleRate: ScreenCaptureKitSystemAudioRecorder.sampleRate,
-                channels: ScreenCaptureKitSystemAudioRecorder.channels,
-                bitrate: ScreenCaptureKitSystemAudioRecorder.bitrate,
-                error: systemResult.failureDescription
+        if runtimeSettings.systemAudioEnabled {
+            audioTracks.append(
+                await sourceTrackMetadata(
+                    kind: "system",
+                    relativePath: "source/system.m4a",
+                    url: systemURL,
+                    fallbackDuration: systemResult?.successValue?.duration ?? duration,
+                    sampleRate: ScreenCaptureKitSystemAudioRecorder.sampleRate,
+                    channels: ScreenCaptureKitSystemAudioRecorder.channels,
+                    bitrate: ScreenCaptureKitSystemAudioRecorder.bitrate,
+                    error: systemResult?.failureDescription
+                )
             )
-        )
+        } else {
+            audioTracks.append(
+                AudioTrackMetadata(
+                    kind: "system",
+                    relativePath: "source/system.m4a",
+                    codec: "aac",
+                    container: "m4a",
+                    sampleRate: ScreenCaptureKitSystemAudioRecorder.sampleRate,
+                    channels: ScreenCaptureKitSystemAudioRecorder.channels,
+                    bitrate: ScreenCaptureKitSystemAudioRecorder.bitrate,
+                    status: "disabled",
+                    error: "system audio disabled in settings"
+                )
+            )
+        }
 
         let sessionStatus: TaggingStatus
         var recoveryError: String?
-        do {
-            let mixedResult = try await mixedAudioPreviewGenerator.createPreview(
-                micURL: micURL,
-                systemURL: systemURL,
-                outputURL: mixedURL
+        if !runtimeSettings.mixedPreviewEnabled {
+            audioTracks.append(
+                AudioTrackMetadata(
+                    kind: "mixed",
+                    relativePath: "export/mixed.m4a",
+                    codec: "aac",
+                    container: "m4a",
+                    sampleRate: MixedAudioPreviewGenerator.sampleRate,
+                    channels: MixedAudioPreviewGenerator.channels,
+                    bitrate: MixedAudioPreviewGenerator.bitrate,
+                    status: "disabled",
+                    error: "mixed preview disabled in settings"
+                )
             )
-            audioTracks.append(mixedResult.track)
             sessionStatus = TaggingStatus.finalizedStatus(
                 forDuration: duration,
-                preferredStatus: .needsTagging
+                preferredStatus: .needsTagging,
+                thresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
             )
-        } catch RecordingControllerError.mixedAudioNoSourceTracks {
-            audioTracks.append(
-                AudioTrackMetadata(
-                    kind: "mixed",
-                    relativePath: "export/mixed.m4a",
-                    codec: "aac",
-                    container: "m4a",
-                    sampleRate: MixedAudioPreviewGenerator.sampleRate,
-                    channels: MixedAudioPreviewGenerator.channels,
-                    bitrate: MixedAudioPreviewGenerator.bitrate,
-                    status: "failed",
-                    error: RecordingControllerError.mixedAudioNoSourceTracks.description
+        } else {
+            do {
+                let mixedResult = try await mixedAudioPreviewGenerator.createPreview(
+                    micURL: micURL,
+                    systemURL: systemURL,
+                    outputURL: mixedURL
                 )
-            )
-            sessionStatus = .failed
-            recoveryError = RecordingControllerError.mixedAudioNoSourceTracks.description
-        } catch {
-            AppLogger.recording.error("Mixed audio preview failed: \(String(describing: error), privacy: .public)")
-            audioTracks.append(
-                AudioTrackMetadata(
-                    kind: "mixed",
-                    relativePath: "export/mixed.m4a",
-                    codec: "aac",
-                    container: "m4a",
-                    sampleRate: MixedAudioPreviewGenerator.sampleRate,
-                    channels: MixedAudioPreviewGenerator.channels,
-                    bitrate: MixedAudioPreviewGenerator.bitrate,
-                    status: "failed",
-                    error: String(describing: error)
+                audioTracks.append(mixedResult.track)
+                sessionStatus = TaggingStatus.finalizedStatus(
+                    forDuration: duration,
+                    preferredStatus: .needsTagging,
+                    thresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
                 )
-            )
-            sessionStatus = .failed
-            recoveryError = String(describing: error)
+            } catch RecordingControllerError.mixedAudioNoSourceTracks {
+                audioTracks.append(
+                    AudioTrackMetadata(
+                        kind: "mixed",
+                        relativePath: "export/mixed.m4a",
+                        codec: "aac",
+                        container: "m4a",
+                        sampleRate: MixedAudioPreviewGenerator.sampleRate,
+                        channels: MixedAudioPreviewGenerator.channels,
+                        bitrate: MixedAudioPreviewGenerator.bitrate,
+                        status: "failed",
+                        error: RecordingControllerError.mixedAudioNoSourceTracks.description
+                    )
+                )
+                sessionStatus = .failed
+                recoveryError = RecordingControllerError.mixedAudioNoSourceTracks.description
+            } catch {
+                AppLogger.recording.error("Mixed audio preview failed: \(String(describing: error), privacy: .public)")
+                audioTracks.append(
+                    AudioTrackMetadata(
+                        kind: "mixed",
+                        relativePath: "export/mixed.m4a",
+                        codec: "aac",
+                        container: "m4a",
+                        sampleRate: MixedAudioPreviewGenerator.sampleRate,
+                        channels: MixedAudioPreviewGenerator.channels,
+                        bitrate: MixedAudioPreviewGenerator.bitrate,
+                        status: "failed",
+                        error: String(describing: error)
+                    )
+                )
+                sessionStatus = .failed
+                recoveryError = String(describing: error)
+            }
         }
 
         try updateRecoveryMetadata(
@@ -182,7 +237,8 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             endedAt: endedAt,
             duration: duration,
             status: sessionStatus,
-            audioTracks: audioTracks
+            audioTracks: audioTracks,
+            shortRecordingThresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
         )
 
         AppLogger.recording.info("Microphone and system audio recording stopped after \(duration, privacy: .public) seconds")
@@ -353,6 +409,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         store = nil
         microphoneRecorder = nil
         systemAudioRecorder = nil
+        runtimeSettings = RecordingRuntimeSettings()
     }
 
     nonisolated public func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {

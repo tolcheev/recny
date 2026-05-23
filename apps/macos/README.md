@@ -29,6 +29,7 @@ apps/macos/.build/app/TOrbitRecorder.app
 - Crash recovery metadata in `recovery.json` and active segment files under `source/segments/`.
 - Recoverable interrupted recordings surfaced in the UI with a Recover Recording action.
 - Auto-start Engine v1 with active app detection, bundle id detection, allowlist/blocklist settings, cooldown, and minimum detection duration.
+- Settings screen persisted locally with sections for Recording, Auto-start, Storage, Hotkeys, and Privacy.
 - `StubRecordingController` that changes state without writing audio.
 - Compact post-call tagging panel after Stop.
 - MVP tags saved to `metadata.json` and SQLite.
@@ -40,6 +41,24 @@ apps/macos/.build/app/TOrbitRecorder.app
 - Permission descriptions for microphone and Screen & System Audio Recording.
 
 Screen video recording, cloud upload, T-Orbit sync, and AI are intentionally not implemented in this step.
+
+## Settings
+
+Active MVP settings:
+
+- Recording: system audio enabled, mixed preview enabled.
+- Auto-start: enabled flag, whitelist apps, blacklist apps, detection duration, cooldown minutes, short recording threshold.
+- Storage: root folder, choose folder, open folder, reset to default.
+- Privacy: show recording indicator.
+
+Disabled placeholders:
+
+- Audio quality preset beyond the current Standard AAC 48 kHz profile.
+- Microphone device selection beyond the default system input.
+- Start/stop global hotkey.
+- Add marker hotkey.
+- Local-only mode toggle.
+- Focus Mode reminder.
 
 ## Microphone Smoke Test
 

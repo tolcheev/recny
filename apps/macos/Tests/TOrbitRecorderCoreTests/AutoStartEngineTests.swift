@@ -141,5 +141,7 @@ struct AutoStartEngineTests {
     func clampsMinimumDetectionDurationToMvpRange() {
         #expect(AutoStartSettings(minDetectionDurationSeconds: 3).minDetectionDurationSeconds == 15)
         #expect(AutoStartSettings(minDetectionDurationSeconds: 90).minDetectionDurationSeconds == 30)
+        #expect(AutoStartSettings(shortRecordingThresholdSeconds: 3).shortRecordingThresholdSeconds == 15)
+        #expect(AutoStartSettings(shortRecordingThresholdSeconds: 900).shortRecordingThresholdSeconds == 300)
     }
 }

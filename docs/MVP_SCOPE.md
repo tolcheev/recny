@@ -20,6 +20,7 @@
 - SQLite recordings index for local filters and library actions.
 - Recordings list filters: date, status, source app, title, and tags.
 - Local recording actions: Open in Finder, Play mixed preview, edit title, add tags, delete with confirmation.
+- Settings screen with recording toggles, auto-start rules, storage root actions, disabled hotkey placeholders, and local privacy controls.
 - Local storage under `~/Recordings/TOrbitRecorder/`.
 - Local logs for lifecycle events and failures.
 - Basic failure classification into `Inbox/Failed/`.
@@ -68,10 +69,11 @@
 - `metadata.json` is created with the MVP schema.
 - Stop opens compact post-call tagging.
 - Closing post-call tagging without saving leaves status `needs_tagging`.
-- Recordings shorter than 60 seconds are classified as `short_recording` and placed under `Inbox/Short/`.
+- Recordings shorter than the configured short-recording threshold are classified as `short_recording` and placed under `Inbox/Short/`; the MVP default is 60 seconds.
 - Tags persist to `metadata.json` and `db/app.sqlite`.
 - Recordings can be filtered by date, status, source app, title, and tag in the app.
 - Local records can be opened, played, retitled, retagged, and deleted with confirmation.
+- Settings persist locally and keep unimplemented controls disabled.
 - Logs explain start, stop, success, short recording, and failure cases.
 - The app can run without T-Orbit backend availability.
 
