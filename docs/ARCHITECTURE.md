@@ -50,6 +50,8 @@ It produces source metadata:
 - trigger
 - rule id
 
+V1 evaluates the active app and bundle id, local whitelist/blacklist, microphone activity, system audio activity, recording state, cooldown, and minimum detection duration. It does not inspect browser URLs and does not use browser extensions.
+
 ### Recording Engine
 
 Owns capture work:
@@ -95,11 +97,11 @@ The protocol package should allow future T-Orbit sync without forcing backend co
 
 ## Data Flow
 
-1. Autostart rule matches a local call signal.
+1. Autostart rule matches a local call signal, or the user starts recording manually.
 2. App checks required permissions.
 3. Recording engine creates a session id and staging folder.
 4. Microphone and system audio are written as separate source tracks.
-5. On stop, the storage layer writes `metadata.json` with `status: "needs_tagging"`.
+5. On stop, the storage layer writes `metadata.json` with `status: "needs_tagging"`, `short_recording`, or `failed` depending on duration and recorder result.
 6. The app opens compact post-call tagging.
 7. Saving post-call tags updates `metadata.json` and `db/app.sqlite`.
 8. Recordings can be filtered locally by date, status, source app, title, and tag.

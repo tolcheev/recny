@@ -11,6 +11,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 - Target OS: macOS Sequoia.
 - Audio-only recording.
 - Automatic recording start.
+- Auto-start v1 rule engine using active app, microphone activity, system audio activity, allowlist/blocklist, cooldown, and minimum detection duration.
 - Microphone recording.
 - Full system audio recording.
 - Local file storage.
@@ -85,4 +86,4 @@ scripts/build_macos.sh
 
 The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`.
 
-Current recording implementation starts from the menu bar UI and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The app shows a local recordings list backed by SQLite and can open folders, play mixed previews, edit titles/tags, and delete local records with confirmation. Autostart is a separate future step.
+Current recording implementation starts from the menu bar UI or Auto-start Engine v1 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The app shows a local recordings list backed by SQLite and can open folders, play mixed previews, edit titles/tags, and delete local records with confirmation.

@@ -293,6 +293,34 @@ struct FileSystemRecordingStoreTests {
         #expect(try store.recordings(filters: RecordingListFilters()).isEmpty)
     }
 
+    @Test
+    func shortRecordingIsStoredInInboxShort() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let session = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+
+        let draft = try store.stopSession(
+            session,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_030),
+            duration: 30,
+            status: .needsTagging,
+            audioTracks: []
+        )
+
+        #expect(draft.status == .shortRecording)
+        #expect(draft.sessionFolderURL.path(percentEncoded: false).contains("Inbox/Short"))
+
+        let metadata = try store.readMetadata(at: draft.metadataURL)
+        #expect(metadata.status == .shortRecording)
+
+        let indexed = try #require(store.recordings(filters: RecordingListFilters(status: .shortRecording)).first)
+        #expect(indexed.id == draft.id)
+        #expect(indexed.sessionFolderURL == draft.sessionFolderURL)
+    }
+
     private static func testOutputFolder() -> URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

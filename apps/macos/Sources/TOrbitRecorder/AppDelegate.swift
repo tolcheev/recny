@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         configureStatusItem()
         bindState()
+        appState.startAutoStartMonitoring()
         AppLogger.app.info("TOrbitRecorder launched")
     }
 

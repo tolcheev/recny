@@ -15,13 +15,21 @@ public final class AppState: ObservableObject {
     @Published public private(set) var recoverableRecordings: [RecoverableRecordingSummary]
     @Published public private(set) var selectedTagFilter: String?
     @Published public private(set) var recordingFilters: RecordingListFilters
+    @Published public private(set) var autoStartSettings: AutoStartSettings
+    @Published public private(set) var autoStartLastDecision: String
 
     public let outputFolderURL: URL
 
     private let recordingController: RecordingController
     private let recordingStore: FileSystemRecordingStore
+    private let activeApplicationDetector: ActiveApplicationDetecting
+    private let audioActivityDetector: AudioActivityDetecting
     private var recordingStartedAt: Date?
     private var durationTask: Task<Void, Never>?
+    private var autoStartTask: Task<Void, Never>?
+    private var autoStartEngine: AutoStartEngine
+    private var lastRecordingStoppedAt: Date?
+    private var lastAutoStartDecisionLogKey: String?
 
     public var outputFolderPath: String {
         outputFolderURL.path(percentEncoded: false)
@@ -33,10 +41,15 @@ public final class AppState: ObservableObject {
 
     public init(
         recordingController: RecordingController = MacOSAudioRecordingController(),
-        outputFolderURL: URL = RecordingPaths.defaultRoot
+        outputFolderURL: URL = RecordingPaths.defaultRoot,
+        activeApplicationDetector: ActiveApplicationDetecting = WorkspaceActiveApplicationDetector(),
+        audioActivityDetector: AudioActivityDetecting = CoreAudioActivityDetector(),
+        autoStartSettings: AutoStartSettings = AutoStartSettingsStore.load()
     ) {
         self.recordingController = recordingController
         self.outputFolderURL = outputFolderURL
+        self.activeApplicationDetector = activeApplicationDetector
+        self.audioActivityDetector = audioActivityDetector
         self.status = .idle
         self.currentRecordingDuration = 0
         self.micStatus = .idle
@@ -49,6 +62,9 @@ public final class AppState: ObservableObject {
         self.recoverableRecordings = []
         self.selectedTagFilter = nil
         self.recordingFilters = RecordingListFilters()
+        self.autoStartSettings = autoStartSettings
+        self.autoStartLastDecision = "not_checked"
+        self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: outputFolderURL)
         reloadRecordingsSilently()
         reloadRecoverableRecordingsSilently()
@@ -56,23 +72,38 @@ public final class AppState: ObservableObject {
 
     deinit {
         durationTask?.cancel()
+        autoStartTask?.cancel()
     }
 
     public func startRecording() async throws {
+        try await startRecording(
+            source: RecordingSource(
+                appName: "TOrbitRecorder",
+                bundleID: "com.torbit.recorder",
+                trigger: "manual",
+                ruleID: "manual.audio"
+            )
+        )
+    }
+
+    public func startRecording(source: RecordingSource) async throws {
         do {
             try FileManager.default.createDirectory(
                 at: outputFolderURL,
                 withIntermediateDirectories: true
             )
 
-            let update = try await recordingController.startRecording(outputFolder: outputFolderURL)
+            let update = try await recordingController.startRecording(
+                outputFolder: outputFolderURL,
+                source: source
+            )
             apply(update)
             recordingStartedAt = update.startedAt ?? Date()
             currentRecordingDuration = 0
             mixedPreviewPath = nil
             errorMessage = nil
             startDurationClock()
-            AppLogger.recording.info("Recording state changed to recording")
+            AppLogger.recording.info("Recording state changed to recording. trigger=\(source.trigger, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), rule_id=\(source.ruleID, privacy: .public)")
         } catch {
             applyError(error)
             AppLogger.recording.error("Failed to start recording: \(String(describing: error), privacy: .public)")
@@ -92,11 +123,16 @@ public final class AppState: ObservableObject {
 
             postCallDraft = draft
             mixedPreviewPath = mixedPreviewPath(for: draft)
-            isPostCallPanelPresented = true
+            isPostCallPanelPresented = draft.status != .shortRecording && draft.status != .failed
+            lastRecordingStoppedAt = Date()
             try reloadRecordings()
             try reloadRecoverableRecordings()
             errorMessage = nil
-            AppLogger.recording.info("Recording stopped; post-call tagging required for \(draft.id, privacy: .public)")
+            if draft.status == .shortRecording {
+                AppLogger.recording.info("Recording stopped as short_recording; post-call tagging skipped for \(draft.id, privacy: .public)")
+            } else {
+                AppLogger.recording.info("Recording stopped; post-call tagging required for \(draft.id, privacy: .public)")
+            }
         } catch {
             applyError(error)
             AppLogger.recording.error("Failed to stop recording: \(String(describing: error), privacy: .public)")
@@ -158,6 +194,114 @@ public final class AppState: ObservableObject {
         try reloadRecordings()
     }
 
+    public func setAutoStartEnabled(_ isEnabled: Bool) {
+        updateAutoStartSettings { settings in
+            settings.isEnabled = isEnabled
+        }
+    }
+
+    public func setAutoStartWhitelist(_ whitelist: [String]) {
+        updateAutoStartSettings { settings in
+            settings.whitelist = normalizedAppList(whitelist)
+        }
+    }
+
+    public func setAutoStartBlacklist(_ blacklist: [String]) {
+        updateAutoStartSettings { settings in
+            settings.blacklist = normalizedAppList(blacklist)
+        }
+    }
+
+    public func setAutoStartCooldownSeconds(_ seconds: TimeInterval) {
+        updateAutoStartSettings { settings in
+            settings = AutoStartSettings(
+                isEnabled: settings.isEnabled,
+                whitelist: settings.whitelist,
+                blacklist: settings.blacklist,
+                cooldownSeconds: seconds,
+                minDetectionDurationSeconds: settings.minDetectionDurationSeconds
+            )
+        }
+    }
+
+    public func setAutoStartMinDetectionDurationSeconds(_ seconds: TimeInterval) {
+        updateAutoStartSettings { settings in
+            settings = AutoStartSettings(
+                isEnabled: settings.isEnabled,
+                whitelist: settings.whitelist,
+                blacklist: settings.blacklist,
+                cooldownSeconds: settings.cooldownSeconds,
+                minDetectionDurationSeconds: seconds
+            )
+        }
+    }
+
+    public func startAutoStartMonitoring(pollIntervalSeconds: TimeInterval = 5) {
+        guard autoStartTask == nil else {
+            return
+        }
+
+        let interval = UInt64(max(1, pollIntervalSeconds) * 1_000_000_000)
+        autoStartTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else {
+                    return
+                }
+
+                await self.evaluateAutoStartNow()
+
+                do {
+                    try await Task.sleep(nanoseconds: interval)
+                } catch {
+                    return
+                }
+            }
+        }
+    }
+
+    public func stopAutoStartMonitoring() {
+        autoStartTask?.cancel()
+        autoStartTask = nil
+    }
+
+    public func evaluateAutoStartNow(now: Date = Date()) async {
+        await evaluateAutoStart(
+            activeApplication: activeApplicationDetector.activeApplication(),
+            audioActivity: audioActivityDetector.audioActivity(),
+            now: now
+        )
+    }
+
+    public func evaluateAutoStart(
+        activeApplication: ActiveApplicationSnapshot?,
+        audioActivity: AudioActivitySnapshot,
+        now: Date
+    ) async {
+        let decision = autoStartEngine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApplication,
+                audioActivity: audioActivity,
+                isAlreadyRecording: status == .recording,
+                lastStoppedAt: lastRecordingStoppedAt,
+                now: now
+            ),
+            settings: autoStartSettings
+        )
+
+        applyAutoStartDecision(decision)
+
+        guard decision.action == .start, let source = decision.recordingSource else {
+            return
+        }
+
+        do {
+            try await startRecording(source: source)
+        } catch {
+            applyError(error)
+            AppLogger.recording.error("Auto-start failed: reason=\(decision.reason.rawValue, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), error=\(String(describing: error), privacy: .public)")
+        }
+    }
+
     public func reloadRecoverableRecordings() throws {
         guard status != .recording else {
             return
@@ -191,6 +335,17 @@ public final class AppState: ObservableObject {
         if let duration = update.duration {
             currentRecordingDuration = duration
         }
+    }
+
+    private func applyAutoStartDecision(_ decision: AutoStartDecision) {
+        autoStartLastDecision = "\(decision.reason.rawValue): \(decision.message)"
+        let logKey = "\(decision.action)-\(decision.reason)-\(decision.message)"
+        guard decision.action == .start || logKey != lastAutoStartDecisionLogKey else {
+            return
+        }
+
+        lastAutoStartDecisionLogKey = logKey
+        AppLogger.recording.info("Auto-start decision: action=\(String(describing: decision.action), privacy: .public), reason=\(decision.reason.rawValue, privacy: .public), message=\(decision.message, privacy: .public)")
     }
 
     private func applyError(_ error: Error) {
@@ -257,6 +412,37 @@ public final class AppState: ObservableObject {
             .appendingPathComponent("mixed.m4a")
         let path = url.path(percentEncoded: false)
         return FileManager.default.fileExists(atPath: path) ? path : nil
+    }
+
+    private func updateAutoStartSettings(_ mutate: (inout AutoStartSettings) -> Void) {
+        var settings = autoStartSettings
+        mutate(&settings)
+        autoStartSettings = AutoStartSettings(
+            isEnabled: settings.isEnabled,
+            whitelist: normalizedAppList(settings.whitelist),
+            blacklist: normalizedAppList(settings.blacklist),
+            cooldownSeconds: settings.cooldownSeconds,
+            minDetectionDurationSeconds: settings.minDetectionDurationSeconds
+        )
+        autoStartEngine.resetCandidate()
+        AutoStartSettingsStore.save(autoStartSettings)
+    }
+
+    private func normalizedAppList(_ values: [String]) -> [String] {
+        var seen = Set<String>()
+        return values.compactMap { value in
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                return nil
+            }
+
+            let key = trimmed.lowercased()
+            guard seen.insert(key).inserted else {
+                return nil
+            }
+
+            return trimmed
+        }
     }
 
     private func startDurationClock() {

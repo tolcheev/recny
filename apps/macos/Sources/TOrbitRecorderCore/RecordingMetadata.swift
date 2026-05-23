@@ -6,6 +6,22 @@ public enum TaggingStatus: String, CaseIterable, Codable, Sendable {
     case needsReview = "needs_review"
     case reviewed
     case failed
+    case shortRecording = "short_recording"
+
+    public static let shortRecordingThresholdSeconds: TimeInterval = 60
+
+    public static func finalizedStatus(
+        forDuration duration: TimeInterval,
+        preferredStatus: TaggingStatus
+    ) -> TaggingStatus {
+        guard preferredStatus == .needsTagging,
+              duration < shortRecordingThresholdSeconds
+        else {
+            return preferredStatus
+        }
+
+        return .shortRecording
+    }
 }
 
 public struct RecordingSource: Codable, Equatable, Sendable {
