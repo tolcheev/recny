@@ -313,7 +313,7 @@ private struct RecordingRow: View {
                 }
 
                 Button {
-                    NSWorkspace.shared.activateFileViewerSelecting([recording.sessionFolderURL])
+                    NSWorkspace.shared.open(recording.sessionFolderURL)
                 } label: {
                     Label("Open in Finder", systemImage: "folder")
                 }
