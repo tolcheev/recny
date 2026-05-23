@@ -43,4 +43,25 @@ struct RecordingDisplayFormatterTests {
     func exposesShortRecordingCopy() {
         #expect(RecordingDisplayFormatter.statusSubtitle(.shortRecording) == "Saved to Inbox/Short")
     }
+
+    @Test
+    func formatsLatestRecordingDetailWithoutDebugFields() {
+        #expect(
+            RecordingDisplayFormatter.latestRecordingDetail(
+                status: .shortRecording,
+                duration: 8,
+                micFileSizeBytes: 10,
+                systemFileSizeBytes: 20
+            ) == "00:08 · Mic + system audio · Saved to Inbox/Short"
+        )
+    }
+
+    @Test
+    func explainsSystemAudioPermissionRestartCase() {
+        #expect(
+            RecordingDisplayFormatter.humanReadableError(
+                "Screen & System Audio Recording permission is unavailable: SCStreamErrorDomain code -3801"
+            ) == "System audio permission needs app restart or re-approval"
+        )
+    }
 }

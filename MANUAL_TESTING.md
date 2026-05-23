@@ -21,6 +21,8 @@ open -n apps/macos/.build/app/TOrbitRecorder.app
 
 The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Last Recording Folder, Open Library, Settings, Diagnostics, and Quit.
 
+Settings, Library, and Diagnostics open as separate app windows. If a window is behind other apps, use the menu bar item again; the app should activate and bring that window forward.
+
 ## Preflight
 
 1. Quit any old `TOrbitRecorder` instance.
@@ -46,6 +48,8 @@ Grant permissions in macOS System Settings:
 - Privacy & Security -> Screen & System Audio Recording -> `TOrbitRecorder`
 
 If macOS prompts during Start Recording, grant access, quit the app, reopen it, and run the test again.
+
+When testing Screen & System Audio Recording, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted.
 
 ## Full Recording Checklist
 
@@ -144,7 +148,7 @@ With default settings, the short recording threshold is 60 seconds.
 ```
 
 6. Confirm post-call tagging does not open automatically.
-7. Confirm Last Recording shows `Short recording`, Play/Open/Tag work, and metadata still exists for false-positive review.
+7. Confirm the compact Latest strip shows `Short recording`, Play/Open/Tag work, and metadata still exists for false-positive review.
 
 ## Auto-Start: Zoom
 
@@ -231,9 +235,11 @@ Fix:
 
 1. Open System Settings -> Privacy & Security -> Screen & System Audio Recording.
 2. Enable `TOrbitRecorder`.
-3. Quit and reopen the app.
+3. Quit and reopen the exact same `TOrbitRecorder.app` bundle you are testing.
 4. Play audible audio from another app.
 5. Retry recording.
+
+If System Settings already shows `TOrbitRecorder` enabled but the app still reports a ScreenCaptureKit permission error, quit the app completely and reopen it. If you installed or opened another build path, approve that build too.
 
 ### No System Audio
 

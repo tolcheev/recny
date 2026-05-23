@@ -223,8 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        AppWindows.openSettings(appState: appState)
     }
 
     @objc private func showDiagnostics() {

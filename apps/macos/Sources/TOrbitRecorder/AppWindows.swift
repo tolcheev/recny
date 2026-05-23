@@ -6,6 +6,7 @@ import TOrbitRecorderCore
 enum AppWindows {
     private static var libraryWindow: NSWindow?
     private static var diagnosticsWindow: NSWindow?
+    private static var settingsWindow: NSWindow?
 
     static func openLibrary(appState: AppState) {
         let window = libraryWindow ?? makeWindow(
@@ -26,6 +27,17 @@ enum AppWindows {
             rootView: DiagnosticsView(appState: appState)
         )
         diagnosticsWindow = window
+        present(window)
+    }
+
+    static func openSettings(appState: AppState) {
+        let window = settingsWindow ?? makeWindow(
+            title: "TOrbit Recorder Settings",
+            width: 700,
+            height: 720,
+            rootView: SettingsView(appState: appState)
+        )
+        settingsWindow = window
         present(window)
     }
 

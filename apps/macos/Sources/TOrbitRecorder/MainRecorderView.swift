@@ -9,13 +9,15 @@ struct MainRecorderView: View {
         VStack(alignment: .leading, spacing: 16) {
             header
             RecordingStatusCard(appState: appState)
-            LastRecordingCard(recording: appState.lastRecording) {
-                appState.editLastRecordingTags()
+            if let lastRecording = appState.lastRecording {
+                LatestRecordingStrip(recording: lastRecording) {
+                    appState.editLastRecordingTags()
+                }
             }
             footerActions
         }
         .padding(20)
-        .frame(minWidth: 560, idealWidth: 600, maxWidth: 680, minHeight: 560)
+        .frame(minWidth: 560, idealWidth: 600, maxWidth: 680, minHeight: 430)
         .background(Color(nsColor: .windowBackgroundColor))
         .sheet(isPresented: $appState.isPostCallPanelPresented) {
             if let draft = appState.postCallDraft {
@@ -60,7 +62,7 @@ struct MainRecorderView: View {
             .accessibilityLabel("Open Library")
 
             Button {
-                showSettings()
+                AppWindows.openSettings(appState: appState)
             } label: {
                 Label("Settings", systemImage: "gearshape")
             }
@@ -75,10 +77,5 @@ struct MainRecorderView: View {
             .accessibilityLabel("Open Diagnostics")
         }
         .padding(.top, 2)
-    }
-
-    private func showSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 }

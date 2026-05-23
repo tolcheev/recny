@@ -24,22 +24,31 @@ struct LibraryView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("Library")
+                Text("Recordings")
                     .font(.title2.weight(.semibold))
-                Text(filtersAreActive ? "Filtered recordings" : "Recent recordings")
+                Text(filtersAreActive ? "Filtered local recordings" : "Recent local recordings")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            Button {
-                try? appState.reloadRecordings()
-                try? appState.reloadLastRecording()
-            } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
+            HStack(spacing: 8) {
+                Button {
+                    openLibraryFolder()
+                } label: {
+                    Label("Open Library Folder", systemImage: "folder")
+                }
+                .accessibilityLabel("Open local recordings library folder")
+
+                Button {
+                    try? appState.reloadRecordings()
+                    try? appState.reloadLastRecording()
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                .accessibilityLabel("Refresh recordings")
             }
-            .accessibilityLabel("Refresh recordings")
         }
     }
 
@@ -188,7 +197,7 @@ struct LibraryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "tray")
+            Image(systemName: "waveform.badge.magnifyingglass")
                 .font(.system(size: 34))
                 .foregroundStyle(.secondary)
             Text(filtersAreActive ? "No recordings match these filters" : "No recordings yet")
@@ -216,6 +225,18 @@ struct LibraryView: View {
             || !appState.recordingFilters.titleText.isEmpty
             || !appState.recordingFilters.tags.isEmpty
     }
+
+    private func openLibraryFolder() {
+        do {
+            try FileManager.default.createDirectory(
+                at: appState.outputFolderURL,
+                withIntermediateDirectories: true
+            )
+            NSWorkspace.shared.open(appState.outputFolderURL)
+        } catch {
+            AppLogger.storage.error("Failed to open library folder: \(String(describing: error), privacy: .public)")
+        }
+    }
 }
 
 private struct LibraryRecordingRow: View {
@@ -228,7 +249,7 @@ private struct LibraryRecordingRow: View {
 
     var body: some View {
         RecorderCard {
-            HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text(recording.title)
@@ -296,10 +317,14 @@ private struct LibraryRecordingRow: View {
                             Label("Delete Local Record", systemImage: "trash")
                         }
                     } label: {
-                        Label("More", systemImage: "ellipsis.circle")
+                        Image(systemName: "ellipsis.circle")
+                            .frame(width: 20, height: 20)
                     }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                     .accessibilityLabel("More actions")
                 }
+                .fixedSize()
             }
         }
         .sheet(item: $tagDraft) { draft in

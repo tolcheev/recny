@@ -11,6 +11,8 @@ struct DiagnosticsView: View {
     @State private var clearResult: String?
     @State private var testResult: String?
     @State private var isRunningTestRecording = false
+    @State private var permissionRefreshID = UUID()
+    @State private var showRawError = false
 
     var body: some View {
         ScrollView {
@@ -47,7 +49,33 @@ struct DiagnosticsView: View {
                 DiagnosticLine(label: "Microphone", value: microphonePermission)
                 DiagnosticLine(label: "Screen & System Audio Recording", value: screenCapturePermission)
                 DiagnosticLine(label: "Output folder", value: outputFolderWritable)
+
+                if !isScreenCaptureAuthorized {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("If TOrbitRecorder is already enabled in System Settings, quit and reopen this exact app build. macOS can keep the old permission state until restart, and dev builds from a different path may need approval again.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: 8) {
+                            Button {
+                                openScreenCapturePrivacySettings()
+                            } label: {
+                                Label("Open Privacy Settings", systemImage: "lock.shield")
+                            }
+
+                            Button {
+                                permissionRefreshID = UUID()
+                            } label: {
+                                Label("Recheck", systemImage: "arrow.clockwise")
+                            }
+                        }
+                    }
+                }
             }
+            .id(permissionRefreshID)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -100,11 +128,31 @@ struct DiagnosticsView: View {
 
     private var errorSection: some View {
         GroupBox("Last Error") {
-            Text(appState.errorMessage ?? "None")
-                .font(.callout.monospaced())
-                .foregroundStyle(appState.errorMessage == nil ? Color.secondary : Color.red)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 8) {
+                if let errorMessage = appState.errorMessage {
+                    Text(RecordingDisplayFormatter.humanReadableError(errorMessage))
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.red)
+
+                    Button(showRawError ? "Hide raw error" : "Show raw error") {
+                        showRawError.toggle()
+                    }
+                    .buttonStyle(.link)
+
+                    if showRawError {
+                        Text(errorMessage)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Text("None")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -221,7 +269,11 @@ struct DiagnosticsView: View {
     }
 
     private var screenCapturePermission: String {
-        CGPreflightScreenCaptureAccess() ? "Authorized" : "Missing permission"
+        isScreenCaptureAuthorized ? "Authorized" : "Needs permission or app restart"
+    }
+
+    private var isScreenCaptureAuthorized: Bool {
+        CGPreflightScreenCaptureAccess()
     }
 
     private var outputFolderWritable: String {
@@ -241,6 +293,16 @@ struct DiagnosticsView: View {
 
     private var logsURL: URL {
         appState.outputFolderURL.appendingPathComponent("logs", isDirectory: true)
+    }
+
+    private func openScreenCapturePrivacySettings() {
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+        ) else {
+            return
+        }
+
+        NSWorkspace.shared.open(url)
     }
 
     private func openLogs() {

@@ -31,6 +31,27 @@ public enum RecordingDisplayFormatter {
         }
     }
 
+    public static func latestRecordingDetail(
+        status: TaggingStatus,
+        duration: TimeInterval,
+        micFileSizeBytes: Int64?,
+        systemFileSizeBytes: Int64?
+    ) -> String {
+        var parts = [
+            Self.duration(duration),
+            Self.audioSummary(
+                micFileSizeBytes: micFileSizeBytes,
+                systemFileSizeBytes: systemFileSizeBytes
+            )
+        ]
+
+        if let subtitle = statusSubtitle(status) {
+            parts.append(subtitle)
+        }
+
+        return parts.joined(separator: " · ")
+    }
+
     public static func duration(_ duration: TimeInterval) -> String {
         let totalSeconds = max(0, Int(duration.rounded(.down)))
         let hours = totalSeconds / 3600
@@ -97,7 +118,7 @@ public enum RecordingDisplayFormatter {
         case .recording:
             return "Active"
         case .permissionDenied:
-            return "System audio permission is missing"
+            return "Needs permission or restart"
         case .error:
             return "System audio error"
         default:
@@ -119,7 +140,7 @@ public enum RecordingDisplayFormatter {
         if errorMessage.localizedCaseInsensitiveContains("system audio")
             || errorMessage.localizedCaseInsensitiveContains("screencapturekit")
             || errorMessage.localizedCaseInsensitiveContains("screen & system") {
-            return "System audio permission is missing"
+            return "System audio permission needs app restart or re-approval"
         }
 
         if errorMessage.localizedCaseInsensitiveContains("input device") {
