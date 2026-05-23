@@ -104,37 +104,16 @@ MVP rules:
   },
   "audio_tracks": [
     {
+      "bitrate": 128000,
+      "channels": 1,
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "error": null,
       "kind": "microphone",
       "relative_path": "source/mic.m4a",
-      "codec": "aac",
-      "container": "m4a",
-      "duration_sec": 2538,
       "sample_rate": 48000,
-      "channels": 1,
-      "status": "completed",
-      "error": null
-    },
-    {
-      "kind": "system",
-      "relative_path": "source/system.m4a",
-      "codec": "aac",
-      "container": "m4a",
-      "duration_sec": 2538,
-      "sample_rate": 48000,
-      "channels": 2,
-      "status": "completed",
-      "error": null
-    },
-    {
-      "kind": "mixed",
-      "relative_path": "export/mixed.m4a",
-      "codec": "aac",
-      "container": "m4a",
-      "duration_sec": 2538,
-      "sample_rate": 48000,
-      "channels": 2,
-      "status": "completed",
-      "error": null
+      "status": "completed"
     }
   ],
   "participants": [],

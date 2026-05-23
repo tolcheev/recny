@@ -3,20 +3,14 @@
   "audio_tracks": [
     {
       "error": null,
+      "bitrate": 128000,
+      "channels": 1,
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
       "kind": "microphone",
       "relative_path": "source/mic.m4a",
-      "status": "completed"
-    },
-    {
-      "error": null,
-      "kind": "system",
-      "relative_path": "source/system.m4a",
-      "status": "completed"
-    },
-    {
-      "error": null,
-      "kind": "mixed",
-      "relative_path": "export/mixed.m4a",
+      "sample_rate": 48000,
       "status": "completed"
     }
   ],

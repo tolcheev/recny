@@ -9,11 +9,12 @@ The engine is a testable core package, not SwiftUI view logic.
 ## MVP Capture Requirements
 
 - Capture microphone audio.
-- Capture full system audio.
-- Store microphone and system audio as separate source tracks.
-- Produce a mixed export for quick playback.
+- Store microphone audio as `source/mic.m4a`.
+- Record microphone audio as AAC in an m4a container at 48 kHz, mono, 128 kbps.
 - Save metadata for every session.
 - Log lifecycle events and failures.
+
+System audio capture and mixed export are not implemented in the current microphone recording step.
 
 ## Preferred Native APIs
 
@@ -45,11 +46,9 @@ State transitions must be logged with timestamps and session id.
 2. Create a stable session id.
 3. Resolve the session staging path.
 4. Check microphone permission.
-5. Check system audio capture permission or availability.
+5. Check microphone input device availability.
 6. Start microphone writer.
-7. Start system audio writer.
-8. Write initial metadata with `status: "recording"`.
-9. Emit a lifecycle log event.
+7. Emit a lifecycle log event.
 
 If any required permission or capture path fails, the engine must write failure metadata when possible and classify the session under `Inbox/Failed/`.
 
@@ -59,19 +58,16 @@ If any required permission or capture path fails, the engine must write failure 
 2. Close source track writers.
 3. Compute duration.
 4. Classify short sessions when below the configured threshold.
-5. Create `export/mixed.m4a` for valid sessions.
-6. Write final `metadata.json`.
-7. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
-8. Emit a final lifecycle log event.
+5. Write final `metadata.json`.
+6. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
+7. Emit a final lifecycle log event.
 
 ## Required Output
 
 ```text
 source/
   mic.m4a
-  system.m4a
 export/
-  mixed.m4a
 metadata.json
 ```
 
@@ -86,6 +82,7 @@ Every track in `metadata.json` should include:
 - `duration_sec`
 - `sample_rate`
 - `channels`
+- `bitrate`
 - `status`
 - `error`, when applicable
 
