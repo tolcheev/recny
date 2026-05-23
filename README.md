@@ -15,6 +15,8 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 - Full system audio recording.
 - Local file storage.
 - `metadata.json` stored next to every recording.
+- Compact post-call tagging after recording stops.
+- MVP tags saved to `metadata.json` and `db/app.sqlite`.
 - No Electron.
 - No screen recording, cloud upload, T-Orbit sync, AI, or Windows support in MVP.
 
@@ -41,7 +43,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
   logs/
 ```
 
-`db/app.sqlite` is reserved for a later local index. In MVP, the recording folder and `metadata.json` remain the canonical record.
+`db/app.sqlite` stores the local tag index for filtering. The recording folder and `metadata.json` remain the canonical record.
 
 ## Repository Layout
 

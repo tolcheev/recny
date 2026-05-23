@@ -44,6 +44,9 @@ The MVP is intentionally not a media studio, meeting bot, cloud recorder, or T-O
 - Separate source tracks for microphone and system audio.
 - Mixed audio export for quick playback.
 - `metadata.json` saved next to each recording.
+- Compact post-call tagging after stop.
+- MVP tags saved to `metadata.json` and local SQLite.
+- Recording list filtering by tag.
 - Local storage under `~/Recordings/TOrbitRecorder/`.
 - Lifecycle and failure logs.
 
@@ -83,7 +86,7 @@ MVP metadata must include:
 - AI status
 - sync status
 
-Tags, AI status, and sync status exist in the schema even though tagging, AI processing, and T-Orbit sync are later features.
+AI status and sync status exist in the schema even though AI processing and T-Orbit sync are later features.
 
 ## Explicit Non-Goals For MVP
 
@@ -96,13 +99,15 @@ Tags, AI status, and sync status exist in the schema even though tagging, AI pro
 - Multi-user administration.
 - Retention or autodelete.
 - Encryption.
-- SQLite-backed library index as a product dependency.
 
 ## Success Criteria
 
 - A real call can be recorded as microphone audio plus system audio.
 - The app starts recording automatically when a configured local rule matches.
 - A completed session has both source tracks, a mixed export, and metadata.
+- Stopping a recording opens post-call tagging.
+- Closing post-call tagging without saving leaves status as `needs_tagging`.
+- Saved tags are queryable through the local SQLite index.
 - Failed capture is visible in `Inbox/Failed/` or logs, not silently ignored.
 - Short accidental captures can be separated into `Inbox/Short/`.
 - The recording engine can be tested separately from SwiftUI.

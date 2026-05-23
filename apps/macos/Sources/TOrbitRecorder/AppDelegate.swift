@@ -109,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             do {
                 try await appState.stopRecording()
+                showMainWindow()
             } catch {
                 AppLogger.recording.error("Menu stop failed: \(String(describing: error), privacy: .public)")
             }
@@ -131,6 +132,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func showSettings() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+
+    private func showMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.windows.first?.makeKeyAndOrderFront(nil)
     }
 
     @objc private func quit() {

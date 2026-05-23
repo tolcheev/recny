@@ -8,10 +8,15 @@ public final class AppState: ObservableObject {
     @Published public private(set) var micStatus: CaptureStatus
     @Published public private(set) var systemAudioStatus: CaptureStatus
     @Published public private(set) var errorMessage: String?
+    @Published public private(set) var postCallDraft: PostCallDraft?
+    @Published public var isPostCallPanelPresented: Bool
+    @Published public private(set) var recordings: [RecordingSummary]
+    @Published public private(set) var selectedTagFilter: String?
 
     public let outputFolderURL: URL
 
     private let recordingController: RecordingController
+    private let metadataStore: RecordingMetadataStore
     private var recordingStartedAt: Date?
     private var durationTask: Task<Void, Never>?
 
@@ -34,6 +39,12 @@ public final class AppState: ObservableObject {
         self.micStatus = .idle
         self.systemAudioStatus = .idle
         self.errorMessage = nil
+        self.postCallDraft = nil
+        self.isPostCallPanelPresented = false
+        self.recordings = []
+        self.selectedTagFilter = nil
+        self.metadataStore = RecordingMetadataStore(rootURL: outputFolderURL)
+        reloadRecordingsSilently()
     }
 
     deinit {
@@ -64,15 +75,43 @@ public final class AppState: ObservableObject {
     public func stopRecording() async throws {
         do {
             let update = try await recordingController.stopRecording()
+            let endedAt = Date()
+            let startedAt = recordingStartedAt ?? endedAt.addingTimeInterval(-(update.duration ?? currentRecordingDuration))
+            let duration = update.duration ?? currentRecordingDuration
             apply(update)
             stopDurationClock()
+            let draft = try metadataStore.createNeedsTaggingDraft(
+                startedAt: startedAt,
+                endedAt: endedAt,
+                duration: duration
+            )
+            postCallDraft = draft
+            isPostCallPanelPresented = true
+            try reloadRecordings()
             errorMessage = nil
-            AppLogger.recording.info("Recording state changed to idle")
+            AppLogger.recording.info("Recording stopped; post-call tagging required for \(draft.id, privacy: .public)")
         } catch {
             applyError(error)
             AppLogger.recording.error("Failed to stop recording: \(String(describing: error), privacy: .public)")
             throw error
         }
+    }
+
+    public func savePostCallDraft(_ draft: PostCallDraft) throws {
+        try metadataStore.saveDraft(draft)
+        postCallDraft = draft
+        isPostCallPanelPresented = false
+        try reloadRecordings()
+        AppLogger.recording.info("Saved post-call tags for \(draft.id, privacy: .public)")
+    }
+
+    public func setTagFilter(_ tag: String?) {
+        selectedTagFilter = tag
+        reloadRecordingsSilently()
+    }
+
+    public func reloadRecordings() throws {
+        recordings = try metadataStore.recordings(filterTag: selectedTagFilter)
     }
 
     private func apply(_ update: RecordingControllerUpdate) {
@@ -91,6 +130,14 @@ public final class AppState: ObservableObject {
         systemAudioStatus = .error
         errorMessage = String(describing: error)
         stopDurationClock()
+    }
+
+    private func reloadRecordingsSilently() {
+        do {
+            try reloadRecordings()
+        } catch {
+            AppLogger.storage.error("Failed to reload recordings: \(String(describing: error), privacy: .public)")
+        }
     }
 
     private func startDurationClock() {

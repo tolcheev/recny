@@ -14,7 +14,10 @@ let package = Package(
     targets: [
         .target(
             name: "TOrbitRecorderCore",
-            path: "Sources/TOrbitRecorderCore"
+            path: "Sources/TOrbitRecorderCore",
+            linkerSettings: [
+                .linkedLibrary("sqlite3")
+            ]
         ),
         .executableTarget(
             name: "TOrbitRecorder",

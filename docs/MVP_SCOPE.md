@@ -13,6 +13,10 @@
 - Separate microphone and system source files.
 - Mixed `m4a` export.
 - `metadata.json` next to every session.
+- Compact post-call tagging panel after stop.
+- MVP tags.
+- Status values: `needs_tagging`, `saved`, `needs_review`, `reviewed`, `failed`.
+- SQLite tag index for local recording filtering.
 - Local storage under `~/Recordings/TOrbitRecorder/`.
 - Local logs for lifecycle events and failures.
 - Basic failure classification into `Inbox/Failed/`.
@@ -24,8 +28,6 @@
 - Cloud upload.
 - T-Orbit backend sync.
 - AI transcription, summaries, insights, or recommendations.
-- Tags as an editable product feature.
-- SQLite index as a required workflow.
 - Windows support.
 - Telegram integration.
 - External storage integration.
@@ -35,8 +37,8 @@
 
 ## Later But Planned
 
-- SQLite index at `~/Recordings/TOrbitRecorder/db/app.sqlite`.
-- Tags and categories as editable library features.
+- Rich local library management.
+- Advanced tag management beyond the MVP fixed tag set.
 - Screen recording.
 - Uploading heavy files to external storage.
 - T-Orbit metadata sync.
@@ -61,6 +63,10 @@
 - System audio is written to `source/system.m4a`.
 - Mixed audio is written to `export/mixed.m4a`.
 - `metadata.json` is created with the MVP schema.
+- Stop opens compact post-call tagging.
+- Closing post-call tagging without saving leaves status `needs_tagging`.
+- Tags persist to `metadata.json` and `db/app.sqlite`.
+- Recordings can be filtered by tag in the app.
 - Logs explain start, stop, success, short recording, and failure cases.
 - The app can run without T-Orbit backend availability.
 

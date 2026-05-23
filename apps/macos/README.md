@@ -23,6 +23,9 @@ apps/macos/.build/app/TOrbitRecorder.app
 - `AppState` core state layer.
 - `RecordingController` protocol.
 - `StubRecordingController` that changes state without writing audio.
+- Compact post-call tagging panel after Stop.
+- MVP tags saved to `metadata.json` and SQLite.
+- Recording list filtering by tag.
 - Basic OSLog logging.
 - Permission descriptions for microphone and future system audio capture.
 
