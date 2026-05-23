@@ -29,7 +29,7 @@ public final class AppState: ObservableObject {
     }
 
     public init(
-        recordingController: RecordingController = AVFoundationMicrophoneRecordingController(),
+        recordingController: RecordingController = MacOSAudioRecordingController(),
         outputFolderURL: URL = RecordingPaths.defaultRoot
     ) {
         self.recordingController = recordingController
@@ -139,6 +139,8 @@ public final class AppState: ObservableObject {
             return .permissionDenied
         case .noInputDevice:
             return .noInputDevice
+        case .systemAudioPermissionDenied, .noShareableDisplay, .systemAudioSetupFailed, .systemAudioWriteFailed, .systemAudioNoSamples:
+            return .idle
         default:
             return .error
         }
@@ -152,6 +154,10 @@ public final class AppState: ObservableObject {
         switch recordingError {
         case .microphonePermissionDenied, .noInputDevice:
             return .idle
+        case .systemAudioPermissionDenied:
+            return .permissionDenied
+        case .noShareableDisplay, .systemAudioSetupFailed, .systemAudioWriteFailed, .systemAudioNoSamples:
+            return .error
         default:
             return .error
         }

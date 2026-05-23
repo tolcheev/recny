@@ -83,3 +83,5 @@ scripts/build_macos.sh
 ```
 
 The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`.
+
+Current recording implementation starts from the menu bar UI and writes `source/mic.m4a` plus `source/system.m4a`. System audio uses ScreenCaptureKit audio capture only; no screen video is written. Mixed export and autostart are separate future steps.

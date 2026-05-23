@@ -105,6 +105,51 @@ struct FileSystemRecordingStoreTests {
         #expect(micTrack.status == "completed")
     }
 
+    @Test
+    func stopSessionCanPersistCompletedSystemAudioTrack() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+        let endedAt = startedAt.addingTimeInterval(10)
+
+        let session = try store.startSession(
+            startedAt: startedAt,
+            source: RecordingSource(appName: "TOrbitRecorder", bundleID: "com.torbit.recorder")
+        )
+        let systemURL = session.sourceURL.appendingPathComponent("system.m4a")
+        try Data([1, 2, 3, 4]).write(to: systemURL)
+
+        let draft = try store.stopSession(
+            session,
+            endedAt: endedAt,
+            duration: 10,
+            status: .needsTagging,
+            audioTracks: [
+                AudioTrackMetadata(
+                    kind: "system",
+                    relativePath: "source/system.m4a",
+                    codec: "aac",
+                    container: "m4a",
+                    durationSec: 10,
+                    sampleRate: 48_000,
+                    channels: 2,
+                    bitrate: 128_000,
+                    status: "completed"
+                )
+            ]
+        )
+
+        let metadata = try store.readMetadata(at: draft.metadataURL)
+        let systemTrack = try #require(metadata.audioTracks.first)
+        #expect(systemTrack.kind == "system")
+        #expect(systemTrack.codec == "aac")
+        #expect(systemTrack.container == "m4a")
+        #expect(systemTrack.sampleRate == 48_000)
+        #expect(systemTrack.channels == 2)
+        #expect(systemTrack.bitrate == 128_000)
+        #expect(systemTrack.status == "completed")
+    }
+
     private static func testOutputFolder() -> URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
