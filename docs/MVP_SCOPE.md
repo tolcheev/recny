@@ -16,7 +16,9 @@
 - Compact post-call tagging panel after stop.
 - MVP tags.
 - Status values: `needs_tagging`, `saved`, `needs_review`, `reviewed`, `failed`.
-- SQLite tag index for local recording filtering.
+- SQLite recordings index for local filters and library actions.
+- Recordings list filters: date, status, source app, title, and tags.
+- Local recording actions: Open in Finder, Play mixed preview, edit title, add tags, delete with confirmation.
 - Local storage under `~/Recordings/TOrbitRecorder/`.
 - Local logs for lifecycle events and failures.
 - Basic failure classification into `Inbox/Failed/`.
@@ -37,7 +39,7 @@
 
 ## Later But Planned
 
-- Rich local library management.
+- Rich local library management beyond the MVP list/actions.
 - Advanced tag management beyond the MVP fixed tag set.
 - Screen recording.
 - Uploading heavy files to external storage.
@@ -66,7 +68,8 @@
 - Stop opens compact post-call tagging.
 - Closing post-call tagging without saving leaves status `needs_tagging`.
 - Tags persist to `metadata.json` and `db/app.sqlite`.
-- Recordings can be filtered by tag in the app.
+- Recordings can be filtered by date, status, source app, title, and tag in the app.
+- Local records can be opened, played, retitled, retagged, and deleted with confirmation.
 - Logs explain start, stop, success, short recording, and failure cases.
 - The app can run without T-Orbit backend availability.
 

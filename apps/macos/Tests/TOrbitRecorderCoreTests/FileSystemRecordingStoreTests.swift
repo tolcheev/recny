@@ -194,6 +194,105 @@ struct FileSystemRecordingStoreTests {
         #expect(systemTrack.status == "completed")
     }
 
+    @Test
+    func sqliteIndexSupportsInsertReadAndFilters() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+        let endedAt = startedAt.addingTimeInterval(10)
+
+        let session = try store.startSession(
+            startedAt: startedAt,
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let draft = try store.stopSession(
+            session,
+            endedAt: endedAt,
+            duration: 10,
+            status: .needsReview,
+            audioTracks: []
+        )
+
+        var postCallDraft = draft
+        postCallDraft.title = "Lead Review"
+        postCallDraft.category = "sales"
+        postCallDraft.participant = "Ivan"
+        postCallDraft.tags = ["#лид", "#важное"]
+        postCallDraft.status = .saved
+        try store.saveDraft(postCallDraft)
+
+        let filtered = try store.recordings(
+            filters: RecordingListFilters(
+                dateText: "2024-05",
+                status: .saved,
+                sourceAppText: "zoom",
+                titleText: "lead",
+                tags: ["#лид"]
+            )
+        )
+
+        let summary = try #require(filtered.first)
+        #expect(summary.id == session.id)
+        #expect(summary.title == "Lead Review")
+        #expect(summary.status == .saved)
+        #expect(summary.sourceApp == "Zoom")
+        #expect(summary.tags == ["#важное", "#лид"])
+    }
+
+    @Test
+    func recordingsScansMetadataWhenSQLiteIsEmpty() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+        let endedAt = startedAt.addingTimeInterval(10)
+
+        let session = try store.startSession(
+            startedAt: startedAt,
+            source: RecordingSource(appName: "FaceTime", bundleID: "com.apple.FaceTime")
+        )
+        let draft = try store.stopSession(
+            session,
+            endedAt: endedAt,
+            duration: 10,
+            status: .needsTagging,
+            audioTracks: []
+        )
+
+        try FileManager.default.removeItem(at: store.paths.dbURL)
+
+        let recordings = try store.recordings(filters: RecordingListFilters(sourceAppText: "facetime"))
+
+        #expect(recordings.map(\.id).contains(draft.id))
+        #expect(FileManager.default.fileExists(atPath: store.paths.dbURL.path(percentEncoded: false)))
+    }
+
+    @Test
+    func updatesTitleTagsAndDeletesLocalRecord() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let session = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let draft = try store.stopSession(
+            session,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_030),
+            duration: 30,
+            status: .needsTagging,
+            audioTracks: []
+        )
+
+        try store.updateRecording(id: draft.id, title: "Updated title", tags: ["#разбор", "#важное"])
+        let updated = try #require(store.recordings(filters: RecordingListFilters(titleText: "updated")).first)
+        #expect(updated.title == "Updated title")
+        #expect(updated.tags == ["#важное", "#разбор"])
+
+        try store.deleteLocalRecord(updated)
+
+        #expect(!FileManager.default.fileExists(atPath: updated.sessionFolderURL.path(percentEncoded: false)))
+        #expect(try store.recordings(filters: RecordingListFilters()).isEmpty)
+    }
+
     private static func testOutputFolder() -> URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

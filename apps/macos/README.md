@@ -31,7 +31,9 @@ apps/macos/.build/app/TOrbitRecorder.app
 - `StubRecordingController` that changes state without writing audio.
 - Compact post-call tagging panel after Stop.
 - MVP tags saved to `metadata.json` and SQLite.
-- Recording list filtering by tag.
+- Local recordings list backed by `~/Recordings/TOrbitRecorder/db/app.sqlite`.
+- Recording filters by date, status, source app, title, and tag.
+- Local library actions: Open in Finder, Play mixed preview, edit title, add tags, and delete with confirmation.
 - File-system storage with temporary sessions in `Inbox/Unsorted` and finalized sessions in `Library/YYYY/MM`.
 - Basic OSLog logging.
 - Permission descriptions for microphone and Screen & System Audio Recording.

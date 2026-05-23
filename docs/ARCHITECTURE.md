@@ -76,7 +76,9 @@ Owns local paths:
 
 The MVP canonical record is the session folder plus `metadata.json`.
 
-SQLite at `db/app.sqlite` mirrors local recording metadata for the MVP recording list and tag filtering. It must not become required for MVP playback or file recovery.
+SQLite at `db/app.sqlite` mirrors local recording metadata for the MVP recording list, filters, and edit/delete actions. It must not become required for MVP playback or file recovery.
+
+The local index contains `recordings`, `tags`, and `recording_tags`. When the database is empty, the storage layer can rebuild it by scanning `Library/` and `Inbox/` for `metadata.json`.
 
 ### Protocol Layer
 
@@ -100,8 +102,9 @@ The protocol package should allow future T-Orbit sync without forcing backend co
 5. On stop, the storage layer writes `metadata.json` with `status: "needs_tagging"`.
 6. The app opens compact post-call tagging.
 7. Saving post-call tags updates `metadata.json` and `db/app.sqlite`.
-8. Recordings can be filtered locally by tag.
-9. Logs record lifecycle and failures.
+8. Recordings can be filtered locally by date, status, source app, title, and tag.
+9. The recordings list can open a folder, play `export/mixed.m4a`, edit title/tags, and delete a local record with confirmation.
+10. Logs record lifecycle and failures.
 
 ## Future Integration Boundary
 
