@@ -79,8 +79,10 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         let endedAt = Date()
         let duration = max(0, endedAt.timeIntervalSince(startedAt))
         let micURL = activeSession.sourceURL.appendingPathComponent("mic.m4a")
+        let systemURL = activeSession.sourceURL.appendingPathComponent("system.m4a")
+        let mixedURL = activeSession.exportURL.appendingPathComponent("mixed.m4a")
 
-        try validateRecordedFile(at: micURL)
+        let micFileSize = try validateRecordedFile(at: micURL)
 
         let micTrack = AudioTrackMetadata(
             kind: "microphone",
@@ -91,14 +93,37 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             sampleRate: Self.sampleRate,
             channels: Self.channels,
             bitrate: Self.bitrate,
+            fileSizeBytes: micFileSize,
             status: "completed"
         )
+        let mixedTrack: AudioTrackMetadata
+        let sessionStatus: TaggingStatus
+        do {
+            mixedTrack = try await MixedAudioPreviewGenerator()
+                .createPreview(micURL: micURL, systemURL: systemURL, outputURL: mixedURL)
+                .track
+            sessionStatus = .needsTagging
+        } catch {
+            AppLogger.recording.error("Mixed audio preview failed for microphone recording: \(String(describing: error), privacy: .public)")
+            mixedTrack = AudioTrackMetadata(
+                kind: "mixed",
+                relativePath: "export/mixed.m4a",
+                codec: "aac",
+                container: "m4a",
+                sampleRate: MixedAudioPreviewGenerator.sampleRate,
+                channels: MixedAudioPreviewGenerator.channels,
+                bitrate: MixedAudioPreviewGenerator.bitrate,
+                status: "failed",
+                error: String(describing: error)
+            )
+            sessionStatus = .failed
+        }
         let draft = try store.stopSession(
             activeSession,
             endedAt: endedAt,
             duration: duration,
-            status: .needsTagging,
-            audioTracks: [micTrack]
+            status: sessionStatus,
+            audioTracks: [micTrack, mixedTrack]
         )
 
         self.startedAt = nil
@@ -142,7 +167,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         }
     }
 
-    private func validateRecordedFile(at url: URL) throws {
+    private func validateRecordedFile(at url: URL) throws -> Int64 {
         let path = url.path(percentEncoded: false)
         guard FileManager.default.fileExists(atPath: path) else {
             throw RecordingControllerError.fileWriteFailed("Missing file at \(path)")
@@ -153,6 +178,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         guard let size, size.int64Value > 0 else {
             throw RecordingControllerError.fileWriteFailed("Empty file at \(path)")
         }
+        return size.int64Value
     }
 
     nonisolated public func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {

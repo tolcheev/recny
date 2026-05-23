@@ -13,6 +13,7 @@ struct RecorderPanelView: View {
                 StatusRow(label: "Duration", value: appState.formattedDuration)
                 StatusRow(label: "Mic", value: appState.micStatus.rawValue)
                 StatusRow(label: "System Audio", value: appState.systemAudioStatus.rawValue)
+                StatusRow(label: "Mixed Preview", value: appState.mixedPreviewPath ?? "Not created")
                 StatusRow(label: "Output Folder", value: appState.outputFolderPath)
             }
 

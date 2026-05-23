@@ -9,6 +9,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var systemAudioStatus: CaptureStatus
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var postCallDraft: PostCallDraft?
+    @Published public private(set) var mixedPreviewPath: String?
     @Published public var isPostCallPanelPresented: Bool
     @Published public private(set) var recordings: [RecordingSummary]
     @Published public private(set) var selectedTagFilter: String?
@@ -40,6 +41,7 @@ public final class AppState: ObservableObject {
         self.systemAudioStatus = .idle
         self.errorMessage = nil
         self.postCallDraft = nil
+        self.mixedPreviewPath = nil
         self.isPostCallPanelPresented = false
         self.recordings = []
         self.selectedTagFilter = nil
@@ -62,6 +64,7 @@ public final class AppState: ObservableObject {
             apply(update)
             recordingStartedAt = update.startedAt ?? Date()
             currentRecordingDuration = 0
+            mixedPreviewPath = nil
             errorMessage = nil
             startDurationClock()
             AppLogger.recording.info("Recording state changed to recording")
@@ -83,6 +86,7 @@ public final class AppState: ObservableObject {
             }
 
             postCallDraft = draft
+            mixedPreviewPath = mixedPreviewPath(for: draft)
             isPostCallPanelPresented = true
             try reloadRecordings()
             errorMessage = nil
@@ -169,6 +173,14 @@ public final class AppState: ObservableObject {
         } catch {
             AppLogger.storage.error("Failed to reload recordings: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    private func mixedPreviewPath(for draft: PostCallDraft) -> String? {
+        let url = draft.sessionFolderURL
+            .appendingPathComponent("export", isDirectory: true)
+            .appendingPathComponent("mixed.m4a")
+        let path = url.path(percentEncoded: false)
+        return FileManager.default.fileExists(atPath: path) ? path : nil
     }
 
     private func startDurationClock() {
