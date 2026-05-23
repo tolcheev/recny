@@ -114,6 +114,18 @@ MVP rules:
       "relative_path": "source/mic.m4a",
       "sample_rate": 48000,
       "status": "completed"
+    },
+    {
+      "bitrate": 128000,
+      "channels": 2,
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "error": null,
+      "kind": "system",
+      "relative_path": "source/system.m4a",
+      "sample_rate": 48000,
+      "status": "completed"
     }
   ],
   "participants": [],

@@ -20,8 +20,13 @@ public enum RecordingControllerError: Error, Equatable, Sendable, CustomStringCo
     case notRecording
     case microphonePermissionDenied
     case noInputDevice
+    case systemAudioPermissionDenied(String)
+    case noShareableDisplay
     case recorderSetupFailed(String)
     case fileWriteFailed(String)
+    case systemAudioSetupFailed(String)
+    case systemAudioWriteFailed(String)
+    case systemAudioNoSamples
 
     public var description: String {
         switch self {
@@ -33,10 +38,20 @@ public enum RecordingControllerError: Error, Equatable, Sendable, CustomStringCo
             return "Microphone permission is denied"
         case .noInputDevice:
             return "No microphone input device is available"
+        case .systemAudioPermissionDenied(let message):
+            return "Screen & System Audio Recording permission is unavailable: \(message)"
+        case .noShareableDisplay:
+            return "No display is available for ScreenCaptureKit system audio capture"
         case .recorderSetupFailed(let message):
             return "Failed to configure microphone recorder: \(message)"
         case .fileWriteFailed(let message):
             return "Failed to write microphone recording: \(message)"
+        case .systemAudioSetupFailed(let message):
+            return "Failed to configure system audio recorder: \(message)"
+        case .systemAudioWriteFailed(let message):
+            return "Failed to write system audio recording: \(message)"
+        case .systemAudioNoSamples:
+            return "System audio capture produced no samples"
         }
     }
 }

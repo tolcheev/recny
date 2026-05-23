@@ -11,10 +11,14 @@ The engine is a testable core package, not SwiftUI view logic.
 - Capture microphone audio.
 - Store microphone audio as `source/mic.m4a`.
 - Record microphone audio as AAC in an m4a container at 48 kHz, mono, 128 kbps.
+- Capture full system audio through ScreenCaptureKit audio output.
+- Store system audio as `source/system.m4a`.
+- Record system audio as AAC in an m4a container at 48 kHz, stereo, 128 kbps.
+- Do not add or persist a screen video output in the MVP.
 - Save metadata for every session.
 - Log lifecycle events and failures.
 
-System audio capture and mixed export are not implemented in the current microphone recording step.
+Mixed export is not implemented in the current recording step.
 
 ## Preferred Native APIs
 
@@ -47,8 +51,9 @@ State transitions must be logged with timestamps and session id.
 3. Resolve the session staging path.
 4. Check microphone permission.
 5. Check microphone input device availability.
-6. Start microphone writer.
-7. Emit a lifecycle log event.
+6. Start ScreenCaptureKit system audio writer.
+7. Start microphone writer.
+8. Emit a lifecycle log event.
 
 If any required permission or capture path fails, the engine must write failure metadata when possible and classify the session under `Inbox/Failed/`.
 
@@ -67,9 +72,12 @@ If any required permission or capture path fails, the engine must write failure 
 ```text
 source/
   mic.m4a
+  system.m4a
 export/
 metadata.json
 ```
+
+`export/mixed.m4a` is part of the MVP storage contract but is not produced in the current capture step.
 
 ## Audio Track Metadata
 

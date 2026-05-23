@@ -21,11 +21,11 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>TOrbitRecorder will use system audio capture to record call audio in a future recorder engine.</string>
+	<string>TOrbitRecorder needs system audio access to record call audio played by macOS apps.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TOrbitRecorder needs microphone access to record your side of calls.</string>
 	<key>NSScreenCaptureUsageDescription</key>
-	<string>TOrbitRecorder may use ScreenCaptureKit permissions for future system audio capture support. Screen video recording is not part of the MVP.</string>
+	<string>TOrbitRecorder uses ScreenCaptureKit permission for system audio capture. Screen video recording is not part of the MVP.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

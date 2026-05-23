@@ -17,6 +17,7 @@ let package = Package(
             path: "Sources/TOrbitRecorderCore",
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
+                .linkedFramework("ScreenCaptureKit"),
                 .linkedLibrary("sqlite3")
             ]
         ),
@@ -31,7 +32,17 @@ let package = Package(
             dependencies: ["TOrbitRecorderCore"],
             path: "Sources/TOrbitRecorderMicSmokeTest",
             linkerSettings: [
-                .linkedFramework("AVFoundation")
+                .linkedFramework("AVFoundation"),
+                .linkedFramework("ScreenCaptureKit")
+            ]
+        ),
+        .executableTarget(
+            name: "TOrbitRecorderSystemAudioSmokeTest",
+            dependencies: ["TOrbitRecorderCore"],
+            path: "Sources/TOrbitRecorderSystemAudioSmokeTest",
+            linkerSettings: [
+                .linkedFramework("AVFoundation"),
+                .linkedFramework("ScreenCaptureKit")
             ]
         ),
         .testTarget(

@@ -23,15 +23,17 @@ apps/macos/.build/app/TOrbitRecorder.app
 - `AppState` core state layer.
 - `RecordingController` protocol.
 - Real microphone recording through AVFoundation into `source/mic.m4a`.
+- Real system audio recording through ScreenCaptureKit audio output into `source/system.m4a`.
+- ScreenCaptureKit is configured for audio capture only; no screen video stream is written.
 - `StubRecordingController` that changes state without writing audio.
 - Compact post-call tagging panel after Stop.
 - MVP tags saved to `metadata.json` and SQLite.
 - Recording list filtering by tag.
 - File-system storage with temporary sessions in `Inbox/Unsorted` and finalized sessions in `Library/YYYY/MM`.
 - Basic OSLog logging.
-- Permission descriptions for microphone and future system audio capture.
+- Permission descriptions for microphone and Screen & System Audio Recording.
 
-System audio recording, mixed export, autostart, screen capture, cloud upload, T-Orbit sync, and AI are intentionally not implemented in this step.
+Mixed export, autostart, screen video recording, cloud upload, T-Orbit sync, and AI are intentionally not implemented in this step.
 
 ## Microphone Smoke Test
 
@@ -42,3 +44,13 @@ swift run --package-path apps/macos TOrbitRecorderMicSmokeTest --duration 10 --r
 ```
 
 If permission is `not_determined`, `denied`, or `restricted`, the smoke test exits before recording and prints the exact authorization status.
+
+## System Audio Smoke Test
+
+Play audible audio from another macOS app, then run:
+
+```sh
+swift run --package-path apps/macos TOrbitRecorderSystemAudioSmokeTest --duration 10 --root /tmp/TOrbitRecorderSystemAudioSmokeTest
+```
+
+The command writes `/tmp/TOrbitRecorderSystemAudioSmokeTest/source/system.m4a` and fails explicitly if ScreenCaptureKit cannot start or no system audio samples are captured. Grant Screen & System Audio Recording permission to the terminal process if macOS prompts for it, then rerun the command.

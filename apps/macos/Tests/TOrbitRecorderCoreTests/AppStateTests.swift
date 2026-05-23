@@ -42,6 +42,24 @@ struct AppStateTests {
     }
 
     @Test
+    func systemAudioPermissionErrorUpdatesSystemStatus() async {
+        let appState = AppState(
+            recordingController: FailingRecordingController(
+                error: RecordingControllerError.systemAudioPermissionDenied("denied")
+            ),
+            outputFolderURL: Self.testOutputFolder()
+        )
+
+        await #expect(throws: RecordingControllerError.systemAudioPermissionDenied("denied")) {
+            try await appState.startRecording()
+        }
+
+        #expect(appState.status == .error)
+        #expect(appState.micStatus == .idle)
+        #expect(appState.systemAudioStatus == .permissionDenied)
+    }
+
+    @Test
     func stopCreatesNeedsTaggingMetadata() async throws {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(
@@ -108,5 +126,21 @@ struct AppStateTests {
             .appendingPathComponent(".build", isDirectory: true)
             .appendingPathComponent("test-recordings", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    }
+}
+
+private final class FailingRecordingController: RecordingController {
+    private let error: Error
+
+    init(error: Error) {
+        self.error = error
+    }
+
+    func startRecording(outputFolder: URL) async throws -> RecordingControllerUpdate {
+        throw error
+    }
+
+    func stopRecording() async throws -> RecordingControllerUpdate {
+        throw error
     }
 }
