@@ -70,6 +70,7 @@ tests/              Integration fixtures and test assets
 - `docs/STORAGE_FORMAT.md`: folder layout and metadata schema.
 - `docs/SECURITY_PRIVACY.md`: local-first privacy constraints.
 - `docs/ROADMAP.md`: staged future work.
+- `MANUAL_TESTING.md`: manual macOS MVP validation checklist and troubleshooting.
 
 ## Development Rules
 
@@ -106,6 +107,8 @@ open -n apps/macos/.build/app/TOrbitRecorder.app
 The app runs as a menu bar app. Use the menu bar icon for Start Recording, Stop Recording, Open Recordings Folder, Settings, and Quit.
 
 ## Manual MVP End-To-End Check
+
+Detailed manual validation lives in `MANUAL_TESTING.md`.
 
 Before the first recording, grant permissions to `TOrbitRecorder` in macOS System Settings:
 
