@@ -70,6 +70,7 @@ tests/              Integration fixtures and test assets
 - `docs/AUTOSTART_RULES.md`: automatic start policy.
 - `docs/STORAGE_FORMAT.md`: folder layout and metadata schema.
 - `docs/SECURITY_PRIVACY.md`: local-first privacy constraints.
+- `docs/UI_REDESIGN.md`: MVP UI structure and redesign notes.
 - `docs/ROADMAP.md`: staged future work.
 - `MANUAL_TESTING.md`: manual macOS MVP validation checklist and troubleshooting.
 
@@ -119,7 +120,7 @@ open /Applications/TOrbitRecorder.app
 
 Use `dist/` for shareable local artifacts and `/Applications/TOrbitRecorder.app` for a normal macOS launch. Do not use `apps/macos/.build/app/TOrbitRecorder.app` except when debugging the build script output directly.
 
-Current recording implementation starts from the menu bar UI or Auto-start Engine v1 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The main window is a compact recorder surface; Library and Diagnostics open as separate windows.
+Current recording implementation starts from the menu bar UI or Auto-start Engine v1 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows.
 
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
 
@@ -186,7 +187,7 @@ metadata.json
 ```
 
 8. Confirm the post-call tagging panel opens.
-9. Add title, category, participant text, tags, and status, then save.
+9. Add title, participant text, and tags, then save.
 10. Open Library and confirm the recording appears in the recent recordings list.
 11. Filter by a saved tag.
 12. Click Open in Finder on the recording row and confirm the recording folder opens.

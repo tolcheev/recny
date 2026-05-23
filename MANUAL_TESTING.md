@@ -105,26 +105,26 @@ Expected metadata:
 3. Close the panel without saving.
 4. Confirm the metadata status remains `needs_tagging`.
 5. Open Library.
-6. Click Edit on the recording row and edit title/tags in the edit dialog.
+6. Click More -> Tag on the recording row and edit title/tags in the tag dialog.
 7. Save edits.
 8. Confirm `metadata.json` and the SQLite list reflect the changed title/tags.
 
-## Recordings List
+## Library
 
 Check the MVP filters:
 
 - date
 - status
 - source app
-- title
+- title search
 - tags
 
 Check actions:
 
-- Open in Finder
+- Open recording folder
 - Play mixed preview
-- Edit title
-- Add/remove tags
+- Tag/Edit title
+- Add/remove tags in the tag dialog
 - Delete local record with confirmation
 
 Delete should remove the local session folder and the SQLite index row.

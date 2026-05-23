@@ -1,0 +1,107 @@
+# UI Redesign
+
+## Before Problems
+
+The early MVP UI exposed too much implementation detail:
+
+- recorder state, library filtering, tag controls, and recovery information competed on the main screen
+- raw statuses such as `needs_tagging` and `short_recording` leaked into user-facing areas
+- long paths and file internals made the app feel like a debug panel
+- the primary Start/Stop workflow was not visually dominant
+- Library and Diagnostics were not clearly separated from daily recording
+
+## New Screen Structure
+
+The app now uses a recorder-first information architecture:
+
+- Main Window: daily recording surface with current status, one primary action, last recording, and footer links
+- Library Window: recent recordings, search, collapsed filters, and per-recording actions
+- Settings Window: grouped recording, auto-start, storage, hotkeys, and privacy controls
+- Diagnostics Window: permissions, device diagnostics, writable storage check, recoverable recordings, logs, and test recording
+- Tag Dialog: optional title, optional participant, quick tags, Save/Cancel
+
+The main window deliberately avoids database controls, raw technical status, recovery details, long paths, and permanent tag fields.
+
+## Main Window States
+
+### Idle
+
+The current recording card shows:
+
+- `Ready`
+- one primary `Start Recording` button
+- selected microphone input
+- system audio readiness
+- auto-start state
+
+The header shows the app name and `Auto-start On` or `Auto-start Off`.
+
+### Recording
+
+The recording card switches to:
+
+- `Recording`
+- large timer
+- one primary `Stop Recording` button
+- active microphone/system audio details
+- subtle copy that all system audio is being recorded
+
+### Error
+
+The error state avoids stack traces on the main screen. It shows:
+
+- `Recording failed`
+- short human-readable reason when known
+- `Open Diagnostics`
+- `Try Again`
+
+Detailed error text remains in Diagnostics.
+
+## Library Behavior
+
+Library is a separate window opened from the main footer or menu bar. It defaults to recent recordings and includes:
+
+- search by title
+- collapsed filters for date, status, source app, and tags
+- recording rows with title, started time, duration, source app, human status badge, and compact tags
+- row actions: Play, Open, More
+- More actions: Tag and Delete Local Record
+
+Title, participant, and tags are edited through the Tag dialog instead of inline fields.
+
+## Diagnostics Behavior
+
+Diagnostics is separate from daily use. It includes:
+
+- microphone permission
+- Screen & System Audio Recording permission
+- output folder writable status
+- selected input device
+- available input devices
+- Bluetooth headset microphone warning when relevant
+- last recorder error
+- recoverable recordings with recovery/open actions
+- clear empty recoverables
+- log folder
+- 10 second test recording
+
+Recoverable recordings are never shown on the main screen.
+
+## Design System
+
+The SwiftUI UI now uses small reusable components:
+
+- `RecorderCard` for subtle macOS cards
+- `StatusBadge` for human-readable state
+- `InfoRow` for compact metadata
+- `PrimaryRecordingButton` for the single Start/Stop action
+- `RecordingDisplayFormatter` for shared UI copy and formatting
+
+The design keeps native macOS styling, supports light/dark mode through system colors, and avoids heavy visual dependencies.
+
+## Known Limitations
+
+- No screenshot automation is currently wired for the native macOS window.
+- Settings still contain disabled placeholders for audio quality presets and hotkeys because the runtime behavior is not implemented in MVP.
+- Library uses simple title search and collapsed filters; advanced saved views are out of scope.
+- Diagnostics test recording requires local macOS microphone and Screen & System Audio Recording permissions.

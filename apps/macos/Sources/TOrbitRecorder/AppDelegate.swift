@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import SwiftUI
 import TOrbitRecorderCore
 
 @MainActor
@@ -11,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var recordingToggleItem: NSMenuItem?
     private var playLastItem: NSMenuItem?
     private var openLastFolderItem: NSMenuItem?
+    private var fallbackMainWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -143,13 +145,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recordingToggleItem?.isEnabled = true
         playLastItem?.isEnabled = hasPlayableLastRecording
         openLastFolderItem?.isEnabled = appState.lastRecording != nil
-        let symbolName = appState.status == .recording && appState.privacySettings.showRecordingIndicator
-            ? "record.circle.fill"
-            : "record.circle"
+        let symbolName: String
+        let accessibilityDescription: String
+        switch appState.status {
+        case .recording where appState.privacySettings.showRecordingIndicator:
+            symbolName = "record.circle.fill"
+            accessibilityDescription = "TOrbit Recorder is recording"
+        case .error:
+            symbolName = "exclamationmark.circle.fill"
+            accessibilityDescription = "TOrbit Recorder error"
+        default:
+            symbolName = "record.circle"
+            accessibilityDescription = "TOrbit Recorder idle"
+        }
         statusItem.button?.image = NSImage(
             systemSymbolName: symbolName,
-            accessibilityDescription: "TOrbitRecorder"
+            accessibilityDescription: accessibilityDescription
         )
+        statusItem.button?.contentTintColor = switch appState.status {
+        case .recording where appState.privacySettings.showRecordingIndicator:
+            .systemRed
+        case .error:
+            .systemOrange
+        default:
+            nil
+        }
     }
 
     @objc private func showWindow() {
@@ -214,11 +234,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
         let mainWindow = NSApp.windows.first { window in
-            window.title == "TOrbitRecorder"
-        } ?? NSApp.windows.first
+            window.title == "TOrbit Recorder"
+        } ?? fallbackMainWindow ?? makeFallbackMainWindow()
 
-        mainWindow?.makeKeyAndOrderFront(nil)
-        mainWindow?.orderFrontRegardless()
+        mainWindow.makeKeyAndOrderFront(nil)
+        mainWindow.orderFrontRegardless()
+    }
+
+    private func makeFallbackMainWindow() -> NSWindow {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 560),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "TOrbit Recorder"
+        window.contentViewController = NSHostingController(rootView: MainRecorderView(appState: appState))
+        window.isReleasedWhenClosed = false
+        window.center()
+        fallbackMainWindow = window
+        return window
     }
 
     private var hasPlayableLastRecording: Bool {

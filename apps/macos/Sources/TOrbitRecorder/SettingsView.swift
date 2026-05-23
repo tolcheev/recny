@@ -7,7 +7,7 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 16) {
                 recordingSection
                 autoStartSection
                 storageSection
@@ -16,15 +16,22 @@ struct SettingsView: View {
             }
             .padding(20)
         }
-        .frame(width: 620, height: 640)
+        .frame(width: 660, height: 680)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     private var recordingSection: some View {
         SettingsSection(title: "Recording") {
-            Picker("Audio quality preset", selection: .constant(appState.recordingSettings.audioQualityPreset)) {
-                Text("Standard AAC 48 kHz").tag(AudioQualityPreset.standard)
+            Picker("Audio quality", selection: .constant("standard")) {
+                Text("Compact").tag("compact")
+                Text("Standard").tag("standard")
+                Text("High").tag("high")
             }
             .disabled(true)
+
+            Text("Quality presets are coming later. MVP uses Standard AAC 48 kHz.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             Picker(
                 "Preferred microphone",
@@ -61,7 +68,7 @@ struct SettingsView: View {
             }
 
             Toggle(
-                "System audio enabled",
+                "System audio recording",
                 isOn: Binding(
                     get: { appState.recordingSettings.systemAudioEnabled },
                     set: { appState.setSystemAudioEnabled($0) }
@@ -69,7 +76,7 @@ struct SettingsView: View {
             )
 
             Toggle(
-                "Mixed preview enabled",
+                "Mixed preview",
                 isOn: Binding(
                     get: { appState.recordingSettings.mixedPreviewEnabled },
                     set: { appState.setMixedPreviewEnabled($0) }
@@ -81,7 +88,7 @@ struct SettingsView: View {
     private var autoStartSection: some View {
         SettingsSection(title: "Auto-start") {
             Toggle(
-                "Enabled",
+                "Auto-start enabled",
                 isOn: Binding(
                     get: { appState.autoStartSettings.isEnabled },
                     set: { appState.setAutoStartEnabled($0) }
@@ -138,33 +145,35 @@ struct SettingsView: View {
             ) {
                 Text("Short recording threshold: \(Int(appState.autoStartSettings.shortRecordingThresholdSeconds)) sec")
             }
-
-            Text("Last decision: \(appState.autoStartLastDecision)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
         }
     }
 
     private var storageSection: some View {
         SettingsSection(title: "Storage") {
-            Text(appState.outputFolderPath)
-                .font(.callout.monospaced())
-                .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Local library location")
+                    .font(.callout.weight(.medium))
+                Text(appState.outputFolderPath)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
 
             HStack(spacing: 8) {
                 Button {
-                    chooseOutputFolder()
-                } label: {
-                    Label("Choose Folder", systemImage: "folder.badge.plus")
-                }
-                .disabled(appState.status == .recording)
-
-                Button {
                     openOutputFolder()
                 } label: {
-                    Label("Open Folder", systemImage: "folder")
+                    Label("Open Library", systemImage: "folder")
                 }
+
+                Button {
+                    chooseOutputFolder()
+                } label: {
+                    Label("Change Location", systemImage: "folder.badge.plus")
+                }
+                .disabled(appState.status == .recording)
 
                 Button {
                     appState.resetStorageRootToDefault()
@@ -178,11 +187,11 @@ struct SettingsView: View {
 
     private var hotkeysSection: some View {
         SettingsSection(title: "Hotkeys") {
-            TextField("Start/stop hotkey", text: .constant("Not configured in MVP"))
+            TextField("Start/stop hotkey", text: .constant("Coming later"))
                 .textFieldStyle(.roundedBorder)
                 .disabled(true)
 
-            TextField("Add marker", text: .constant("Later"))
+            TextField("Add marker", text: .constant("Coming later"))
                 .textFieldStyle(.roundedBorder)
                 .disabled(true)
         }
@@ -192,6 +201,10 @@ struct SettingsView: View {
         SettingsSection(title: "Privacy") {
             Toggle("Local-only mode", isOn: .constant(appState.privacySettings.localOnlyMode))
                 .disabled(true)
+
+            Text("MVP recordings stay on this Mac.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             Toggle(
                 "Show recording indicator",
@@ -256,6 +269,7 @@ private struct SettingsSection<Content: View>: View {
                 content
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 2)
         } label: {
             Text(title)
                 .font(.headline)

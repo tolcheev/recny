@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import CoreGraphics
+import Foundation
 import SwiftUI
 import TOrbitRecorderCore
 
@@ -16,6 +17,7 @@ struct DiagnosticsView: View {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 permissionsSection
+                deviceSection
                 errorSection
                 recoverableSection
                 logsSection
@@ -33,7 +35,7 @@ struct DiagnosticsView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text("Diagnostics")
                 .font(.title2.weight(.semibold))
-            Text("Permissions, recovery, logs, and a local test recording action.")
+            Text("Permissions, devices, recovery, logs, and test recording.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -44,13 +46,52 @@ struct DiagnosticsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 DiagnosticLine(label: "Microphone", value: microphonePermission)
                 DiagnosticLine(label: "Screen & System Audio Recording", value: screenCapturePermission)
-                DiagnosticLine(label: "Selected mic", value: appState.selectedMicrophoneName)
+                DiagnosticLine(label: "Output folder", value: outputFolderWritable)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var deviceSection: some View {
+        GroupBox("Device Diagnostics") {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    DiagnosticLine(
+                        label: "Selected input",
+                        value: RecordingDisplayFormatter.microphoneName(appState.selectedMicrophoneName)
+                    )
+
+                    Spacer()
+
+                    Button {
+                        appState.refreshMicrophoneDevices()
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+                }
 
                 if let warning = appState.microphoneInputWarning {
                     Text(warning)
                         .font(.caption)
                         .foregroundStyle(.orange)
                         .textSelection(.enabled)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Available input devices")
+                        .font(.callout.weight(.medium))
+
+                    if appState.availableMicrophoneDevices.isEmpty {
+                        Text("No input devices detected.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(appState.availableMicrophoneDevices) { device in
+                            Text(device.name)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -142,14 +183,14 @@ struct DiagnosticsView: View {
     private var testRecordingSection: some View {
         GroupBox("Test Recording") {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Runs a short local recording with the same pipeline as the main Start button.")
+                Text("Runs a 10 second local recording with the same pipeline as the main Start button.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
 
                 Button {
                     runTestRecording()
                 } label: {
-                    Label("Run test recording", systemImage: "waveform")
+                    Label("Run 10 sec test recording", systemImage: "waveform")
                 }
                 .disabled(appState.status == .recording || isRunningTestRecording)
 
@@ -183,6 +224,21 @@ struct DiagnosticsView: View {
         CGPreflightScreenCaptureAccess() ? "Authorized" : "Missing permission"
     }
 
+    private var outputFolderWritable: String {
+        do {
+            try FileManager.default.createDirectory(
+                at: appState.outputFolderURL,
+                withIntermediateDirectories: true
+            )
+            let testURL = appState.outputFolderURL.appendingPathComponent(".torbit-write-test")
+            try Data().write(to: testURL)
+            try? FileManager.default.removeItem(at: testURL)
+            return "Writable"
+        } catch {
+            return "Not writable"
+        }
+    }
+
     private var logsURL: URL {
         appState.outputFolderURL.appendingPathComponent("logs", isDirectory: true)
     }
@@ -201,12 +257,12 @@ struct DiagnosticsView: View {
 
     private func runTestRecording() {
         isRunningTestRecording = true
-        testResult = "Running 5 second test recording..."
+        testResult = "Running 10 second test recording..."
 
         Task {
             do {
                 try await appState.startRecording()
-                try await Task.sleep(for: .seconds(5))
+                try await Task.sleep(for: .seconds(10))
                 try await appState.stopRecording()
                 testResult = "Test recording stopped. Check Last Recording and Library."
             } catch {

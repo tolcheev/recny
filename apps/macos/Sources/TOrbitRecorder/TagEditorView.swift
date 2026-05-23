@@ -1,7 +1,7 @@
 import SwiftUI
 import TOrbitRecorderCore
 
-struct PostCallTaggingView: View {
+struct TagEditorView: View {
     private static let quickTags: [String] = [
         "#ученик",
         "#лид",
@@ -28,15 +28,22 @@ struct PostCallTaggingView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Tag recording")
-                .font(.title3.weight(.semibold))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Tag recording")
+                    .font(.title3.weight(.semibold))
+                Text("Add just enough context to find this call later.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
 
             VStack(alignment: .leading, spacing: 10) {
-                TextField("Optional title", text: $draft.title)
+                TextField("Title, optional", text: $draft.title)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("Recording title")
 
-                TextField("Optional participant", text: $draft.participant)
+                TextField("Participant, optional", text: $draft.participant)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("Participant")
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -50,6 +57,7 @@ struct PostCallTaggingView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(draft.tags.contains(tag) ? .blue : .secondary)
+                        .accessibilityLabel(draft.tags.contains(tag) ? "Remove tag \(tag)" : "Add tag \(tag)")
                     }
                 }
             }
@@ -64,21 +72,13 @@ struct PostCallTaggingView: View {
             HStack {
                 Spacer()
 
-                Button("Close") {
+                Button("Cancel") {
                     dismiss()
                 }
+                .keyboardShortcut(.cancelAction)
 
                 Button("Save") {
-                    do {
-                        var savedDraft = draft
-                        if savedDraft.status == .needsTagging {
-                            savedDraft.status = .saved
-                        }
-                        try onSave(savedDraft)
-                        dismiss()
-                    } catch {
-                        saveError = String(describing: error)
-                    }
+                    save()
                 }
                 .keyboardShortcut(.defaultAction)
             }
@@ -92,6 +92,19 @@ struct PostCallTaggingView: View {
             draft.tags.remove(at: index)
         } else {
             draft.tags.append(tag)
+        }
+    }
+
+    private func save() {
+        do {
+            var savedDraft = draft
+            if savedDraft.status == .needsTagging {
+                savedDraft.status = .saved
+            }
+            try onSave(savedDraft)
+            dismiss()
+        } catch {
+            saveError = String(describing: error)
         }
     }
 }

@@ -438,14 +438,8 @@ public final class AppState: ObservableObject {
         }
 
         do {
-            let metadata = try recordingStore.readMetadata(at: lastRecording.metadataURL)
-            postCallDraft = PostCallDraft(
-                id: metadata.id,
-                title: metadata.title,
-                category: metadata.category,
-                participant: metadata.participants.first ?? "",
-                tags: metadata.tags,
-                status: metadata.status,
+            postCallDraft = try draft(
+                id: lastRecording.id,
                 sessionFolderURL: lastRecording.sessionFolderURL,
                 metadataURL: lastRecording.metadataURL
             )
@@ -455,6 +449,14 @@ public final class AppState: ObservableObject {
             applyError(error)
             AppLogger.storage.error("Failed to open last recording tags: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    public func draft(for recording: RecordingSummary) throws -> PostCallDraft {
+        try draft(
+            id: recording.id,
+            sessionFolderURL: recording.sessionFolderURL,
+            metadataURL: recording.metadataURL
+        )
     }
 
     private func apply(_ update: RecordingControllerUpdate) {
@@ -592,6 +594,24 @@ public final class AppState: ObservableObject {
         MicrophoneDeviceResolver.resolve(
             devices: devices,
             preferredDeviceID: preferredDeviceID
+        )
+    }
+
+    private func draft(
+        id: String,
+        sessionFolderURL: URL,
+        metadataURL: URL
+    ) throws -> PostCallDraft {
+        let metadata = try recordingStore.readMetadata(at: metadataURL)
+        return PostCallDraft(
+            id: id,
+            title: metadata.title,
+            category: metadata.category,
+            participant: metadata.participants.first ?? "",
+            tags: metadata.tags,
+            status: metadata.status,
+            sessionFolderURL: sessionFolderURL,
+            metadataURL: metadataURL
         )
     }
 

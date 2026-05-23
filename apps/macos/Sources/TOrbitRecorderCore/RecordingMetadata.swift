@@ -283,14 +283,7 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     }
 
     public var displayStatus: String {
-        switch status {
-        case .shortRecording:
-            return "Short recording"
-        case .failed:
-            return "Failed"
-        default:
-            return "Saved"
-        }
+        RecordingDisplayFormatter.statusText(status)
     }
 
     public var mixedPreviewState: String {

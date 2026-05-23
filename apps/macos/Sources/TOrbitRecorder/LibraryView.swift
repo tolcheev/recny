@@ -7,62 +7,96 @@ struct LibraryView: View {
     @State private var filtersExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Library")
-                        .font(.title2.weight(.semibold))
-                    Text("Recent recordings")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button {
-                    try? appState.reloadRecordings()
-                    try? appState.reloadLastRecording()
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-            }
-
-            DisclosureGroup(isExpanded: $filtersExpanded) {
-                filters
-                    .padding(.top, 8)
-            } label: {
-                Text("Filters")
-                    .font(.headline)
-            }
-
-            Divider()
-
-            if displayedRecordings.isEmpty {
-                Text("No recordings")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 8) {
-                        ForEach(displayedRecordings) { recording in
-                            LibraryRecordingRow(recording: recording, appState: appState)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
+        VStack(alignment: .leading, spacing: 16) {
+            header
+            search
+            filtersDisclosure
+            recordingsList
         }
         .padding(20)
-        .frame(minWidth: 760, minHeight: 560)
+        .frame(minWidth: 800, minHeight: 600)
+        .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             try? appState.reloadRecordings()
         }
     }
 
+    private var header: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Library")
+                    .font(.title2.weight(.semibold))
+                Text(filtersAreActive ? "Filtered recordings" : "Recent recordings")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button {
+                try? appState.reloadRecordings()
+                try? appState.reloadLastRecording()
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+            .accessibilityLabel("Refresh recordings")
+        }
+    }
+
+    private var search: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+            TextField(
+                "Search recordings",
+                text: Binding(
+                    get: { appState.recordingFilters.titleText },
+                    set: { appState.setTitleFilter($0) }
+                )
+            )
+            .textFieldStyle(.plain)
+            .accessibilityLabel("Search recordings")
+
+            if !appState.recordingFilters.titleText.isEmpty {
+                Button {
+                    appState.setTitleFilter("")
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.3), lineWidth: 1)
+        )
+    }
+
+    private var filtersDisclosure: some View {
+        DisclosureGroup(isExpanded: $filtersExpanded) {
+            filters
+                .padding(.top, 10)
+        } label: {
+            HStack(spacing: 8) {
+                Text("Filters")
+                    .font(.headline)
+                if filtersAreActive {
+                    StatusBadge(text: "Active", tone: .warning)
+                }
+            }
+        }
+    }
+
     private var filters: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
                 GridRow {
                     Text("Date")
                         .foregroundStyle(.secondary)
@@ -86,7 +120,7 @@ struct LibraryView: View {
                     ) {
                         Text("Any").tag("")
                         ForEach(TaggingStatus.allCases, id: \.self) { status in
-                            Text(statusLabel(status)).tag(status.rawValue)
+                            Text(RecordingDisplayFormatter.statusText(status)).tag(status.rawValue)
                         }
                     }
                     .labelsHidden()
@@ -104,37 +138,25 @@ struct LibraryView: View {
                     )
                     .textFieldStyle(.roundedBorder)
 
-                    Text("Title")
+                    Text("Tags")
                         .foregroundStyle(.secondary)
-                    TextField(
-                        "Title contains",
-                        text: Binding(
-                            get: { appState.recordingFilters.titleText },
-                            set: { appState.setTitleFilter($0) }
-                        )
-                    )
-                    .textFieldStyle(.roundedBorder)
-                }
-            }
+                    Menu(appState.selectedTagFilter ?? "All Tags") {
+                        Button("All Tags") {
+                            appState.setTagFilter(nil)
+                        }
 
-            HStack(spacing: 8) {
-                Text("Tags")
-                    .foregroundStyle(.secondary)
+                        Divider()
 
-                Menu(appState.selectedTagFilter ?? "All Tags") {
-                    Button("All Tags") {
-                        appState.setTagFilter(nil)
-                    }
-
-                    Divider()
-
-                    ForEach(MVPTags.all, id: \.self) { tag in
-                        Button(tag) {
-                            appState.setTagFilter(tag)
+                        ForEach(MVPTags.all, id: \.self) { tag in
+                            Button(tag) {
+                                appState.setTagFilter(tag)
+                            }
                         }
                     }
                 }
+            }
 
+            HStack {
                 Spacer()
 
                 Button {
@@ -142,8 +164,41 @@ struct LibraryView: View {
                 } label: {
                     Label("Clear Filters", systemImage: "line.3.horizontal.decrease.circle")
                 }
+                .disabled(!filtersAreActive)
             }
         }
+    }
+
+    private var recordingsList: some View {
+        Group {
+            if displayedRecordings.isEmpty {
+                emptyState
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 10) {
+                        ForEach(displayedRecordings) { recording in
+                            LibraryRecordingRow(recording: recording, appState: appState)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "tray")
+                .font(.system(size: 34))
+                .foregroundStyle(.secondary)
+            Text(filtersAreActive ? "No recordings match these filters" : "No recordings yet")
+                .font(.headline)
+            Text(filtersAreActive ? "Clear filters or adjust search." : "Start a recording from the main window.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     private var displayedRecordings: [RecordingSummary] {
@@ -168,76 +223,90 @@ private struct LibraryRecordingRow: View {
     let appState: AppState
 
     @State private var actionError: String?
+    @State private var tagDraft: PostCallDraft?
     @State private var isDeleteConfirmationPresented = false
-    @State private var isEditPresented = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(recording.title)
-                        .font(.callout.weight(.semibold))
-                        .lineLimit(1)
+        RecorderCard {
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(recording.title)
+                            .font(.callout.weight(.semibold))
+                            .lineLimit(1)
 
-                    Text("\(displayDate(recording.startedAt)) · \(recording.sourceApp) · \(statusLabel(recording.status))")
+                        StatusBadge(
+                            text: RecordingDisplayFormatter.statusText(recording.status),
+                            tone: tone(for: recording.status)
+                        )
+                    }
+
+                    Text("\(displayDate(recording.startedAt)) · \(RecordingDisplayFormatter.duration(recording.durationSec)) · \(recording.sourceApp)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    if !recording.tags.isEmpty || !recording.participant.isEmpty {
+                        Text([recording.participant, recording.tags.joined(separator: " ")]
+                            .filter { !$0.isEmpty }
+                            .joined(separator: " · "))
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                            .lineLimit(2)
+                    }
+
+                    if let actionError {
+                        Text(actionError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .textSelection(.enabled)
+                    }
                 }
 
                 Spacer()
 
-                Text(formatDuration(recording.durationSec))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
+                HStack(spacing: 8) {
+                    Button {
+                        playMixedAudio()
+                    } label: {
+                        Label("Play", systemImage: "play.fill")
+                    }
+                    .disabled(!FileManager.default.fileExists(atPath: recording.mixedAudioURL.path(percentEncoded: false)))
+                    .accessibilityLabel("Play recording")
 
-            if !recording.tags.isEmpty || !recording.participant.isEmpty {
-                Text([recording.participant, recording.tags.joined(separator: " ")]
-                    .filter { !$0.isEmpty }
-                    .joined(separator: " · "))
-                    .font(.caption)
-                    .foregroundStyle(.blue)
-                    .lineLimit(2)
-            }
+                    Button {
+                        NSWorkspace.shared.open(recording.sessionFolderURL)
+                    } label: {
+                        Label("Open", systemImage: "folder")
+                    }
+                    .accessibilityLabel("Open recording folder")
 
-            HStack(spacing: 8) {
-                Button {
-                    NSWorkspace.shared.open(recording.sessionFolderURL)
-                } label: {
-                    Label("Open in Finder", systemImage: "folder")
+                    Menu {
+                        Button {
+                            openTagEditor()
+                        } label: {
+                            Label("Tag", systemImage: "tag")
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive) {
+                            isDeleteConfirmationPresented = true
+                        } label: {
+                            Label("Delete Local Record", systemImage: "trash")
+                        }
+                    } label: {
+                        Label("More", systemImage: "ellipsis.circle")
+                    }
+                    .accessibilityLabel("More actions")
                 }
-
-                Button {
-                    playMixedAudio()
-                } label: {
-                    Label("Play", systemImage: "play.fill")
-                }
-                .disabled(!FileManager.default.fileExists(atPath: recording.mixedAudioURL.path(percentEncoded: false)))
-
-                Button {
-                    isEditPresented = true
-                } label: {
-                    Label("Edit", systemImage: "pencil")
-                }
-
-                Button(role: .destructive) {
-                    isDeleteConfirmationPresented = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
-
-            if let actionError {
-                Text(actionError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
             }
         }
-        .padding(10)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
-        .sheet(isPresented: $isEditPresented) {
-            RecordingEditSheet(recording: recording, appState: appState)
+        .sheet(item: $tagDraft) { draft in
+            TagEditorView(draft: draft) { updatedDraft in
+                try appState.savePostCallDraft(updatedDraft)
+                tagDraft = nil
+            }
         }
         .confirmationDialog(
             "Delete local recording?",
@@ -263,6 +332,15 @@ private struct LibraryRecordingRow: View {
         NSWorkspace.shared.open(recording.mixedAudioURL)
     }
 
+    private func openTagEditor() {
+        do {
+            tagDraft = try appState.draft(for: recording)
+            actionError = nil
+        } catch {
+            actionError = String(describing: error)
+        }
+    }
+
     private func deleteRecording() {
         do {
             try appState.deleteLocalRecord(recording)
@@ -273,125 +351,9 @@ private struct LibraryRecordingRow: View {
     }
 }
 
-private struct RecordingEditSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let recording: RecordingSummary
-    let appState: AppState
-
-    @State private var editedTitle: String
-    @State private var editedTags: Set<String>
-    @State private var actionError: String?
-
-    init(recording: RecordingSummary, appState: AppState) {
-        self.recording = recording
-        self.appState = appState
-        self._editedTitle = State(initialValue: recording.title)
-        self._editedTags = State(initialValue: Set(recording.tags))
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Edit recording")
-                .font(.title3.weight(.semibold))
-
-            TextField("Title", text: $editedTitle)
-                .textFieldStyle(.roundedBorder)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Tags")
-                    .font(.callout.weight(.medium))
-
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 8)], alignment: .leading, spacing: 8) {
-                    ForEach(MVPTags.all, id: \.self) { tag in
-                        Button(tag) {
-                            toggleTag(tag)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(editedTags.contains(tag) ? .blue : .secondary)
-                    }
-                }
-            }
-
-            if let actionError {
-                Text(actionError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
-            }
-
-            HStack {
-                Spacer()
-
-                Button("Cancel") {
-                    dismiss()
-                }
-
-                Button("Save") {
-                    save()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(20)
-        .frame(width: 520)
-    }
-
-    private func toggleTag(_ tag: String) {
-        if editedTags.contains(tag) {
-            editedTags.remove(tag)
-        } else {
-            editedTags.insert(tag)
-        }
-    }
-
-    private func save() {
-        do {
-            try appState.updateRecording(
-                recording,
-                title: editedTitle,
-                tags: editedTags.sorted()
-            )
-            actionError = nil
-            dismiss()
-        } catch {
-            actionError = String(describing: error)
-        }
-    }
-}
-
-private func statusLabel(_ status: TaggingStatus) -> String {
-    switch status {
-    case .needsTagging:
-        return "Needs tagging"
-    case .saved:
-        return "Saved"
-    case .needsReview:
-        return "Needs review"
-    case .reviewed:
-        return "Reviewed"
-    case .failed:
-        return "Failed"
-    case .shortRecording:
-        return "Short recording"
-    }
-}
-
 private func displayDate(_ value: String) -> String {
     value
         .replacingOccurrences(of: "T", with: " ")
         .prefix(16)
         .description
-}
-
-private func formatDuration(_ duration: TimeInterval) -> String {
-    let totalSeconds = max(0, Int(duration.rounded(.down)))
-    let minutes = totalSeconds / 60
-    let seconds = totalSeconds % 60
-    if minutes >= 60 {
-        let hours = minutes / 60
-        let remainingMinutes = minutes % 60
-        return String(format: "%d:%02d:%02d", hours, remainingMinutes, seconds)
-    }
-    return String(format: "%02d:%02d", minutes, seconds)
 }

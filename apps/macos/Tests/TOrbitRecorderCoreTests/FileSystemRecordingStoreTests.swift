@@ -398,7 +398,7 @@ struct FileSystemRecordingStoreTests {
         let latest = try #require(try store.latestRecordingSummary())
         #expect(latest.id == draft.id)
         #expect(latest.status == .needsTagging)
-        #expect(latest.displayStatus == "Saved")
+        #expect(latest.displayStatus == "Needs tag")
         #expect(latest.folderName == draft.sessionFolderURL.lastPathComponent)
         #expect(latest.durationSec == 120)
         #expect(latest.micFileSizeBytes == 11)
