@@ -177,7 +177,11 @@ private final class FailingRecordingController: RecordingController {
         self.error = error
     }
 
-    func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
+    func startRecording(
+        outputFolder: URL,
+        source: RecordingSource,
+        settings: RecordingRuntimeSettings
+    ) async throws -> RecordingControllerUpdate {
         throw error
     }
 

@@ -8,6 +8,8 @@
 
 The MVP stores all recordings locally. The recording folder plus `metadata.json` is the canonical record.
 
+The default root can be changed from Settings and is persisted locally. Reset to default returns the app to `~/Recordings/TOrbitRecorder/`.
+
 ## Directory Layout
 
 ```text

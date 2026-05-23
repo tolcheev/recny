@@ -4,7 +4,7 @@ import TOrbitRecorderCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let appState = AppState()
+    lazy var appState = AppState(appSettings: AppSettingsStore.load())
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var cancellables: Set<AnyCancellable> = []
@@ -89,11 +89,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .store(in: &cancellables)
+
+        appState.$privacySettings
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.refreshMenuState()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     private func refreshMenuState() {
         startItem?.isEnabled = appState.status != .recording
         stopItem?.isEnabled = appState.status == .recording
+        let symbolName = appState.status == .recording && appState.privacySettings.showRecordingIndicator
+            ? "record.circle.fill"
+            : "record.circle"
+        statusItem.button?.image = NSImage(
+            systemSymbolName: symbolName,
+            accessibilityDescription: "TOrbitRecorder"
+        )
     }
 
     @objc private func startRecording() {

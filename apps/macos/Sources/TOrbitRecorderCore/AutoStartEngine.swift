@@ -45,19 +45,22 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
     public var blacklist: [String]
     public var cooldownSeconds: TimeInterval
     public var minDetectionDurationSeconds: TimeInterval
+    public var shortRecordingThresholdSeconds: TimeInterval
 
     public init(
         isEnabled: Bool = true,
         whitelist: [String] = Self.defaultWhitelist,
         blacklist: [String] = [],
         cooldownSeconds: TimeInterval = 180,
-        minDetectionDurationSeconds: TimeInterval = 20
+        minDetectionDurationSeconds: TimeInterval = 20,
+        shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds
     ) {
         self.isEnabled = isEnabled
         self.whitelist = whitelist
         self.blacklist = blacklist
         self.cooldownSeconds = max(0, cooldownSeconds)
         self.minDetectionDurationSeconds = min(30, max(15, minDetectionDurationSeconds))
+        self.shortRecordingThresholdSeconds = min(300, max(15, shortRecordingThresholdSeconds))
     }
 }
 
@@ -334,7 +337,8 @@ public enum AutoStartSettingsStore {
             whitelist: settings.whitelist,
             blacklist: settings.blacklist,
             cooldownSeconds: settings.cooldownSeconds,
-            minDetectionDurationSeconds: settings.minDetectionDurationSeconds
+            minDetectionDurationSeconds: settings.minDetectionDurationSeconds,
+            shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds
         )
     }
 

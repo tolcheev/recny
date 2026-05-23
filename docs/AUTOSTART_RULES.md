@@ -82,8 +82,9 @@ MVP settings:
 - blacklist entries, matched against app name or bundle id
 - cooldown after stop, default 180 seconds
 - minimum detection duration, clamped to 15-30 seconds
+- short-recording threshold, default 60 seconds and clamped to 15-300 seconds
 
-Changing whitelist, blacklist, cooldown, or detection duration resets the current detection candidate.
+Changing whitelist, blacklist, cooldown, detection duration, or short-recording threshold resets the current detection candidate.
 
 ## Recording Categories
 
@@ -108,7 +109,7 @@ Rules:
 - Keep the call signal stable for the configured minimum detection duration before starting.
 - If a recording is below the short-session threshold, classify it under `Inbox/Short/`.
 - Short sessions must still keep metadata so false positives can be debugged.
-- V1 short-session threshold is 60 seconds.
+- V1 short-session threshold defaults to 60 seconds and is configurable from Settings.
 - Short sessions use `status: "short_recording"` and do not open the post-call tagging panel automatically.
 
 ## Permission Guardrails

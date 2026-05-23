@@ -5,10 +5,15 @@ public final class StubRecordingController: RecordingController {
     private var startedAt: Date?
     private var activeSession: RecordingSession?
     private var store: FileSystemRecordingStore?
+    private var runtimeSettings = RecordingRuntimeSettings()
 
     public init() {}
 
-    public func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
+    public func startRecording(
+        outputFolder: URL,
+        source: RecordingSource,
+        settings: RecordingRuntimeSettings
+    ) async throws -> RecordingControllerUpdate {
         guard startedAt == nil else {
             throw RecordingControllerError.alreadyRecording
         }
@@ -23,6 +28,7 @@ public final class StubRecordingController: RecordingController {
         startedAt = startDate
         activeSession = session
         self.store = store
+        runtimeSettings = settings
 
         AppLogger.recording.info(
             "Stub recording started; session folder created. outputFolder=\(outputFolder.path(percentEncoded: false), privacy: .public)"
@@ -46,18 +52,21 @@ public final class StubRecordingController: RecordingController {
         let duration = Date().timeIntervalSince(startedAt)
         let sessionStatus = TaggingStatus.finalizedStatus(
             forDuration: duration,
-            preferredStatus: .needsTagging
+            preferredStatus: .needsTagging,
+            thresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
         )
         let draft = try store.stopSession(
             activeSession,
             endedAt: Date(),
             duration: duration,
-            status: sessionStatus
+            status: sessionStatus,
+            shortRecordingThresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
         )
 
         self.startedAt = nil
         self.activeSession = nil
         self.store = nil
+        self.runtimeSettings = RecordingRuntimeSettings()
 
         AppLogger.recording.info(
             "Stub recording stopped after \(duration, privacy: .public) seconds; metadata written."

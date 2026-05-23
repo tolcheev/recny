@@ -61,13 +61,15 @@ public final class FileSystemRecordingStore {
         endedAt: Date,
         duration: TimeInterval,
         status: TaggingStatus,
-        audioTracks: [AudioTrackMetadata]? = nil
+        audioTracks: [AudioTrackMetadata]? = nil,
+        shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds
     ) throws -> PostCallDraft {
         try prepareRoot()
 
         let finalStatus = TaggingStatus.finalizedStatus(
             forDuration: duration,
-            preferredStatus: status
+            preferredStatus: status,
+            thresholdSeconds: shortRecordingThresholdSeconds
         )
         let finalFolderURL = try uniqueFinalSessionURL(for: session, status: finalStatus)
         try FileManager.default.createDirectory(

@@ -15,13 +15,16 @@ public final class AppState: ObservableObject {
     @Published public private(set) var recoverableRecordings: [RecoverableRecordingSummary]
     @Published public private(set) var selectedTagFilter: String?
     @Published public private(set) var recordingFilters: RecordingListFilters
+    @Published public private(set) var recordingSettings: RecordingSettings
     @Published public private(set) var autoStartSettings: AutoStartSettings
+    @Published public private(set) var storageSettings: StorageSettings
+    @Published public private(set) var hotkeySettings: HotkeySettings
+    @Published public private(set) var privacySettings: PrivacySettings
     @Published public private(set) var autoStartLastDecision: String
-
-    public let outputFolderURL: URL
+    @Published public private(set) var outputFolderURL: URL
 
     private let recordingController: RecordingController
-    private let recordingStore: FileSystemRecordingStore
+    private var recordingStore: FileSystemRecordingStore
     private let activeApplicationDetector: ActiveApplicationDetecting
     private let audioActivityDetector: AudioActivityDetecting
     private var recordingStartedAt: Date?
@@ -40,16 +43,25 @@ public final class AppState: ObservableObject {
     }
 
     public init(
-        recordingController: RecordingController = MacOSAudioRecordingController(),
-        outputFolderURL: URL = RecordingPaths.defaultRoot,
-        activeApplicationDetector: ActiveApplicationDetecting = WorkspaceActiveApplicationDetector(),
-        audioActivityDetector: AudioActivityDetecting = CoreAudioActivityDetector(),
-        autoStartSettings: AutoStartSettings = AutoStartSettingsStore.load()
+        recordingController: RecordingController? = nil,
+        outputFolderURL: URL? = nil,
+        activeApplicationDetector: ActiveApplicationDetecting? = nil,
+        audioActivityDetector: AudioActivityDetecting? = nil,
+        autoStartSettings: AutoStartSettings? = nil,
+        appSettings: AppSettings = AppSettingsStore.load()
     ) {
-        self.recordingController = recordingController
-        self.outputFolderURL = outputFolderURL
-        self.activeApplicationDetector = activeApplicationDetector
-        self.audioActivityDetector = audioActivityDetector
+        var resolvedSettings = appSettings
+        if let autoStartSettings {
+            resolvedSettings.autoStart = autoStartSettings
+        }
+        if let outputFolderURL {
+            resolvedSettings.storage.rootFolderPath = outputFolderURL.path(percentEncoded: false)
+        }
+
+        self.recordingController = recordingController ?? MacOSAudioRecordingController()
+        self.outputFolderURL = resolvedSettings.storage.rootFolderURL
+        self.activeApplicationDetector = activeApplicationDetector ?? WorkspaceActiveApplicationDetector()
+        self.audioActivityDetector = audioActivityDetector ?? CoreAudioActivityDetector()
         self.status = .idle
         self.currentRecordingDuration = 0
         self.micStatus = .idle
@@ -62,10 +74,14 @@ public final class AppState: ObservableObject {
         self.recoverableRecordings = []
         self.selectedTagFilter = nil
         self.recordingFilters = RecordingListFilters()
-        self.autoStartSettings = autoStartSettings
+        self.recordingSettings = resolvedSettings.recording
+        self.autoStartSettings = resolvedSettings.autoStart
+        self.storageSettings = resolvedSettings.storage
+        self.hotkeySettings = resolvedSettings.hotkeys
+        self.privacySettings = resolvedSettings.privacy
         self.autoStartLastDecision = "not_checked"
         self.autoStartEngine = AutoStartEngine()
-        self.recordingStore = FileSystemRecordingStore(rootURL: outputFolderURL)
+        self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
         reloadRecordingsSilently()
         reloadRecoverableRecordingsSilently()
     }
@@ -95,7 +111,8 @@ public final class AppState: ObservableObject {
 
             let update = try await recordingController.startRecording(
                 outputFolder: outputFolderURL,
-                source: source
+                source: source,
+                settings: recordingRuntimeSettings()
             )
             apply(update)
             recordingStartedAt = update.startedAt ?? Date()
@@ -219,7 +236,8 @@ public final class AppState: ObservableObject {
                 whitelist: settings.whitelist,
                 blacklist: settings.blacklist,
                 cooldownSeconds: seconds,
-                minDetectionDurationSeconds: settings.minDetectionDurationSeconds
+                minDetectionDurationSeconds: settings.minDetectionDurationSeconds,
+                shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds
             )
         }
     }
@@ -231,9 +249,51 @@ public final class AppState: ObservableObject {
                 whitelist: settings.whitelist,
                 blacklist: settings.blacklist,
                 cooldownSeconds: settings.cooldownSeconds,
-                minDetectionDurationSeconds: seconds
+                minDetectionDurationSeconds: seconds,
+                shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds
             )
         }
+    }
+
+    public func setShortRecordingThresholdSeconds(_ seconds: TimeInterval) {
+        updateAutoStartSettings { settings in
+            settings = AutoStartSettings(
+                isEnabled: settings.isEnabled,
+                whitelist: settings.whitelist,
+                blacklist: settings.blacklist,
+                cooldownSeconds: settings.cooldownSeconds,
+                minDetectionDurationSeconds: settings.minDetectionDurationSeconds,
+                shortRecordingThresholdSeconds: seconds
+            )
+        }
+    }
+
+    public func setSystemAudioEnabled(_ isEnabled: Bool) {
+        recordingSettings.systemAudioEnabled = isEnabled
+        saveSettings()
+    }
+
+    public func setMixedPreviewEnabled(_ isEnabled: Bool) {
+        recordingSettings.mixedPreviewEnabled = isEnabled
+        saveSettings()
+    }
+
+    public func resetStorageRootToDefault() {
+        setStorageRoot(RecordingPaths.defaultRoot)
+    }
+
+    public func setShowRecordingIndicator(_ isEnabled: Bool) {
+        privacySettings.showRecordingIndicator = isEnabled
+        saveSettings()
+    }
+
+    public func setStorageRoot(_ url: URL) {
+        outputFolderURL = url
+        storageSettings.rootFolderPath = url.path(percentEncoded: false)
+        recordingStore = FileSystemRecordingStore(rootURL: url)
+        reloadRecordingsSilently()
+        reloadRecoverableRecordingsSilently()
+        saveSettings()
     }
 
     public func startAutoStartMonitoring(pollIntervalSeconds: TimeInterval = 5) {
@@ -422,10 +482,31 @@ public final class AppState: ObservableObject {
             whitelist: normalizedAppList(settings.whitelist),
             blacklist: normalizedAppList(settings.blacklist),
             cooldownSeconds: settings.cooldownSeconds,
-            minDetectionDurationSeconds: settings.minDetectionDurationSeconds
+            minDetectionDurationSeconds: settings.minDetectionDurationSeconds,
+            shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds
         )
         autoStartEngine.resetCandidate()
-        AutoStartSettingsStore.save(autoStartSettings)
+        saveSettings()
+    }
+
+    private func recordingRuntimeSettings() -> RecordingRuntimeSettings {
+        RecordingRuntimeSettings(
+            systemAudioEnabled: recordingSettings.systemAudioEnabled,
+            mixedPreviewEnabled: recordingSettings.mixedPreviewEnabled,
+            shortRecordingThresholdSeconds: autoStartSettings.shortRecordingThresholdSeconds
+        )
+    }
+
+    private func saveSettings() {
+        AppSettingsStore.save(
+            AppSettings(
+                recording: recordingSettings,
+                autoStart: autoStartSettings,
+                storage: storageSettings,
+                hotkeys: hotkeySettings,
+                privacy: privacySettings
+            )
+        )
     }
 
     private func normalizedAppList(_ values: [String]) -> [String] {

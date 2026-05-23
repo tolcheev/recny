@@ -20,10 +20,15 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
     private var activeSession: RecordingSession?
     private var store: FileSystemRecordingStore?
     private var recorder: AVAudioRecorder?
+    private var runtimeSettings = RecordingRuntimeSettings()
 
     public override init() {}
 
-    public func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
+    public func startRecording(
+        outputFolder: URL,
+        source: RecordingSource,
+        settings: RecordingRuntimeSettings
+    ) async throws -> RecordingControllerUpdate {
         guard startedAt == nil else {
             throw RecordingControllerError.alreadyRecording
         }
@@ -51,6 +56,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         self.activeSession = session
         self.store = store
         self.recorder = recorder
+        self.runtimeSettings = settings
 
         AppLogger.recording.info("Microphone recording started: \(micSegmentURL.path(percentEncoded: false), privacy: .public)")
 
@@ -96,16 +102,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         )
         let mixedTrack: AudioTrackMetadata
         let sessionStatus: TaggingStatus
-        do {
-            mixedTrack = try await MixedAudioPreviewGenerator()
-                .createPreview(micURL: micURL, systemURL: systemURL, outputURL: mixedURL)
-                .track
-            sessionStatus = TaggingStatus.finalizedStatus(
-                forDuration: duration,
-                preferredStatus: .needsTagging
-            )
-        } catch {
-            AppLogger.recording.error("Mixed audio preview failed for microphone recording: \(String(describing: error), privacy: .public)")
+        if !runtimeSettings.mixedPreviewEnabled {
             mixedTrack = AudioTrackMetadata(
                 kind: "mixed",
                 relativePath: "export/mixed.m4a",
@@ -114,10 +111,39 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
                 sampleRate: MixedAudioPreviewGenerator.sampleRate,
                 channels: MixedAudioPreviewGenerator.channels,
                 bitrate: MixedAudioPreviewGenerator.bitrate,
-                status: "failed",
-                error: String(describing: error)
+                status: "disabled",
+                error: "mixed preview disabled in settings"
             )
-            sessionStatus = .failed
+            sessionStatus = TaggingStatus.finalizedStatus(
+                forDuration: duration,
+                preferredStatus: .needsTagging,
+                thresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
+            )
+        } else {
+            do {
+                mixedTrack = try await MixedAudioPreviewGenerator()
+                    .createPreview(micURL: micURL, systemURL: systemURL, outputURL: mixedURL)
+                    .track
+                sessionStatus = TaggingStatus.finalizedStatus(
+                    forDuration: duration,
+                    preferredStatus: .needsTagging,
+                    thresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
+                )
+            } catch {
+                AppLogger.recording.error("Mixed audio preview failed for microphone recording: \(String(describing: error), privacy: .public)")
+                mixedTrack = AudioTrackMetadata(
+                    kind: "mixed",
+                    relativePath: "export/mixed.m4a",
+                    codec: "aac",
+                    container: "m4a",
+                    sampleRate: MixedAudioPreviewGenerator.sampleRate,
+                    channels: MixedAudioPreviewGenerator.channels,
+                    bitrate: MixedAudioPreviewGenerator.bitrate,
+                    status: "failed",
+                    error: String(describing: error)
+                )
+                sessionStatus = .failed
+            }
         }
         try updateRecoveryMetadata(
             for: activeSession,
@@ -129,13 +155,15 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             endedAt: endedAt,
             duration: duration,
             status: sessionStatus,
-            audioTracks: [micTrack, mixedTrack]
+            audioTracks: [micTrack, mixedTrack],
+            shortRecordingThresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
         )
 
         self.startedAt = nil
         self.activeSession = nil
         self.store = nil
         self.recorder = nil
+        self.runtimeSettings = RecordingRuntimeSettings()
 
         AppLogger.recording.info("Microphone recording stopped after \(duration, privacy: .public) seconds")
 

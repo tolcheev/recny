@@ -15,6 +15,8 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 - Microphone recording.
 - Full system audio recording.
 - Local file storage.
+- Local settings stored on the Mac.
+- Settings screen for recording toggles, auto-start rules, storage root, hotkey placeholders, and local privacy controls.
 - `metadata.json` stored next to every recording.
 - Compact post-call tagging after recording stops.
 - MVP tags saved to `metadata.json` and `db/app.sqlite`.
@@ -87,3 +89,7 @@ scripts/build_macos.sh
 The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`.
 
 Current recording implementation starts from the menu bar UI or Auto-start Engine v1 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The app shows a local recordings list backed by SQLite and can open folders, play mixed previews, edit titles/tags, and delete local records with confirmation.
+
+Settings currently cover recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
+
+Active settings are persisted locally with `UserDefaults`. MVP defaults keep system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Audio quality, microphone device selection, hotkey capture, add marker, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.

@@ -89,4 +89,6 @@ Future encryption work must define:
 
 The app should make recording state visible in the menu bar UI and provide a local way to stop recording.
 
+Settings include local privacy controls for local-only mode, recording indicator visibility, and Focus Mode reminder. Local-only mode and Focus Mode reminder remain disabled placeholders in the MVP until additional behavior exists; the recording indicator can be toggled locally.
+
 Autostart must be explainable through metadata and logs so the user can understand why a recording started.

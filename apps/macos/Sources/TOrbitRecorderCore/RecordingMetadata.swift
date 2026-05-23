@@ -12,10 +12,11 @@ public enum TaggingStatus: String, CaseIterable, Codable, Sendable {
 
     public static func finalizedStatus(
         forDuration duration: TimeInterval,
-        preferredStatus: TaggingStatus
+        preferredStatus: TaggingStatus,
+        thresholdSeconds: TimeInterval = shortRecordingThresholdSeconds
     ) -> TaggingStatus {
         guard preferredStatus == .needsTagging,
-              duration < shortRecordingThresholdSeconds
+              duration < thresholdSeconds
         else {
             return preferredStatus
         }
