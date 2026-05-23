@@ -14,6 +14,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var recordings: [RecordingSummary]
     @Published public private(set) var recoverableRecordings: [RecoverableRecordingSummary]
     @Published public private(set) var selectedTagFilter: String?
+    @Published public private(set) var recordingFilters: RecordingListFilters
 
     public let outputFolderURL: URL
 
@@ -47,6 +48,7 @@ public final class AppState: ObservableObject {
         self.recordings = []
         self.recoverableRecordings = []
         self.selectedTagFilter = nil
+        self.recordingFilters = RecordingListFilters()
         self.recordingStore = FileSystemRecordingStore(rootURL: outputFolderURL)
         reloadRecordingsSilently()
         reloadRecoverableRecordingsSilently()
@@ -112,11 +114,48 @@ public final class AppState: ObservableObject {
 
     public func setTagFilter(_ tag: String?) {
         selectedTagFilter = tag
+        recordingFilters.tags = tag.map { [$0] } ?? []
+        reloadRecordingsSilently()
+    }
+
+    public func setDateFilter(_ value: String) {
+        recordingFilters.dateText = value
+        reloadRecordingsSilently()
+    }
+
+    public func setStatusFilter(_ status: TaggingStatus?) {
+        recordingFilters.status = status
+        reloadRecordingsSilently()
+    }
+
+    public func setSourceAppFilter(_ value: String) {
+        recordingFilters.sourceAppText = value
+        reloadRecordingsSilently()
+    }
+
+    public func setTitleFilter(_ value: String) {
+        recordingFilters.titleText = value
+        reloadRecordingsSilently()
+    }
+
+    public func clearRecordingFilters() {
+        recordingFilters = RecordingListFilters()
+        selectedTagFilter = nil
         reloadRecordingsSilently()
     }
 
     public func reloadRecordings() throws {
-        recordings = try recordingStore.recordings(filterTag: selectedTagFilter)
+        recordings = try recordingStore.recordings(filters: recordingFilters)
+    }
+
+    public func updateRecording(_ recording: RecordingSummary, title: String, tags: [String]) throws {
+        try recordingStore.updateRecording(id: recording.id, title: title, tags: tags)
+        try reloadRecordings()
+    }
+
+    public func deleteLocalRecord(_ recording: RecordingSummary) throws {
+        try recordingStore.deleteLocalRecord(recording)
+        try reloadRecordings()
     }
 
     public func reloadRecoverableRecordings() throws {

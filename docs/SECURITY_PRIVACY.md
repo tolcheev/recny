@@ -33,7 +33,7 @@ MVP data stays local:
 - mixed exports
 - metadata
 - logs
-- local SQLite tag index
+- local SQLite recordings index
 
 ## Permissions
 

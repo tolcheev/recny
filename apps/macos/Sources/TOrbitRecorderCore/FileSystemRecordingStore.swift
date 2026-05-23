@@ -198,7 +198,44 @@ public final class FileSystemRecordingStore {
     }
 
     public func recordings(filterTag: String?) throws -> [RecordingSummary] {
-        try SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL).recordings(filterTag: filterTag)
+        try recordings(
+            filters: RecordingListFilters(tags: filterTag.map { [$0] } ?? [])
+        )
+    }
+
+    public func recordings(filters: RecordingListFilters) throws -> [RecordingSummary] {
+        try prepareRoot()
+        let index = SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL)
+
+        if try index.isEmpty() {
+            try reindexMetadataFiles(with: index)
+        }
+
+        return try index.recordings(filters: filters)
+    }
+
+    public func updateRecording(id: String, title: String, tags: [String]) throws {
+        let index = SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL)
+        if try index.isEmpty() {
+            try reindexMetadataFiles(with: index)
+        }
+
+        guard let summary = try index.recording(id: id) else {
+            throw SQLiteIndexError(message: "Recording not found: \(id)")
+        }
+
+        var metadata = try readMetadata(at: summary.metadataURL)
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        metadata.title = trimmedTitle.isEmpty ? "Untitled recording" : trimmedTitle
+        metadata.tags = normalizedTags(tags)
+
+        try write(metadata, metadataURL: summary.metadataURL, sessionFolderURL: summary.sessionFolderURL)
+    }
+
+    public func deleteLocalRecord(_ summary: RecordingSummary) throws {
+        let index = SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL)
+        try FileManager.default.removeItemIfExists(at: summary.sessionFolderURL)
+        try index.delete(recordingID: summary.id)
     }
 
     private func write(
@@ -212,6 +249,44 @@ public final class FileSystemRecordingStore {
             metadataURL: metadataURL,
             sessionFolderURL: sessionFolderURL
         )
+    }
+
+    private func reindexMetadataFiles(with index: SQLiteRecordingIndex) throws {
+        for metadataURL in try metadataURLsForReindex() {
+            do {
+                let metadata = try readMetadata(at: metadataURL)
+                try index.upsert(
+                    metadata: metadata,
+                    metadataURL: metadataURL,
+                    sessionFolderURL: metadataURL.deletingLastPathComponent()
+                )
+            } catch {
+                AppLogger.storage.error("Failed to index metadata file \(metadataURL.path(percentEncoded: false), privacy: .public): \(String(describing: error), privacy: .public)")
+            }
+        }
+    }
+
+    private func metadataURLsForReindex() throws -> [URL] {
+        let roots = [paths.libraryURL, paths.inboxURL].filter {
+            FileManager.default.fileExists(atPath: $0.path(percentEncoded: false))
+        }
+        var urls: [URL] = []
+
+        for root in roots {
+            guard let enumerator = FileManager.default.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.isRegularFileKey],
+                options: [.skipsHiddenFiles]
+            ) else {
+                continue
+            }
+
+            for case let url as URL in enumerator where url.lastPathComponent == "metadata.json" {
+                urls.append(url)
+            }
+        }
+
+        return urls
     }
 
     private func makeMetadata(
@@ -382,9 +457,9 @@ private final class SQLiteRecordingIndex {
             try executePrepared(
                 """
                 INSERT OR REPLACE INTO recordings (
-                    id, title, category, participant, status, started_at, ended_at,
-                    duration_sec, metadata_path, folder_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, title, category, participant, status, source_app,
+                    started_at, ended_at, duration_sec, metadata_path, folder_path
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 bindings: [
                     .text(metadata.id),
@@ -392,6 +467,7 @@ private final class SQLiteRecordingIndex {
                     .text(metadata.category),
                     .text(metadata.participants.first ?? ""),
                     .text(metadata.status.rawValue),
+                    .text(metadata.source.appName),
                     .text(metadata.startedAt),
                     .text(metadata.endedAt),
                     .double(metadata.durationSec),
@@ -407,6 +483,10 @@ private final class SQLiteRecordingIndex {
 
             for tag in metadata.tags {
                 try executePrepared(
+                    "INSERT OR REPLACE INTO tags (tag) VALUES (?)",
+                    bindings: [.text(tag)]
+                )
+                try executePrepared(
                     "INSERT OR REPLACE INTO recording_tags (recording_id, tag) VALUES (?, ?)",
                     bindings: [.text(metadata.id), .text(tag)]
                 )
@@ -420,52 +500,127 @@ private final class SQLiteRecordingIndex {
     }
 
     func recordings(filterTag: String?) throws -> [RecordingSummary] {
+        try recordings(
+            filters: RecordingListFilters(tags: filterTag.map { [$0] } ?? [])
+        )
+    }
+
+    func recordings(filters: RecordingListFilters) throws -> [RecordingSummary] {
         try open()
         try migrate()
 
-        let query: String
-        let bindings: [SQLiteBinding]
+        var whereClauses: [String] = []
+        var bindings: [SQLiteBinding] = []
 
-        if let filterTag, !filterTag.isEmpty {
-            query = """
-            SELECT id, title, category, participant, status, started_at, ended_at,
-                   duration_sec, metadata_path, folder_path
-            FROM recordings
-            WHERE EXISTS (
-                SELECT 1 FROM recording_tags
-                WHERE recording_tags.recording_id = recordings.id
-                  AND recording_tags.tag = ?
-            )
-            ORDER BY ended_at DESC
-            """
-            bindings = [.text(filterTag)]
-        } else {
-            query = """
-            SELECT id, title, category, participant, status, started_at, ended_at,
-                   duration_sec, metadata_path, folder_path
-            FROM recordings
-            ORDER BY ended_at DESC
-            """
-            bindings = []
+        let dateText = filters.dateText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !dateText.isEmpty {
+            whereClauses.append("(started_at LIKE ? OR ended_at LIKE ?)")
+            bindings.append(.text("%\(dateText)%"))
+            bindings.append(.text("%\(dateText)%"))
         }
+
+        if let status = filters.status {
+            whereClauses.append("status = ?")
+            bindings.append(.text(status.rawValue))
+        }
+
+        let sourceAppText = filters.sourceAppText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sourceAppText.isEmpty {
+            whereClauses.append("LOWER(source_app) LIKE LOWER(?)")
+            bindings.append(.text("%\(sourceAppText)%"))
+        }
+
+        let titleText = filters.titleText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !titleText.isEmpty {
+            whereClauses.append("LOWER(title) LIKE LOWER(?)")
+            bindings.append(.text("%\(titleText)%"))
+        }
+
+        for tag in filters.tags where !tag.isEmpty {
+            whereClauses.append(
+                """
+                EXISTS (
+                    SELECT 1 FROM recording_tags
+                    WHERE recording_tags.recording_id = recordings.id
+                      AND recording_tags.tag = ?
+                )
+                """
+            )
+            bindings.append(.text(tag))
+        }
+
+        let whereSQL = whereClauses.isEmpty ? "" : "WHERE \(whereClauses.joined(separator: " AND "))"
+        let query = """
+        SELECT id, title, category, participant, status, source_app, started_at, ended_at,
+               duration_sec, metadata_path, folder_path
+        FROM recordings
+        \(whereSQL)
+        ORDER BY ended_at DESC
+        """
 
         let rows = try queryRows(query, bindings: bindings)
-        return try rows.map { row in
-            let id = row[0]
-            return RecordingSummary(
-                id: id,
-                title: row[1],
-                category: row[2],
-                participant: row[3],
-                tags: try tags(for: id),
-                status: TaggingStatus(rawValue: row[4]) ?? .failed,
-                startedAt: row[5],
-                endedAt: row[6],
-                durationSec: Double(row[7]) ?? 0,
-                metadataURL: URL(fileURLWithPath: row[8]),
-                sessionFolderURL: URL(fileURLWithPath: row[9])
-            )
+        return try rows.map(summary(from:))
+    }
+
+    func recording(id: String) throws -> RecordingSummary? {
+        try open()
+        try migrate()
+
+        let rows = try queryRows(
+            """
+            SELECT id, title, category, participant, status, source_app, started_at, ended_at,
+                   duration_sec, metadata_path, folder_path
+            FROM recordings
+            WHERE id = ?
+            LIMIT 1
+            """,
+            bindings: [.text(id)]
+        )
+
+        guard let row = rows.first else {
+            return nil
         }
+
+        return try summary(from: row)
+    }
+
+    func delete(recordingID: String) throws {
+        try open()
+        try migrate()
+        try execute("BEGIN IMMEDIATE TRANSACTION")
+
+        do {
+            try executePrepared("DELETE FROM recording_tags WHERE recording_id = ?", bindings: [.text(recordingID)])
+            try executePrepared("DELETE FROM recordings WHERE id = ?", bindings: [.text(recordingID)])
+            try execute("COMMIT")
+        } catch {
+            try? execute("ROLLBACK")
+            throw error
+        }
+    }
+
+    func isEmpty() throws -> Bool {
+        try open()
+        try migrate()
+        return try queryRows("SELECT id FROM recordings LIMIT 1", bindings: []).isEmpty
+    }
+
+    private func summary(from row: [String]) throws -> RecordingSummary {
+        let id = row[0]
+        return RecordingSummary(
+            id: id,
+            title: row[1],
+            category: row[2],
+            participant: row[3],
+            tags: try tags(for: id),
+            status: TaggingStatus(rawValue: row[4]) ?? .failed,
+            sourceApp: row[5],
+            startedAt: row[6],
+            endedAt: row[7],
+            durationSec: Double(row[8]) ?? 0,
+            metadataURL: URL(fileURLWithPath: row[9]),
+            sessionFolderURL: URL(fileURLWithPath: row[10])
+        )
     }
 
     private func tags(for recordingID: String) throws -> [String] {
@@ -500,11 +655,20 @@ private final class SQLiteRecordingIndex {
                 category TEXT NOT NULL,
                 participant TEXT NOT NULL,
                 status TEXT NOT NULL,
+                source_app TEXT NOT NULL DEFAULT '',
                 started_at TEXT NOT NULL,
                 ended_at TEXT NOT NULL,
                 duration_sec REAL NOT NULL,
                 metadata_path TEXT NOT NULL,
                 folder_path TEXT NOT NULL
+            );
+            """
+        )
+        try addColumnIfNeeded(table: "recordings", column: "source_app", definition: "TEXT NOT NULL DEFAULT ''")
+        try execute(
+            """
+            CREATE TABLE IF NOT EXISTS tags (
+                tag TEXT PRIMARY KEY
             );
             """
         )
@@ -517,7 +681,28 @@ private final class SQLiteRecordingIndex {
             );
             """
         )
+        try execute("CREATE INDEX IF NOT EXISTS idx_recordings_started_at ON recordings(started_at);")
+        try execute("CREATE INDEX IF NOT EXISTS idx_recordings_status ON recordings(status);")
+        try execute("CREATE INDEX IF NOT EXISTS idx_recordings_source_app ON recordings(source_app);")
         try execute("CREATE INDEX IF NOT EXISTS idx_recording_tags_tag ON recording_tags(tag);")
+    }
+
+    private func addColumnIfNeeded(table: String, column: String, definition: String) throws {
+        guard try !tableColumns(table).contains(column) else {
+            return
+        }
+
+        try execute("ALTER TABLE \(table) ADD COLUMN \(column) \(definition);")
+    }
+
+    private func tableColumns(_ table: String) throws -> Set<String> {
+        let rows = try queryRows("PRAGMA table_info(\(table));", bindings: [])
+        return Set(rows.compactMap { row in
+            guard row.count > 1 else {
+                return nil
+            }
+            return row[1]
+        })
     }
 
     private func execute(_ sql: String) throws {
@@ -605,5 +790,15 @@ private struct SQLiteIndexError: Error, CustomStringConvertible {
 
     var description: String {
         message
+    }
+}
+
+private extension FileManager {
+    func removeItemIfExists(at url: URL) throws {
+        guard fileExists(atPath: url.path(percentEncoded: false)) else {
+            return
+        }
+
+        try removeItem(at: url)
     }
 }

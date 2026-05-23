@@ -17,6 +17,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 - `metadata.json` stored next to every recording.
 - Compact post-call tagging after recording stops.
 - MVP tags saved to `metadata.json` and `db/app.sqlite`.
+- Local recordings list with filters by date, status, source app, title, and tag.
 - No Electron.
 - No screen recording, cloud upload, T-Orbit sync, AI, or Windows support in MVP.
 
@@ -43,7 +44,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
   logs/
 ```
 
-`db/app.sqlite` stores the local tag index for filtering. The recording folder and `metadata.json` remain the canonical record.
+`db/app.sqlite` stores the local recordings index for list filtering and quick library actions. The recording folder and `metadata.json` remain the canonical record.
 
 ## Repository Layout
 
@@ -84,4 +85,4 @@ scripts/build_macos.sh
 
 The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`.
 
-Current recording implementation starts from the menu bar UI and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. Autostart is a separate future step.
+Current recording implementation starts from the menu bar UI and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The app shows a local recordings list backed by SQLite and can open folders, play mixed previews, edit titles/tags, and delete local records with confirmation. Autostart is a separate future step.

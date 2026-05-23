@@ -78,13 +78,40 @@ Failed sessions may have missing final audio files, but `metadata.json` should b
 
 ## SQLite Index
 
-`db/app.sqlite` stores the MVP local index for post-call tags and recording list filtering.
+`db/app.sqlite` stores the MVP local index for the recordings list, post-call tags, and local library actions.
 
 MVP rules:
 
 - The app must not require SQLite to recover a recording.
 - `metadata.json` remains the source of truth for a session.
-- SQLite mirrors local recording metadata needed for list and tag filtering.
+- SQLite mirrors local recording metadata needed for list filtering by date, status, source app, title, and tags.
+- If the SQLite database is empty, the app may rebuild the index by scanning `Library/` and `Inbox/` for `metadata.json`.
+
+MVP tables:
+
+```text
+recordings
+  id TEXT PRIMARY KEY
+  title TEXT
+  category TEXT
+  participant TEXT
+  status TEXT
+  source_app TEXT
+  started_at TEXT
+  ended_at TEXT
+  duration_sec REAL
+  metadata_path TEXT
+  folder_path TEXT
+
+tags
+  tag TEXT PRIMARY KEY
+
+recording_tags
+  recording_id TEXT
+  tag TEXT
+```
+
+Deleting a local record removes the session folder and the SQLite index row. It does not call T-Orbit, cloud storage, or AI services.
 
 ## Metadata Schema
 

@@ -14,20 +14,20 @@ Scope:
 - Local storage.
 - Per-session `metadata.json`.
 - Post-call tagging.
-- MVP tag filtering.
-- Local SQLite index for recording tags.
+- Recordings list filtering by date, status, source app, title, and tag.
+- Local SQLite index with `recordings`, `tags`, and `recording_tags`.
 - Mixed `m4a` export.
 - Logs for lifecycle and failures.
 
-## Next: Local Library
+## Next: Local Library Polish
 
-Goal: make local recordings easier to browse and manage.
+Goal: make local recordings easier to browse and manage beyond the MVP list.
 
 Candidate work:
 
-- Local recording list.
-- Search by title, date, category, source app, and status.
-- Editable titles.
+- Search by category and participant.
+- Multi-tag filter combinations.
+- Bulk edit and delete.
 - Editable categories.
 - Advanced tag management.
 - Better handling for `Inbox/Unsorted/`, `Inbox/Short/`, and `Inbox/Failed/`.

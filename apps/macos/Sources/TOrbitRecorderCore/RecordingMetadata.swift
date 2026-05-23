@@ -230,9 +230,38 @@ public struct RecordingSummary: Equatable, Identifiable, Sendable {
     public let participant: String
     public let tags: [String]
     public let status: TaggingStatus
+    public let sourceApp: String
     public let startedAt: String
     public let endedAt: String
     public let durationSec: Double
     public let metadataURL: URL
     public let sessionFolderURL: URL
+
+    public var mixedAudioURL: URL {
+        sessionFolderURL
+            .appendingPathComponent("export", isDirectory: true)
+            .appendingPathComponent("mixed.m4a")
+    }
+}
+
+public struct RecordingListFilters: Equatable, Sendable {
+    public var dateText: String
+    public var status: TaggingStatus?
+    public var sourceAppText: String
+    public var titleText: String
+    public var tags: [String]
+
+    public init(
+        dateText: String = "",
+        status: TaggingStatus? = nil,
+        sourceAppText: String = "",
+        titleText: String = "",
+        tags: [String] = []
+    ) {
+        self.dateText = dateText
+        self.status = status
+        self.sourceAppText = sourceAppText
+        self.titleText = titleText
+        self.tags = tags
+    }
 }
