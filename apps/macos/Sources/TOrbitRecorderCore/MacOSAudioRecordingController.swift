@@ -8,8 +8,12 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
     private var store: FileSystemRecordingStore?
     private var microphoneRecorder: AVAudioRecorder?
     private var systemAudioRecorder: ScreenCaptureKitSystemAudioRecorder?
+    private let mixedAudioPreviewGenerator: MixedAudioPreviewGenerator
 
-    public override init() {}
+    public override init() {
+        self.mixedAudioPreviewGenerator = MixedAudioPreviewGenerator()
+        super.init()
+    }
 
     public func startRecording(outputFolder: URL) async throws -> RecordingControllerUpdate {
         guard startedAt == nil else {
@@ -79,45 +83,93 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         }
 
         microphoneRecorder.stop()
-        let systemResult = try await systemAudioRecorder.stop()
+
+        let systemResult: Result<SystemAudioRecordingResult, Error>
+        do {
+            systemResult = .success(try await systemAudioRecorder.stop())
+        } catch {
+            AppLogger.recording.error("System audio stop failed: \(String(describing: error), privacy: .public)")
+            systemResult = .failure(error)
+        }
 
         let endedAt = Date()
         let duration = max(0, endedAt.timeIntervalSince(startedAt))
         let micURL = activeSession.sourceURL.appendingPathComponent("mic.m4a")
         let systemURL = activeSession.sourceURL.appendingPathComponent("system.m4a")
+        let mixedURL = activeSession.exportURL.appendingPathComponent("mixed.m4a")
 
-        try validateRecordedFile(at: micURL, kind: "microphone")
-        try validateRecordedFile(at: systemURL, kind: "system")
-
-        let audioTracks = [
-            AudioTrackMetadata(
+        var audioTracks: [AudioTrackMetadata] = []
+        audioTracks.append(
+            await sourceTrackMetadata(
                 kind: "microphone",
                 relativePath: "source/mic.m4a",
-                codec: "aac",
-                container: "m4a",
-                durationSec: duration,
+                url: micURL,
+                fallbackDuration: duration,
                 sampleRate: AVFoundationMicrophoneRecordingController.sampleRate,
                 channels: AVFoundationMicrophoneRecordingController.channels,
-                bitrate: AVFoundationMicrophoneRecordingController.bitrate,
-                status: "completed"
-            ),
-            AudioTrackMetadata(
+                bitrate: AVFoundationMicrophoneRecordingController.bitrate
+            )
+        )
+        audioTracks.append(
+            await sourceTrackMetadata(
                 kind: "system",
                 relativePath: "source/system.m4a",
-                codec: "aac",
-                container: "m4a",
-                durationSec: systemResult.duration > 0 ? systemResult.duration : duration,
+                url: systemURL,
+                fallbackDuration: systemResult.successValue?.duration ?? duration,
                 sampleRate: ScreenCaptureKitSystemAudioRecorder.sampleRate,
                 channels: ScreenCaptureKitSystemAudioRecorder.channels,
                 bitrate: ScreenCaptureKitSystemAudioRecorder.bitrate,
-                status: "completed"
+                error: systemResult.failureDescription
             )
-        ]
+        )
+
+        let sessionStatus: TaggingStatus
+        do {
+            let mixedResult = try await mixedAudioPreviewGenerator.createPreview(
+                micURL: micURL,
+                systemURL: systemURL,
+                outputURL: mixedURL
+            )
+            audioTracks.append(mixedResult.track)
+            sessionStatus = .needsTagging
+        } catch RecordingControllerError.mixedAudioNoSourceTracks {
+            audioTracks.append(
+                AudioTrackMetadata(
+                    kind: "mixed",
+                    relativePath: "export/mixed.m4a",
+                    codec: "aac",
+                    container: "m4a",
+                    sampleRate: MixedAudioPreviewGenerator.sampleRate,
+                    channels: MixedAudioPreviewGenerator.channels,
+                    bitrate: MixedAudioPreviewGenerator.bitrate,
+                    status: "failed",
+                    error: RecordingControllerError.mixedAudioNoSourceTracks.description
+                )
+            )
+            sessionStatus = .failed
+        } catch {
+            AppLogger.recording.error("Mixed audio preview failed: \(String(describing: error), privacy: .public)")
+            audioTracks.append(
+                AudioTrackMetadata(
+                    kind: "mixed",
+                    relativePath: "export/mixed.m4a",
+                    codec: "aac",
+                    container: "m4a",
+                    sampleRate: MixedAudioPreviewGenerator.sampleRate,
+                    channels: MixedAudioPreviewGenerator.channels,
+                    bitrate: MixedAudioPreviewGenerator.bitrate,
+                    status: "failed",
+                    error: String(describing: error)
+                )
+            )
+            sessionStatus = .failed
+        }
+
         let draft = try store.stopSession(
             activeSession,
             endedAt: endedAt,
             duration: duration,
-            status: .needsTagging,
+            status: sessionStatus,
             audioTracks: audioTracks
         )
 
@@ -154,17 +206,85 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         }
     }
 
-    private func validateRecordedFile(at url: URL, kind: String) throws {
+    private func sourceTrackMetadata(
+        kind: String,
+        relativePath: String,
+        url: URL,
+        fallbackDuration: TimeInterval,
+        sampleRate: Double,
+        channels: Int,
+        bitrate: Int,
+        error: String? = nil
+    ) async -> AudioTrackMetadata {
         let path = url.path(percentEncoded: false)
         guard FileManager.default.fileExists(atPath: path) else {
-            throw RecordingControllerError.fileWriteFailed("Missing \(kind) file at \(path)")
+            return AudioTrackMetadata(
+                kind: kind,
+                relativePath: relativePath,
+                codec: "aac",
+                container: "m4a",
+                durationSec: nil,
+                sampleRate: sampleRate,
+                channels: channels,
+                bitrate: bitrate,
+                status: "failed",
+                error: error ?? "Missing \(kind) file at \(path)"
+            )
         }
 
+        do {
+            let fileSize = try recordedFileSize(at: url, kind: kind)
+            return AudioTrackMetadata(
+                kind: kind,
+                relativePath: relativePath,
+                codec: "aac",
+                container: "m4a",
+                durationSec: await detectedDuration(at: url, fallback: fallbackDuration),
+                sampleRate: sampleRate,
+                channels: channels,
+                bitrate: bitrate,
+                fileSizeBytes: fileSize,
+                status: error == nil ? "completed" : "failed",
+                error: error
+            )
+        } catch {
+            return AudioTrackMetadata(
+                kind: kind,
+                relativePath: relativePath,
+                codec: "aac",
+                container: "m4a",
+                durationSec: nil,
+                sampleRate: sampleRate,
+                channels: channels,
+                bitrate: bitrate,
+                status: "failed",
+                error: String(describing: error)
+            )
+        }
+    }
+
+    private func detectedDuration(at url: URL, fallback: TimeInterval) async -> TimeInterval {
+        do {
+            let duration = try await AVURLAsset(url: url).load(.duration)
+            guard duration.isNumeric else {
+                return fallback
+            }
+            let seconds = CMTimeGetSeconds(duration)
+            return seconds.isFinite && seconds > 0 ? seconds : fallback
+        } catch {
+            AppLogger.recording.error("Failed to detect audio duration: \(url.path(percentEncoded: false), privacy: .public), error=\(String(describing: error), privacy: .public)")
+            return fallback
+        }
+    }
+
+    private func recordedFileSize(at url: URL, kind: String) throws -> Int64 {
+        let path = url.path(percentEncoded: false)
         let attributes = try FileManager.default.attributesOfItem(atPath: path)
         let size = attributes[.size] as? NSNumber
         guard let size, size.int64Value > 0 else {
             throw RecordingControllerError.fileWriteFailed("Empty \(kind) file at \(path)")
         }
+        return size.int64Value
     }
 
     private func clearActiveRecordingState() {
@@ -179,5 +299,21 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         if let error {
             AppLogger.recording.error("Microphone recorder encode error: \(String(describing: error), privacy: .public)")
         }
+    }
+}
+
+private extension Result where Success == SystemAudioRecordingResult, Failure == Error {
+    var successValue: SystemAudioRecordingResult? {
+        guard case .success(let value) = self else {
+            return nil
+        }
+        return value
+    }
+
+    var failureDescription: String? {
+        guard case .failure(let error) = self else {
+            return nil
+        }
+        return String(describing: error)
     }
 }

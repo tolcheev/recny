@@ -25,6 +25,7 @@ apps/macos/.build/app/TOrbitRecorder.app
 - Real microphone recording through AVFoundation into `source/mic.m4a`.
 - Real system audio recording through ScreenCaptureKit audio output into `source/system.m4a`.
 - ScreenCaptureKit is configured for audio capture only; no screen video stream is written.
+- Mixed audio preview through AVFoundation into `export/mixed.m4a`.
 - `StubRecordingController` that changes state without writing audio.
 - Compact post-call tagging panel after Stop.
 - MVP tags saved to `metadata.json` and SQLite.
@@ -33,7 +34,7 @@ apps/macos/.build/app/TOrbitRecorder.app
 - Basic OSLog logging.
 - Permission descriptions for microphone and Screen & System Audio Recording.
 
-Mixed export, autostart, screen video recording, cloud upload, T-Orbit sync, and AI are intentionally not implemented in this step.
+Autostart, screen video recording, cloud upload, T-Orbit sync, and AI are intentionally not implemented in this step.
 
 ## Microphone Smoke Test
 

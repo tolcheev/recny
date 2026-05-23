@@ -14,11 +14,11 @@ The engine is a testable core package, not SwiftUI view logic.
 - Capture full system audio through ScreenCaptureKit audio output.
 - Store system audio as `source/system.m4a`.
 - Record system audio as AAC in an m4a container at 48 kHz, stereo, 128 kbps.
+- Create quick-listen mixed audio preview as `export/mixed.m4a`.
+- Record mixed preview as AAC in an m4a container at 48 kHz, stereo, about 96 kbps.
 - Do not add or persist a screen video output in the MVP.
 - Save metadata for every session.
 - Log lifecycle events and failures.
-
-Mixed export is not implemented in the current recording step.
 
 ## Preferred Native APIs
 
@@ -61,11 +61,13 @@ If any required permission or capture path fails, the engine must write failure 
 
 1. Stop accepting new audio buffers.
 2. Close source track writers.
-3. Compute duration.
-4. Classify short sessions when below the configured threshold.
-5. Write final `metadata.json`.
-6. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
-7. Emit a final lifecycle log event.
+3. Validate source files with existence and size checks.
+4. Create `export/mixed.m4a` from the available source tracks.
+5. Compute duration and file sizes where possible.
+6. Classify short sessions when below the configured threshold.
+7. Write final `metadata.json`.
+8. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
+9. Emit a final lifecycle log event.
 
 ## Required Output
 
@@ -74,10 +76,11 @@ source/
   mic.m4a
   system.m4a
 export/
+  mixed.m4a
 metadata.json
 ```
 
-`export/mixed.m4a` is part of the MVP storage contract but is not produced in the current capture step.
+If one source track is missing, the mixed preview must be created from the available track. If both source tracks are missing or unusable, the session status must be `failed`.
 
 ## Audio Track Metadata
 
@@ -91,6 +94,7 @@ Every track in `metadata.json` should include:
 - `sample_rate`
 - `channels`
 - `bitrate`
+- `file_size_bytes`
 - `status`
 - `error`, when applicable
 

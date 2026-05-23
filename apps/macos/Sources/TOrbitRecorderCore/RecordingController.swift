@@ -27,6 +27,9 @@ public enum RecordingControllerError: Error, Equatable, Sendable, CustomStringCo
     case systemAudioSetupFailed(String)
     case systemAudioWriteFailed(String)
     case systemAudioNoSamples
+    case mixedAudioNoSourceTracks
+    case mixedAudioSetupFailed(String)
+    case mixedAudioWriteFailed(String)
 
     public var description: String {
         switch self {
@@ -52,6 +55,12 @@ public enum RecordingControllerError: Error, Equatable, Sendable, CustomStringCo
             return "Failed to write system audio recording: \(message)"
         case .systemAudioNoSamples:
             return "System audio capture produced no samples"
+        case .mixedAudioNoSourceTracks:
+            return "Cannot create mixed audio preview because no source tracks are available"
+        case .mixedAudioSetupFailed(let message):
+            return "Failed to configure mixed audio preview: \(message)"
+        case .mixedAudioWriteFailed(let message):
+            return "Failed to write mixed audio preview: \(message)"
         }
     }
 }

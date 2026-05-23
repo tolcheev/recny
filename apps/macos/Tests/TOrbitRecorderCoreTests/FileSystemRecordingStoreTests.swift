@@ -89,6 +89,7 @@ struct FileSystemRecordingStoreTests {
                     sampleRate: 48_000,
                     channels: 1,
                     bitrate: 128_000,
+                    fileSizeBytes: 4,
                     status: "completed"
                 )
             ]
@@ -102,6 +103,7 @@ struct FileSystemRecordingStoreTests {
         #expect(micTrack.sampleRate == 48_000)
         #expect(micTrack.channels == 1)
         #expect(micTrack.bitrate == 128_000)
+        #expect(micTrack.fileSizeBytes == 4)
         #expect(micTrack.status == "completed")
     }
 

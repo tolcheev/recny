@@ -43,6 +43,7 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
     public var sampleRate: Double?
     public var channels: Int?
     public var bitrate: Int?
+    public var fileSizeBytes: Int64?
     public var status: String
     public var error: String?
 
@@ -55,6 +56,7 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
         sampleRate: Double? = nil,
         channels: Int? = nil,
         bitrate: Int? = nil,
+        fileSizeBytes: Int64? = nil,
         status: String,
         error: String? = nil
     ) {
@@ -66,6 +68,7 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
         self.sampleRate = sampleRate
         self.channels = channels
         self.bitrate = bitrate
+        self.fileSizeBytes = fileSizeBytes
         self.status = status
         self.error = error
     }
@@ -79,6 +82,7 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
         case sampleRate = "sample_rate"
         case channels
         case bitrate
+        case fileSizeBytes = "file_size_bytes"
         case status
         case error
     }

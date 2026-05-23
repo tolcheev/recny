@@ -8,6 +8,7 @@
       "codec": "aac",
       "container": "m4a",
       "duration_sec": 2538,
+      "file_size_bytes": 30212231,
       "kind": "microphone",
       "relative_path": "source/mic.m4a",
       "sample_rate": 48000,
@@ -20,8 +21,22 @@
       "codec": "aac",
       "container": "m4a",
       "duration_sec": 2538,
+      "file_size_bytes": 40155312,
       "kind": "system",
       "relative_path": "source/system.m4a",
+      "sample_rate": 48000,
+      "status": "completed"
+    },
+    {
+      "error": null,
+      "bitrate": 96000,
+      "channels": 2,
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "file_size_bytes": 30462102,
+      "kind": "mixed",
+      "relative_path": "export/mixed.m4a",
       "sample_rate": 48000,
       "status": "completed"
     }

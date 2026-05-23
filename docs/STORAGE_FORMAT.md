@@ -110,6 +110,7 @@ MVP rules:
       "container": "m4a",
       "duration_sec": 2538,
       "error": null,
+      "file_size_bytes": 30212231,
       "kind": "microphone",
       "relative_path": "source/mic.m4a",
       "sample_rate": 48000,
@@ -122,8 +123,22 @@ MVP rules:
       "container": "m4a",
       "duration_sec": 2538,
       "error": null,
+      "file_size_bytes": 40155312,
       "kind": "system",
       "relative_path": "source/system.m4a",
+      "sample_rate": 48000,
+      "status": "completed"
+    },
+    {
+      "bitrate": 96000,
+      "channels": 2,
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "error": null,
+      "file_size_bytes": 30462102,
+      "kind": "mixed",
+      "relative_path": "export/mixed.m4a",
       "sample_rate": 48000,
       "status": "completed"
     }
@@ -142,6 +157,7 @@ MVP rules:
 - `owner_id`, `workspace_id`, and `mentor_id` may use local placeholder ids in MVP.
 - `participants` is an array because future versions may attach leads, students, or interview participants.
 - `tags` stores the MVP post-call tag selection.
+- `file_size_bytes` is written for audio tracks that pass the integrity check.
 - `ai` exists now but AI is later.
 - `sync` exists now but T-Orbit sync is later.
 
