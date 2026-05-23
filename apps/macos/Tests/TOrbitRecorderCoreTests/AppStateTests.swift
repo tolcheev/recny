@@ -59,7 +59,7 @@ struct AppStateTests {
         let metadataURL = draft.metadataURL
         #expect(FileManager.default.fileExists(atPath: metadataURL.path(percentEncoded: false)))
 
-        let store = RecordingMetadataStore(rootURL: outputFolder)
+        let store = FileSystemRecordingStore(rootURL: outputFolder)
         let recordings = try store.recordings(filterTag: nil)
         #expect(recordings.map(\.id).contains(draft.id))
         #expect(recordings.first(where: { $0.id == draft.id })?.status == .needsTagging)
@@ -85,7 +85,7 @@ struct AppStateTests {
 
         try appState.savePostCallDraft(draft)
 
-        let metadata = try RecordingMetadataStore(rootURL: outputFolder)
+        let metadata = try FileSystemRecordingStore(rootURL: outputFolder)
             .readMetadata(at: draft.metadataURL)
         #expect(metadata.title == "Lead call follow-up")
         #expect(metadata.category == "lead")
@@ -93,7 +93,7 @@ struct AppStateTests {
         #expect(metadata.tags == ["#лид", "#продажа"])
         #expect(metadata.status == .saved)
 
-        let filtered = try RecordingMetadataStore(rootURL: outputFolder)
+        let filtered = try FileSystemRecordingStore(rootURL: outputFolder)
             .recordings(filterTag: "#лид")
         #expect(filtered.map(\.id).contains(draft.id))
     }

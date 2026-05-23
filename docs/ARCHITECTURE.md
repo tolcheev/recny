@@ -85,8 +85,8 @@ Owns stable data contracts:
 - metadata schema
 - recording status values
 - MVP tag values
-- AI status values
-- sync status values
+- AI state values
+- sync state values
 - audio track descriptors
 
 The protocol package should allow future T-Orbit sync without forcing backend code into the desktop app.

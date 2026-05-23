@@ -1,0 +1,49 @@
+{
+  "ai": "not_started",
+  "audio_tracks": [
+    {
+      "error": null,
+      "kind": "microphone",
+      "relative_path": "source/mic.m4a",
+      "status": "completed"
+    },
+    {
+      "error": null,
+      "kind": "system",
+      "relative_path": "source/system.m4a",
+      "status": "completed"
+    },
+    {
+      "error": null,
+      "kind": "mixed",
+      "relative_path": "export/mixed.m4a",
+      "status": "completed"
+    }
+  ],
+  "category": "student_call",
+  "duration_sec": 2538,
+  "ended_at": "2026-05-23T15:12:18Z",
+  "id": "rec_2026-05-23_14-30-00_ab12cd34",
+  "mentor_id": "local:vlad",
+  "owner_id": "local:vlad",
+  "participants": [
+    "Ivan Student"
+  ],
+  "recording_mode": "audio_only",
+  "schema_version": 1,
+  "source": {
+    "app_name": "Zoom",
+    "bundle_id": "us.zoom.xos",
+    "rule_id": "local.enabled_app.zoom",
+    "trigger": "manual"
+  },
+  "started_at": "2026-05-23T14:30:00Z",
+  "status": "needs_tagging",
+  "sync": "local_only",
+  "tags": [
+    "#ученик",
+    "#разбор"
+  ],
+  "title": "Student call",
+  "workspace_id": "local:t-orbit-recorder"
+}

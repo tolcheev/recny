@@ -16,7 +16,7 @@ public final class AppState: ObservableObject {
     public let outputFolderURL: URL
 
     private let recordingController: RecordingController
-    private let metadataStore: RecordingMetadataStore
+    private let recordingStore: FileSystemRecordingStore
     private var recordingStartedAt: Date?
     private var durationTask: Task<Void, Never>?
 
@@ -43,7 +43,7 @@ public final class AppState: ObservableObject {
         self.isPostCallPanelPresented = false
         self.recordings = []
         self.selectedTagFilter = nil
-        self.metadataStore = RecordingMetadataStore(rootURL: outputFolderURL)
+        self.recordingStore = FileSystemRecordingStore(rootURL: outputFolderURL)
         reloadRecordingsSilently()
     }
 
@@ -75,16 +75,13 @@ public final class AppState: ObservableObject {
     public func stopRecording() async throws {
         do {
             let update = try await recordingController.stopRecording()
-            let endedAt = Date()
-            let startedAt = recordingStartedAt ?? endedAt.addingTimeInterval(-(update.duration ?? currentRecordingDuration))
-            let duration = update.duration ?? currentRecordingDuration
             apply(update)
             stopDurationClock()
-            let draft = try metadataStore.createNeedsTaggingDraft(
-                startedAt: startedAt,
-                endedAt: endedAt,
-                duration: duration
-            )
+
+            guard let draft = update.postCallDraft else {
+                throw RecordingControllerError.notRecording
+            }
+
             postCallDraft = draft
             isPostCallPanelPresented = true
             try reloadRecordings()
@@ -98,7 +95,7 @@ public final class AppState: ObservableObject {
     }
 
     public func savePostCallDraft(_ draft: PostCallDraft) throws {
-        try metadataStore.saveDraft(draft)
+        try recordingStore.saveDraft(draft)
         postCallDraft = draft
         isPostCallPanelPresented = false
         try reloadRecordings()
@@ -111,7 +108,7 @@ public final class AppState: ObservableObject {
     }
 
     public func reloadRecordings() throws {
-        recordings = try metadataStore.recordings(filterTag: selectedTagFilter)
+        recordings = try recordingStore.recordings(filterTag: selectedTagFilter)
     }
 
     private func apply(_ update: RecordingControllerUpdate) {

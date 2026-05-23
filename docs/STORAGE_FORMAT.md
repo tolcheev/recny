@@ -97,7 +97,7 @@ MVP rules:
   "duration_sec": 2538,
   "recording_mode": "audio_only",
   "source": {
-    "app": "Zoom",
+    "app_name": "Zoom",
     "bundle_id": "us.zoom.xos",
     "trigger": "app_active",
     "rule_id": "local.enabled_app.zoom"
@@ -141,8 +141,8 @@ MVP rules:
   "tags": [],
   "category": "student_call",
   "status": "needs_tagging",
-  "ai_status": "not_started",
-  "sync_status": "local_only"
+  "ai": "not_started",
+  "sync": "local_only"
 }
 ```
 
@@ -151,8 +151,8 @@ MVP rules:
 - `owner_id`, `workspace_id`, and `mentor_id` may use local placeholder ids in MVP.
 - `participants` is an array because future versions may attach leads, students, or interview participants.
 - `tags` stores the MVP post-call tag selection.
-- `ai_status` exists now but AI is later.
-- `sync_status` exists now but T-Orbit sync is later.
+- `ai` exists now but AI is later.
+- `sync` exists now but T-Orbit sync is later.
 
 ## MVP Tags
 
@@ -182,7 +182,7 @@ Recording `status`:
 - `reviewed`
 - `failed`
 
-AI `ai_status`:
+AI `ai`:
 
 - `not_started`
 - `queued`
@@ -192,7 +192,7 @@ AI `ai_status`:
 
 For MVP, use `not_started`.
 
-Sync `sync_status`:
+Sync `sync`:
 
 - `local_only`
 - `pending`
