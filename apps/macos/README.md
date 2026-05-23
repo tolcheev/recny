@@ -26,6 +26,8 @@ apps/macos/.build/app/TOrbitRecorder.app
 - Real system audio recording through ScreenCaptureKit audio output into `source/system.m4a`.
 - ScreenCaptureKit is configured for audio capture only; no screen video stream is written.
 - Mixed audio preview through AVFoundation into `export/mixed.m4a`.
+- Crash recovery metadata in `recovery.json` and active segment files under `source/segments/`.
+- Recoverable interrupted recordings surfaced in the UI with a Recover Recording action.
 - `StubRecordingController` that changes state without writing audio.
 - Compact post-call tagging panel after Stop.
 - MVP tags saved to `metadata.json` and SQLite.

@@ -21,11 +21,15 @@ The MVP stores all recordings locally. The recording folder plus `metadata.json`
       MM/
         YYYY-MM-DD_HH-mm_source_audio/
           source/
+            segments/
+              mic-0001.m4a
+              system-0001.m4a
             mic.m4a
             system.m4a
           export/
             mixed.m4a
           metadata.json
+          recovery.json
   db/
     app.sqlite
   logs/
@@ -64,11 +68,13 @@ If two sessions would produce the same folder name, append a short stable id suf
 ```text
 source/mic.m4a
 source/system.m4a
+source/segments/
 export/mixed.m4a
 metadata.json
+recovery.json
 ```
 
-Failed sessions may have missing audio files, but `metadata.json` should be written whenever possible.
+Failed sessions may have missing final audio files, but `metadata.json` should be written whenever possible. Interrupted sessions keep `recovery.json` and any files under `source/segments/`.
 
 ## SQLite Index
 

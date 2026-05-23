@@ -170,7 +170,9 @@ public struct RecordingSession: Equatable, Identifiable, Sendable {
     public let folderURL: URL
     public let sourceURL: URL
     public let exportURL: URL
+    public let segmentsURL: URL
     public let metadataURL: URL
+    public let recoveryMetadataURL: URL
 
     public init(
         id: String,
@@ -184,7 +186,9 @@ public struct RecordingSession: Equatable, Identifiable, Sendable {
         self.folderURL = folderURL
         self.sourceURL = folderURL.appendingPathComponent("source", isDirectory: true)
         self.exportURL = folderURL.appendingPathComponent("export", isDirectory: true)
+        self.segmentsURL = self.sourceURL.appendingPathComponent("segments", isDirectory: true)
         self.metadataURL = folderURL.appendingPathComponent("metadata.json")
+        self.recoveryMetadataURL = folderURL.appendingPathComponent("recovery.json")
     }
 }
 

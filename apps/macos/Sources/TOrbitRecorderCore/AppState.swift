@@ -12,6 +12,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var mixedPreviewPath: String?
     @Published public var isPostCallPanelPresented: Bool
     @Published public private(set) var recordings: [RecordingSummary]
+    @Published public private(set) var recoverableRecordings: [RecoverableRecordingSummary]
     @Published public private(set) var selectedTagFilter: String?
 
     public let outputFolderURL: URL
@@ -44,9 +45,11 @@ public final class AppState: ObservableObject {
         self.mixedPreviewPath = nil
         self.isPostCallPanelPresented = false
         self.recordings = []
+        self.recoverableRecordings = []
         self.selectedTagFilter = nil
         self.recordingStore = FileSystemRecordingStore(rootURL: outputFolderURL)
         reloadRecordingsSilently()
+        reloadRecoverableRecordingsSilently()
     }
 
     deinit {
@@ -89,6 +92,7 @@ public final class AppState: ObservableObject {
             mixedPreviewPath = mixedPreviewPath(for: draft)
             isPostCallPanelPresented = true
             try reloadRecordings()
+            try reloadRecoverableRecordings()
             errorMessage = nil
             AppLogger.recording.info("Recording stopped; post-call tagging required for \(draft.id, privacy: .public)")
         } catch {
@@ -113,6 +117,31 @@ public final class AppState: ObservableObject {
 
     public func reloadRecordings() throws {
         recordings = try recordingStore.recordings(filterTag: selectedTagFilter)
+    }
+
+    public func reloadRecoverableRecordings() throws {
+        guard status != .recording else {
+            return
+        }
+
+        recoverableRecordings = try recordingStore.recoverableSessions()
+    }
+
+    public func recoverRecording(_ summary: RecoverableRecordingSummary) async throws {
+        do {
+            let draft = try await RecordingRecoveryController(store: recordingStore).recover(summary)
+            postCallDraft = draft
+            mixedPreviewPath = mixedPreviewPath(for: draft)
+            isPostCallPanelPresented = draft.status != .failed
+            try reloadRecordings()
+            try reloadRecoverableRecordings()
+            errorMessage = nil
+            AppLogger.recording.info("Recovered interrupted recording \(summary.id, privacy: .public)")
+        } catch {
+            applyError(error)
+            AppLogger.recording.error("Failed to recover recording \(summary.id, privacy: .public): \(String(describing: error), privacy: .public)")
+            throw error
+        }
     }
 
     private func apply(_ update: RecordingControllerUpdate) {
@@ -172,6 +201,14 @@ public final class AppState: ObservableObject {
             try reloadRecordings()
         } catch {
             AppLogger.storage.error("Failed to reload recordings: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    private func reloadRecoverableRecordingsSilently() {
+        do {
+            try reloadRecoverableRecordings()
+        } catch {
+            AppLogger.storage.error("Failed to reload recoverable recordings: \(String(describing: error), privacy: .public)")
         }
     }
 

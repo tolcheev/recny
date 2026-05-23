@@ -46,6 +46,8 @@ struct RecorderPanelView: View {
 
             Divider()
 
+            recoverableSection
+
             recordingsSection
         }
         .frame(minWidth: 560, minHeight: 520)
@@ -122,6 +124,34 @@ struct RecorderPanelView: View {
             }
         }
     }
+
+    private var recoverableSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Recoverable")
+                    .font(.headline)
+
+                Spacer()
+
+                Button("Refresh") {
+                    try? appState.reloadRecoverableRecordings()
+                }
+            }
+
+            if appState.recoverableRecordings.isEmpty {
+                Text("No interrupted recordings")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    ForEach(appState.recoverableRecordings) { recording in
+                        RecoverableRecordingRow(recording: recording, appState: appState)
+                    }
+                }
+            }
+        }
+    }
 }
 
 private struct StatusRow: View {
@@ -181,6 +211,52 @@ private struct RecordingRow: View {
         }
         .padding(10)
         .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct RecoverableRecordingRow: View {
+    let recording: RecoverableRecordingSummary
+    let appState: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(recording.id)
+                    .font(.callout.weight(.semibold))
+                    .lineLimit(1)
+
+                Spacer()
+
+                Text("failed / \(recording.status.rawValue)")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.orange)
+            }
+
+            HStack(spacing: 8) {
+                Text("\(recording.segmentCount) segments")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text(recording.startedAt)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            HStack(spacing: 8) {
+                Button("Recover Recording") {
+                    Task {
+                        try? await appState.recoverRecording(recording)
+                    }
+                }
+
+                Button("Open Folder") {
+                    NSWorkspace.shared.open(recording.folderURL)
+                }
+            }
+        }
+        .padding(10)
+        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 

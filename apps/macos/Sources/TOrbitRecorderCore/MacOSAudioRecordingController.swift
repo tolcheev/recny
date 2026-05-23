@@ -35,16 +35,16 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             )
         )
 
-        let micURL = session.sourceURL.appendingPathComponent("mic.m4a")
-        let systemURL = session.sourceURL.appendingPathComponent("system.m4a")
+        let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
+        let systemSegmentURL = session.segmentsURL.appendingPathComponent("system-0001.m4a")
         let micRecorder = try AVAudioRecorder(
-            url: micURL,
+            url: micSegmentURL,
             settings: AVFoundationMicrophoneRecordingController.audioRecorderSettings
         )
         micRecorder.delegate = self
 
         let systemRecorder = ScreenCaptureKitSystemAudioRecorder()
-        try await systemRecorder.start(outputURL: systemURL)
+        try await systemRecorder.start(outputURL: systemSegmentURL)
 
         guard micRecorder.prepareToRecord(), micRecorder.record() else {
             _ = try? await systemRecorder.stop()
@@ -97,6 +97,11 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         let micURL = activeSession.sourceURL.appendingPathComponent("mic.m4a")
         let systemURL = activeSession.sourceURL.appendingPathComponent("system.m4a")
         let mixedURL = activeSession.exportURL.appendingPathComponent("mixed.m4a")
+        let micSegmentURL = activeSession.segmentsURL.appendingPathComponent("mic-0001.m4a")
+        let systemSegmentURL = activeSession.segmentsURL.appendingPathComponent("system-0001.m4a")
+
+        try finalizeSegmentIfUsable(from: micSegmentURL, to: micURL)
+        try finalizeSegmentIfUsable(from: systemSegmentURL, to: systemURL)
 
         var audioTracks: [AudioTrackMetadata] = []
         audioTracks.append(
@@ -124,6 +129,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         )
 
         let sessionStatus: TaggingStatus
+        var recoveryError: String?
         do {
             let mixedResult = try await mixedAudioPreviewGenerator.createPreview(
                 micURL: micURL,
@@ -147,6 +153,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 )
             )
             sessionStatus = .failed
+            recoveryError = RecordingControllerError.mixedAudioNoSourceTracks.description
         } catch {
             AppLogger.recording.error("Mixed audio preview failed: \(String(describing: error), privacy: .public)")
             audioTracks.append(
@@ -163,7 +170,14 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 )
             )
             sessionStatus = .failed
+            recoveryError = String(describing: error)
         }
+
+        try updateRecoveryMetadata(
+            for: activeSession,
+            status: sessionStatus == .failed ? .failed : .completed,
+            error: recoveryError
+        )
 
         let draft = try store.stopSession(
             activeSession,
@@ -287,6 +301,54 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         return size.int64Value
     }
 
+    private func finalizeSegmentIfUsable(from segmentURL: URL, to finalURL: URL) throws {
+        let segmentPath = segmentURL.path(percentEncoded: false)
+        guard FileManager.default.fileExists(atPath: segmentPath) else {
+            return
+        }
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: segmentPath)
+        let size = attributes[.size] as? NSNumber
+        guard let size, size.int64Value > 0 else {
+            return
+        }
+
+        try FileManager.default.removeItemIfExists(at: finalURL)
+        try FileManager.default.copyItem(at: segmentURL, to: finalURL)
+    }
+
+    private func updateRecoveryMetadata(
+        for session: RecordingSession,
+        status: RecoveryStatus,
+        error: String?
+    ) throws {
+        guard var recovery = try store?.readRecoveryMetadata(at: session.recoveryMetadataURL) else {
+            return
+        }
+
+        recovery.status = status
+        recovery.updatedAt = iso8601(Date())
+        recovery.error = error
+        let updatedAt = recovery.updatedAt
+        recovery.segments = recovery.segments.map { segment in
+            var updated = segment
+            let url = session.folderURL.appendingPathComponent(segment.relativePath)
+            let size = (try? FileManager.default.attributesOfItem(atPath: url.path(percentEncoded: false))[.size] as? NSNumber)?.int64Value
+            updated.fileSizeBytes = size
+            updated.status = (size ?? 0) > 0 ? "completed" : "missing"
+            updated.updatedAt = updatedAt
+            return updated
+        }
+
+        try store?.writeRecoveryMetadata(recovery, to: session.recoveryMetadataURL)
+    }
+
+    private func iso8601(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
     private func clearActiveRecordingState() {
         startedAt = nil
         activeSession = nil
@@ -315,5 +377,14 @@ private extension Result where Success == SystemAudioRecordingResult, Failure ==
             return nil
         }
         return String(describing: error)
+    }
+}
+
+private extension FileManager {
+    func removeItemIfExists(at url: URL) throws {
+        let path = url.path(percentEncoded: false)
+        if fileExists(atPath: path) {
+            try removeItem(at: url)
+        }
     }
 }
