@@ -65,7 +65,11 @@ public final class FileSystemRecordingStore {
     ) throws -> PostCallDraft {
         try prepareRoot()
 
-        let finalFolderURL = try uniqueLibrarySessionURL(for: session)
+        let finalStatus = TaggingStatus.finalizedStatus(
+            forDuration: duration,
+            preferredStatus: status
+        )
+        let finalFolderURL = try uniqueFinalSessionURL(for: session, status: finalStatus)
         try FileManager.default.createDirectory(
             at: finalFolderURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -77,7 +81,7 @@ public final class FileSystemRecordingStore {
             session: session,
             endedAt: endedAt,
             duration: duration,
-            status: status,
+            status: finalStatus,
             audioTracks: audioTracks
         )
 
@@ -366,6 +370,68 @@ public final class FileSystemRecordingStore {
         )
         .filter { url in
             ((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) > 0
+        }
+    }
+
+    private func uniqueFinalSessionURL(
+        for session: RecordingSession,
+        status: TaggingStatus
+    ) throws -> URL {
+        switch status {
+        case .shortRecording:
+            return try uniqueInboxSessionURL(for: session, inboxURL: paths.inboxShortURL)
+        case .failed:
+            return try uniqueInboxSessionURL(for: session, inboxURL: paths.inboxFailedURL)
+        default:
+            return try uniqueLibrarySessionURL(for: session)
+        }
+    }
+
+    private func uniqueInboxSessionURL(for session: RecordingSession, inboxURL: URL) throws -> URL {
+        var suffix: String?
+        var candidate = inboxURL.appendingPathComponent(
+            paths.libraryFolderName(
+                startedAt: session.startedAt,
+                sourceAppName: session.source.appName,
+                suffix: suffix
+            ),
+            isDirectory: true
+        )
+
+        if !FileManager.default.fileExists(atPath: candidate.path(percentEncoded: false)) {
+            return candidate
+        }
+
+        suffix = String(session.id.suffix(8))
+        candidate = inboxURL.appendingPathComponent(
+            paths.libraryFolderName(
+                startedAt: session.startedAt,
+                sourceAppName: session.source.appName,
+                suffix: suffix
+            ),
+            isDirectory: true
+        )
+
+        if !FileManager.default.fileExists(atPath: candidate.path(percentEncoded: false)) {
+            return candidate
+        }
+
+        var index = 2
+        while true {
+            candidate = inboxURL.appendingPathComponent(
+                paths.libraryFolderName(
+                    startedAt: session.startedAt,
+                    sourceAppName: session.source.appName,
+                    suffix: "\(suffix ?? session.id)-\(index)"
+                ),
+                isDirectory: true
+            )
+
+            if !FileManager.default.fileExists(atPath: candidate.path(percentEncoded: false)) {
+                return candidate
+            }
+
+            index += 1
         }
     }
 

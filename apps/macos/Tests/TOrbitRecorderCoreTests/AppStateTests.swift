@@ -60,7 +60,7 @@ struct AppStateTests {
     }
 
     @Test
-    func stopCreatesNeedsTaggingMetadata() async throws {
+    func stopCreatesShortRecordingMetadataForShortSession() async throws {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(
             recordingController: StubRecordingController(),
@@ -71,16 +71,57 @@ struct AppStateTests {
         try await appState.stopRecording()
 
         let draft = try #require(appState.postCallDraft)
-        #expect(draft.status == .needsTagging)
-        #expect(appState.isPostCallPanelPresented)
+        #expect(draft.status == .shortRecording)
+        #expect(!appState.isPostCallPanelPresented)
 
         let metadataURL = draft.metadataURL
         #expect(FileManager.default.fileExists(atPath: metadataURL.path(percentEncoded: false)))
 
         let store = FileSystemRecordingStore(rootURL: outputFolder)
-        let recordings = try store.recordings(filterTag: nil)
+        let recordings = try store.recordings(filters: RecordingListFilters(status: .shortRecording))
         #expect(recordings.map(\.id).contains(draft.id))
-        #expect(recordings.first(where: { $0.id == draft.id })?.status == .needsTagging)
+        #expect(recordings.first(where: { $0.id == draft.id })?.status == .shortRecording)
+    }
+
+    @Test
+    func autoStartStartsAfterDetectionDuration() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let activeApp = ActiveApplicationSnapshot(name: "Zoom", bundleID: "us.zoom.xos")
+        let audio = AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: activeApp,
+            audioActivity: audio,
+            now: startedAt
+        )
+        #expect(appState.status == .idle)
+
+        await appState.evaluateAutoStart(
+            activeApplication: activeApp,
+            audioActivity: audio,
+            now: startedAt.addingTimeInterval(15)
+        )
+        #expect(appState.status == .recording)
+
+        try await appState.stopRecording()
+        let draft = try #require(appState.postCallDraft)
+        let metadata = try FileSystemRecordingStore(rootURL: outputFolder).readMetadata(at: draft.metadataURL)
+        #expect(metadata.source.appName == "Zoom")
+        #expect(metadata.source.bundleID == "us.zoom.xos")
+        #expect(metadata.source.trigger == "autostart")
+        #expect(metadata.source.ruleID == "autostart.v1")
     }
 
     @Test
@@ -136,7 +177,7 @@ private final class FailingRecordingController: RecordingController {
         self.error = error
     }
 
-    func startRecording(outputFolder: URL) async throws -> RecordingControllerUpdate {
+    func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
         throw error
     }
 

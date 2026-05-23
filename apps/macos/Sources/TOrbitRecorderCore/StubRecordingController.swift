@@ -8,7 +8,7 @@ public final class StubRecordingController: RecordingController {
 
     public init() {}
 
-    public func startRecording(outputFolder: URL) async throws -> RecordingControllerUpdate {
+    public func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
         guard startedAt == nil else {
             throw RecordingControllerError.alreadyRecording
         }
@@ -17,7 +17,7 @@ public final class StubRecordingController: RecordingController {
         let store = FileSystemRecordingStore(rootURL: outputFolder)
         let session = try store.startSession(
             startedAt: startDate,
-            source: RecordingSource()
+            source: source
         )
 
         startedAt = startDate
@@ -44,11 +44,15 @@ public final class StubRecordingController: RecordingController {
         }
 
         let duration = Date().timeIntervalSince(startedAt)
+        let sessionStatus = TaggingStatus.finalizedStatus(
+            forDuration: duration,
+            preferredStatus: .needsTagging
+        )
         let draft = try store.stopSession(
             activeSession,
             endedAt: Date(),
             duration: duration,
-            status: .needsTagging
+            status: sessionStatus
         )
 
         self.startedAt = nil

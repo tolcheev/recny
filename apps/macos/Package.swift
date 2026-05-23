@@ -17,6 +17,7 @@ let package = Package(
             path: "Sources/TOrbitRecorderCore",
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
+                .linkedFramework("CoreAudio"),
                 .linkedFramework("ScreenCaptureKit"),
                 .linkedLibrary("sqlite3")
             ]

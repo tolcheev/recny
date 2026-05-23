@@ -15,7 +15,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         super.init()
     }
 
-    public func startRecording(outputFolder: URL) async throws -> RecordingControllerUpdate {
+    public func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
         guard startedAt == nil else {
             throw RecordingControllerError.alreadyRecording
         }
@@ -27,12 +27,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         let store = FileSystemRecordingStore(rootURL: outputFolder)
         let session = try store.startSession(
             startedAt: startDate,
-            source: RecordingSource(
-                appName: "TOrbitRecorder",
-                bundleID: "com.torbit.recorder",
-                trigger: "manual",
-                ruleID: "manual.audio"
-            )
+            source: source
         )
 
         let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
@@ -137,7 +132,10 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 outputURL: mixedURL
             )
             audioTracks.append(mixedResult.track)
-            sessionStatus = .needsTagging
+            sessionStatus = TaggingStatus.finalizedStatus(
+                forDuration: duration,
+                preferredStatus: .needsTagging
+            )
         } catch RecordingControllerError.mixedAudioNoSourceTracks {
             audioTracks.append(
                 AudioTrackMetadata(

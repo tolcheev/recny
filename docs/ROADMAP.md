@@ -8,7 +8,7 @@ Scope:
 
 - macOS Sequoia.
 - Audio-only recording.
-- Automatic start.
+- Auto-start Engine v1.
 - Microphone capture.
 - Full system audio capture.
 - Local storage.
@@ -41,7 +41,7 @@ Candidate work:
 - More precise app detection.
 - Better audio activity heuristics.
 - Per-app local rules.
-- Cooldowns and duplicate-session detection.
+- Better cooldowns and duplicate-session detection.
 - Manual correction of category and source metadata.
 
 ## Future: Screen And External Storage

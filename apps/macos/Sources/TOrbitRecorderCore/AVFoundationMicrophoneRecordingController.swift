@@ -23,7 +23,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
 
     public override init() {}
 
-    public func startRecording(outputFolder: URL) async throws -> RecordingControllerUpdate {
+    public func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
         guard startedAt == nil else {
             throw RecordingControllerError.alreadyRecording
         }
@@ -35,12 +35,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         let store = FileSystemRecordingStore(rootURL: outputFolder)
         let session = try store.startSession(
             startedAt: startDate,
-            source: RecordingSource(
-                appName: "TOrbitRecorder",
-                bundleID: "com.torbit.recorder",
-                trigger: "manual",
-                ruleID: "manual.microphone"
-            )
+            source: source
         )
 
         let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
@@ -105,7 +100,10 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             mixedTrack = try await MixedAudioPreviewGenerator()
                 .createPreview(micURL: micURL, systemURL: systemURL, outputURL: mixedURL)
                 .track
-            sessionStatus = .needsTagging
+            sessionStatus = TaggingStatus.finalizedStatus(
+                forDuration: duration,
+                preferredStatus: .needsTagging
+            )
         } catch {
             AppLogger.recording.error("Mixed audio preview failed for microphone recording: \(String(describing: error), privacy: .public)")
             mixedTrack = AudioTrackMetadata(

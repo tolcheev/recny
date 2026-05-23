@@ -39,6 +39,7 @@ The MVP is intentionally not a media studio, meeting bot, cloud recorder, or T-O
 ## MVP Capabilities
 
 - Automatic recording start based on local rules.
+- Auto-start Engine v1 using active app, bundle id, microphone activity, system audio activity, whitelist/blacklist, cooldown, and minimum detection duration.
 - Microphone audio recording.
 - Full system audio recording.
 - Separate source tracks for microphone and system audio.
@@ -108,6 +109,7 @@ AI and sync fields exist in the schema even though AI processing and T-Orbit syn
 - A completed session has both source tracks, a mixed export, and metadata.
 - Stopping a recording opens post-call tagging.
 - Closing post-call tagging without saving leaves status as `needs_tagging`.
+- Recordings shorter than 60 seconds are stored under `Inbox/Short/` with status `short_recording`.
 - Saved recordings are queryable through the local SQLite index.
 - Failed capture is visible in `Inbox/Failed/` or logs, not silently ignored.
 - Short accidental captures can be separated into `Inbox/Short/`.

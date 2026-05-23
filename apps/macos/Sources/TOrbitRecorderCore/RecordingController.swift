@@ -95,6 +95,21 @@ public struct RecordingControllerUpdate: Equatable, Sendable {
 
 @MainActor
 public protocol RecordingController {
-    func startRecording(outputFolder: URL) async throws -> RecordingControllerUpdate
+    func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate
     func stopRecording() async throws -> RecordingControllerUpdate
+}
+
+@MainActor
+public extension RecordingController {
+    func startRecording(outputFolder: URL) async throws -> RecordingControllerUpdate {
+        try await startRecording(
+            outputFolder: outputFolder,
+            source: RecordingSource(
+                appName: "TOrbitRecorder",
+                bundleID: "com.torbit.recorder",
+                trigger: "manual",
+                ruleID: "manual.audio"
+            )
+        )
+    }
 }

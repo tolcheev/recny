@@ -8,6 +8,7 @@
 - Apple Silicon support, with MacBook M4 Pro as the primary validation machine.
 - Audio-only recording.
 - Automatic recording start.
+- Auto-start Engine v1 with active app detection, bundle id detection, whitelist/blacklist settings, cooldown, and minimum detection duration.
 - Microphone capture.
 - Full system audio capture.
 - Separate microphone and system source files.
@@ -15,7 +16,7 @@
 - `metadata.json` next to every session.
 - Compact post-call tagging panel after stop.
 - MVP tags.
-- Status values: `needs_tagging`, `saved`, `needs_review`, `reviewed`, `failed`.
+- Status values: `needs_tagging`, `saved`, `needs_review`, `reviewed`, `failed`, `short_recording`.
 - SQLite recordings index for local filters and library actions.
 - Recordings list filters: date, status, source app, title, and tags.
 - Local recording actions: Open in Finder, Play mixed preview, edit title, add tags, delete with confirmation.
@@ -67,6 +68,7 @@
 - `metadata.json` is created with the MVP schema.
 - Stop opens compact post-call tagging.
 - Closing post-call tagging without saving leaves status `needs_tagging`.
+- Recordings shorter than 60 seconds are classified as `short_recording` and placed under `Inbox/Short/`.
 - Tags persist to `metadata.json` and `db/app.sqlite`.
 - Recordings can be filtered by date, status, source app, title, and tag in the app.
 - Local records can be opened, played, retitled, retagged, and deleted with confirmation.

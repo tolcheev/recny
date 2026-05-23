@@ -221,6 +221,7 @@ Recording `status`:
 - `needs_review`
 - `reviewed`
 - `failed`
+- `short_recording`
 
 AI `ai`:
 
