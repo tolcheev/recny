@@ -43,8 +43,8 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             )
         )
 
-        let micURL = session.sourceURL.appendingPathComponent("mic.m4a")
-        let recorder = try AVAudioRecorder(url: micURL, settings: Self.audioRecorderSettings)
+        let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
+        let recorder = try AVAudioRecorder(url: micSegmentURL, settings: Self.audioRecorderSettings)
         recorder.delegate = self
         recorder.isMeteringEnabled = false
 
@@ -57,7 +57,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         self.store = store
         self.recorder = recorder
 
-        AppLogger.recording.info("Microphone recording started: \(micURL.path(percentEncoded: false), privacy: .public)")
+        AppLogger.recording.info("Microphone recording started: \(micSegmentURL.path(percentEncoded: false), privacy: .public)")
 
         return RecordingControllerUpdate(
             status: .recording,
@@ -81,6 +81,9 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         let micURL = activeSession.sourceURL.appendingPathComponent("mic.m4a")
         let systemURL = activeSession.sourceURL.appendingPathComponent("system.m4a")
         let mixedURL = activeSession.exportURL.appendingPathComponent("mixed.m4a")
+        let micSegmentURL = activeSession.segmentsURL.appendingPathComponent("mic-0001.m4a")
+
+        try finalizeSegmentIfUsable(from: micSegmentURL, to: micURL)
 
         let micFileSize = try validateRecordedFile(at: micURL)
 
@@ -118,6 +121,11 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             )
             sessionStatus = .failed
         }
+        try updateRecoveryMetadata(
+            for: activeSession,
+            status: sessionStatus == .failed ? .failed : .completed,
+            error: sessionStatus == .failed ? mixedTrack.error : nil
+        )
         let draft = try store.stopSession(
             activeSession,
             endedAt: endedAt,
@@ -181,9 +189,65 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         return size.int64Value
     }
 
+    private func finalizeSegmentIfUsable(from segmentURL: URL, to finalURL: URL) throws {
+        let segmentPath = segmentURL.path(percentEncoded: false)
+        guard FileManager.default.fileExists(atPath: segmentPath) else {
+            return
+        }
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: segmentPath)
+        let size = attributes[.size] as? NSNumber
+        guard let size, size.int64Value > 0 else {
+            return
+        }
+
+        try FileManager.default.removeItemIfExists(at: finalURL)
+        try FileManager.default.copyItem(at: segmentURL, to: finalURL)
+    }
+
+    private func updateRecoveryMetadata(
+        for session: RecordingSession,
+        status: RecoveryStatus,
+        error: String?
+    ) throws {
+        guard var recovery = try store?.readRecoveryMetadata(at: session.recoveryMetadataURL) else {
+            return
+        }
+
+        let updatedAt = iso8601(Date())
+        recovery.status = status
+        recovery.updatedAt = updatedAt
+        recovery.error = error
+        recovery.segments = recovery.segments.map { segment in
+            var updated = segment
+            let url = session.folderURL.appendingPathComponent(segment.relativePath)
+            let size = (try? FileManager.default.attributesOfItem(atPath: url.path(percentEncoded: false))[.size] as? NSNumber)?.int64Value
+            updated.fileSizeBytes = size
+            updated.status = (size ?? 0) > 0 ? "completed" : "missing"
+            updated.updatedAt = updatedAt
+            return updated
+        }
+        try store?.writeRecoveryMetadata(recovery, to: session.recoveryMetadataURL)
+    }
+
+    private func iso8601(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
     nonisolated public func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
         if let error {
             AppLogger.recording.error("Microphone recorder encode error: \(String(describing: error), privacy: .public)")
+        }
+    }
+}
+
+private extension FileManager {
+    func removeItemIfExists(at url: URL) throws {
+        let path = url.path(percentEncoded: false)
+        if fileExists(atPath: path) {
+            try removeItem(at: url)
         }
     }
 }

@@ -45,6 +45,11 @@ public final class FileSystemRecordingStore {
             at: session.exportURL,
             withIntermediateDirectories: true
         )
+        try FileManager.default.createDirectory(
+            at: session.segmentsURL,
+            withIntermediateDirectories: true
+        )
+        try writeRecoveryMetadata(makeInitialRecoveryMetadata(for: session), to: session.recoveryMetadataURL)
 
         AppLogger.storage.info("Created temporary recording session folder: \(folderURL.path(percentEncoded: false), privacy: .public)")
 
@@ -132,6 +137,66 @@ public final class FileSystemRecordingStore {
         try codec.read(from: url)
     }
 
+    public func readRecoveryMetadata(at url: URL) throws -> RecoveryMetadata {
+        let data = try Data(contentsOf: url)
+        let decoder = JSONDecoder()
+        return try decoder.decode(RecoveryMetadata.self, from: data)
+    }
+
+    public func writeRecoveryMetadata(_ metadata: RecoveryMetadata, to url: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(metadata)
+        try data.write(to: url, options: [.atomic])
+    }
+
+    public func recoverableSessions() throws -> [RecoverableRecordingSummary] {
+        try prepareRoot()
+
+        let folderURLs = try FileManager.default.contentsOfDirectory(
+            at: paths.inboxUnsortedURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        var summaries: [RecoverableRecordingSummary] = []
+        for folderURL in folderURLs {
+            let values = try folderURL.resourceValues(forKeys: [.isDirectoryKey])
+            guard values.isDirectory == true else {
+                continue
+            }
+
+            let recoveryURL = folderURL.appendingPathComponent("recovery.json")
+            guard FileManager.default.fileExists(atPath: recoveryURL.path(percentEncoded: false)) else {
+                continue
+            }
+
+            var recovery = try readRecoveryMetadata(at: recoveryURL)
+            guard recovery.status == .recording || recovery.status == .recoverable else {
+                continue
+            }
+
+            recovery.status = .recoverable
+            recovery.updatedAt = formatISO8601(Date())
+            try writeRecoveryMetadata(recovery, to: recoveryURL)
+
+            let segmentCount = try usableSegmentURLs(in: folderURL).count
+            summaries.append(
+                RecoverableRecordingSummary(
+                    id: recovery.recordingID,
+                    status: recovery.status,
+                    startedAt: recovery.startedAt,
+                    updatedAt: recovery.updatedAt,
+                    folderURL: folderURL,
+                    recoveryMetadataURL: recoveryURL,
+                    segmentCount: segmentCount
+                )
+            )
+        }
+
+        return summaries.sorted { $0.startedAt > $1.startedAt }
+    }
+
     public func recordings(filterTag: String?) throws -> [RecordingSummary] {
         try SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL).recordings(filterTag: filterTag)
     }
@@ -185,6 +250,48 @@ public final class FileSystemRecordingStore {
             ],
             status: status
         )
+    }
+
+    private func makeInitialRecoveryMetadata(for session: RecordingSession) -> RecoveryMetadata {
+        let now = formatISO8601(session.startedAt)
+        return RecoveryMetadata(
+            recordingID: session.id,
+            status: .recording,
+            startedAt: now,
+            updatedAt: now,
+            source: session.source,
+            segments: [
+                RecoverySegmentMetadata(
+                    kind: "microphone",
+                    relativePath: "source/segments/mic-0001.m4a",
+                    status: "planned"
+                ),
+                RecoverySegmentMetadata(
+                    kind: "system",
+                    relativePath: "source/segments/system-0001.m4a",
+                    status: "planned"
+                )
+            ]
+        )
+    }
+
+    private func usableSegmentURLs(in folderURL: URL) throws -> [URL] {
+        let segmentsURL = folderURL
+            .appendingPathComponent("source", isDirectory: true)
+            .appendingPathComponent("segments", isDirectory: true)
+
+        guard FileManager.default.fileExists(atPath: segmentsURL.path(percentEncoded: false)) else {
+            return []
+        }
+
+        return try FileManager.default.contentsOfDirectory(
+            at: segmentsURL,
+            includingPropertiesForKeys: [.fileSizeKey],
+            options: [.skipsHiddenFiles]
+        )
+        .filter { url in
+            ((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) > 0
+        }
     }
 
     private func uniqueLibrarySessionURL(for session: RecordingSession) throws -> URL {

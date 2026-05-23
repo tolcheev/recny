@@ -18,6 +18,8 @@ The engine is a testable core package, not SwiftUI view logic.
 - Record mixed preview as AAC in an m4a container at 48 kHz, stereo, about 96 kbps.
 - Do not add or persist a screen video output in the MVP.
 - Save metadata for every session.
+- Write `recovery.json` while a session is active.
+- Preserve active recording files under `source/segments/`.
 - Log lifecycle events and failures.
 
 ## Preferred Native APIs
@@ -41,6 +43,7 @@ Suggested states:
 - `completed`
 - `short`
 - `failed`
+- `recoverable`
 
 State transitions must be logged with timestamps and session id.
 
@@ -49,35 +52,69 @@ State transitions must be logged with timestamps and session id.
 1. Receive a start request from the autostart controller or UI.
 2. Create a stable session id.
 3. Resolve the session staging path.
-4. Check microphone permission.
-5. Check microphone input device availability.
-6. Start ScreenCaptureKit system audio writer.
-7. Start microphone writer.
-8. Emit a lifecycle log event.
+4. Create `source/`, `source/segments/`, `export/`, and `recovery.json`.
+5. Check microphone permission.
+6. Check microphone input device availability.
+7. Start ScreenCaptureKit system audio writer at `source/segments/system-0001.m4a`.
+8. Start microphone writer at `source/segments/mic-0001.m4a`.
+9. Emit a lifecycle log event.
 
 If any required permission or capture path fails, the engine must write failure metadata when possible and classify the session under `Inbox/Failed/`.
 
 ## Stop Flow
 
 1. Stop accepting new audio buffers.
-2. Close source track writers.
-3. Validate source files with existence and size checks.
-4. Create `export/mixed.m4a` from the available source tracks.
-5. Compute duration and file sizes where possible.
-6. Classify short sessions when below the configured threshold.
-7. Write final `metadata.json`.
-8. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
-9. Emit a final lifecycle log event.
+2. Close segment writers.
+3. Copy usable segment files into final source files:
+   `source/segments/mic-0001.m4a` -> `source/mic.m4a`;
+   `source/segments/system-0001.m4a` -> `source/system.m4a`.
+4. Mark `recovery.json` as `completed`.
+5. Validate source files with existence and size checks.
+6. Create `export/mixed.m4a` from the available source tracks.
+7. Compute duration and file sizes where possible.
+8. Classify short sessions when below the configured threshold.
+9. Write final `metadata.json`.
+10. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
+11. Emit a final lifecycle log event.
+
+## Crash Recovery
+
+While recording, the canonical in-progress files live in:
+
+```text
+source/segments/
+  mic-0001.m4a
+  system-0001.m4a
+recovery.json
+```
+
+If the app crashes before normal Stop, the session remains under `Inbox/Unsorted/`.
+On next launch, the app scans `Inbox/Unsorted/*/recovery.json`. Any session still marked `recording` is changed to `recoverable` and shown in the UI as `failed / recoverable`.
+
+The Recover Recording action attempts to:
+
+1. Preserve the original segment files.
+2. Copy usable segment files into `source/mic.m4a` and `source/system.m4a`.
+3. Create `export/mixed.m4a` from whichever source files are readable.
+4. Write final `metadata.json`.
+5. Move the recovered session into the Library with `status: "needs_review"`.
+
+If no readable source can be recovered, the final recording status is `failed`.
+The MVP does not delete interrupted files automatically.
 
 ## Required Output
 
 ```text
 source/
+  segments/
+    mic-0001.m4a
+    system-0001.m4a
   mic.m4a
   system.m4a
 export/
   mixed.m4a
 metadata.json
+recovery.json
 ```
 
 If one source track is missing, the mixed preview must be created from the available track. If both source tracks are missing or unusable, the session status must be `failed`.

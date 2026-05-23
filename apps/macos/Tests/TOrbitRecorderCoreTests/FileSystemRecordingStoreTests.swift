@@ -17,6 +17,48 @@ struct FileSystemRecordingStoreTests {
         #expect(session.folderURL.path(percentEncoded: false).contains("Inbox/Unsorted"))
         #expect(FileManager.default.fileExists(atPath: session.sourceURL.path(percentEncoded: false)))
         #expect(FileManager.default.fileExists(atPath: session.exportURL.path(percentEncoded: false)))
+        #expect(FileManager.default.fileExists(atPath: session.segmentsURL.path(percentEncoded: false)))
+    }
+
+    @Test
+    func startSessionWritesRecoveryMetadata() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        let session = try store.startSession(
+            startedAt: startedAt,
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+
+        let recovery = try store.readRecoveryMetadata(at: session.recoveryMetadataURL)
+        #expect(recovery.recordingID == session.id)
+        #expect(recovery.status == .recording)
+        #expect(recovery.source.appName == "Zoom")
+        #expect(recovery.segments.map(\.relativePath).contains("source/segments/mic-0001.m4a"))
+        #expect(recovery.segments.map(\.relativePath).contains("source/segments/system-0001.m4a"))
+    }
+
+    @Test
+    func recoverableSessionsMarksInterruptedRecording() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let session = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        try Data([1, 2, 3]).write(to: session.segmentsURL.appendingPathComponent("mic-0001.m4a"))
+
+        let recoverable = try store.recoverableSessions()
+
+        let summary = try #require(recoverable.first)
+        #expect(summary.id == session.id)
+        #expect(summary.status == .recoverable)
+        #expect(summary.folderURL == session.folderURL)
+        #expect(summary.segmentCount == 1)
+
+        let recovery = try store.readRecoveryMetadata(at: session.recoveryMetadataURL)
+        #expect(recovery.status == .recoverable)
     }
 
     @Test
