@@ -55,7 +55,8 @@ public final class FileSystemRecordingStore {
         _ session: RecordingSession,
         endedAt: Date,
         duration: TimeInterval,
-        status: TaggingStatus
+        status: TaggingStatus,
+        audioTracks: [AudioTrackMetadata]? = nil
     ) throws -> PostCallDraft {
         try prepareRoot()
 
@@ -71,7 +72,8 @@ public final class FileSystemRecordingStore {
             session: session,
             endedAt: endedAt,
             duration: duration,
-            status: status
+            status: status,
+            audioTracks: audioTracks
         )
 
         try write(metadata, metadataURL: finalMetadataURL, sessionFolderURL: finalFolderURL)
@@ -151,7 +153,8 @@ public final class FileSystemRecordingStore {
         session: RecordingSession,
         endedAt: Date,
         duration: TimeInterval,
-        status: TaggingStatus
+        status: TaggingStatus,
+        audioTracks: [AudioTrackMetadata]?
     ) -> RecordingMetadata {
         RecordingMetadata(
             id: session.id,
@@ -160,7 +163,7 @@ public final class FileSystemRecordingStore {
             endedAt: formatISO8601(endedAt),
             durationSec: max(0, duration),
             source: session.source,
-            audioTracks: [
+            audioTracks: audioTracks ?? [
                 AudioTrackMetadata(
                     kind: "microphone",
                     relativePath: "source/mic.m4a",

@@ -29,7 +29,7 @@ public final class AppState: ObservableObject {
     }
 
     public init(
-        recordingController: RecordingController = StubRecordingController(),
+        recordingController: RecordingController = AVFoundationMicrophoneRecordingController(),
         outputFolderURL: URL = RecordingPaths.defaultRoot
     ) {
         self.recordingController = recordingController
@@ -123,10 +123,38 @@ public final class AppState: ObservableObject {
 
     private func applyError(_ error: Error) {
         status = .error
-        micStatus = .error
-        systemAudioStatus = .error
+        micStatus = Self.captureStatus(for: error)
+        systemAudioStatus = Self.systemAudioStatus(for: error)
         errorMessage = String(describing: error)
         stopDurationClock()
+    }
+
+    private static func captureStatus(for error: Error) -> CaptureStatus {
+        guard let recordingError = error as? RecordingControllerError else {
+            return .error
+        }
+
+        switch recordingError {
+        case .microphonePermissionDenied:
+            return .permissionDenied
+        case .noInputDevice:
+            return .noInputDevice
+        default:
+            return .error
+        }
+    }
+
+    private static func systemAudioStatus(for error: Error) -> CaptureStatus {
+        guard let recordingError = error as? RecordingControllerError else {
+            return .error
+        }
+
+        switch recordingError {
+        case .microphonePermissionDenied, .noInputDevice:
+            return .idle
+        default:
+            return .error
+        }
     }
 
     private func reloadRecordingsSilently() {

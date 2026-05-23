@@ -22,6 +22,7 @@ apps/macos/.build/app/TOrbitRecorder.app
 - AppKit status item for menu bar commands.
 - `AppState` core state layer.
 - `RecordingController` protocol.
+- Real microphone recording through AVFoundation into `source/mic.m4a`.
 - `StubRecordingController` that changes state without writing audio.
 - Compact post-call tagging panel after Stop.
 - MVP tags saved to `metadata.json` and SQLite.
@@ -30,4 +31,14 @@ apps/macos/.build/app/TOrbitRecorder.app
 - Basic OSLog logging.
 - Permission descriptions for microphone and future system audio capture.
 
-Real recording, autostart, screen capture, cloud upload, T-Orbit sync, and AI are intentionally not implemented in this step.
+System audio recording, mixed export, autostart, screen capture, cloud upload, T-Orbit sync, and AI are intentionally not implemented in this step.
+
+## Microphone Smoke Test
+
+If the current macOS user has granted microphone access to the terminal process, run:
+
+```sh
+swift run --package-path apps/macos TOrbitRecorderMicSmokeTest --duration 10 --root /tmp/TOrbitRecorderMicSmokeTest
+```
+
+If permission is `not_determined`, `denied`, or `restricted`, the smoke test exits before recording and prints the exact authorization status.

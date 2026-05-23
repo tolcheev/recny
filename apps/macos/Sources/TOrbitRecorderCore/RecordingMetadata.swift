@@ -37,12 +37,35 @@ public struct RecordingSource: Codable, Equatable, Sendable {
 public struct AudioTrackMetadata: Codable, Equatable, Sendable {
     public var kind: String
     public var relativePath: String
+    public var codec: String?
+    public var container: String?
+    public var durationSec: Double?
+    public var sampleRate: Double?
+    public var channels: Int?
+    public var bitrate: Int?
     public var status: String
     public var error: String?
 
-    public init(kind: String, relativePath: String, status: String, error: String? = nil) {
+    public init(
+        kind: String,
+        relativePath: String,
+        codec: String? = nil,
+        container: String? = nil,
+        durationSec: Double? = nil,
+        sampleRate: Double? = nil,
+        channels: Int? = nil,
+        bitrate: Int? = nil,
+        status: String,
+        error: String? = nil
+    ) {
         self.kind = kind
         self.relativePath = relativePath
+        self.codec = codec
+        self.container = container
+        self.durationSec = durationSec
+        self.sampleRate = sampleRate
+        self.channels = channels
+        self.bitrate = bitrate
         self.status = status
         self.error = error
     }
@@ -50,6 +73,12 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case kind
         case relativePath = "relative_path"
+        case codec
+        case container
+        case durationSec = "duration_sec"
+        case sampleRate = "sample_rate"
+        case channels
+        case bitrate
         case status
         case error
     }
