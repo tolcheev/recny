@@ -9,7 +9,8 @@ struct AppStateTests {
         let controller = StubRecordingController()
         let appState = AppState(
             recordingController: controller,
-            outputFolderURL: Self.testOutputFolder()
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
         )
 
         try await appState.startRecording()
@@ -31,7 +32,8 @@ struct AppStateTests {
         let controller = StubRecordingController()
         let appState = AppState(
             recordingController: controller,
-            outputFolderURL: Self.testOutputFolder()
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
         )
 
         try await appState.startRecording()
@@ -47,7 +49,8 @@ struct AppStateTests {
             recordingController: FailingRecordingController(
                 error: RecordingControllerError.systemAudioPermissionDenied("denied")
             ),
-            outputFolderURL: Self.testOutputFolder()
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
         )
 
         await #expect(throws: RecordingControllerError.systemAudioPermissionDenied("denied")) {
@@ -64,7 +67,8 @@ struct AppStateTests {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(
             recordingController: StubRecordingController(),
-            outputFolderURL: outputFolder
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted
         )
 
         try await appState.startRecording()
@@ -89,6 +93,7 @@ struct AppStateTests {
         let appState = AppState(
             recordingController: StubRecordingController(),
             outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
             autoStartSettings: AutoStartSettings(
                 isEnabled: true,
                 whitelist: ["Zoom"],
@@ -129,7 +134,8 @@ struct AppStateTests {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(
             recordingController: StubRecordingController(),
-            outputFolderURL: outputFolder
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted
         )
 
         try await appState.startRecording()
@@ -157,6 +163,60 @@ struct AppStateTests {
         #expect(filtered.map(\.id).contains(draft.id))
     }
 
+    @Test
+    func preflightBlocksStartWhenPermissionsAreMissing() async {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .missing,
+                    screenSystemAudio: .granted,
+                    storage: .granted
+                )
+            )
+        )
+
+        await #expect(throws: RecordingControllerError.preflightFailed("Microphone access is required before recording.")) {
+            try await appState.startRecording()
+        }
+
+        #expect(appState.status == .error)
+        #expect(appState.shouldShowPermissionsOnboarding)
+        let unsortedURL = outputFolder.appendingPathComponent("Inbox/Unsorted", isDirectory: true)
+        let sessionFolders = (try? FileManager.default.contentsOfDirectory(
+            at: unsortedURL,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        #expect(sessionFolders.isEmpty)
+        #expect(
+            (try? FileSystemRecordingStore(rootURL: outputFolder).recoverableSessions().isEmpty) == true
+        )
+    }
+
+    @Test
+    func preflightBlocksStartWhenStorageIsNotWritable() async {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .granted,
+                    storage: .denied
+                )
+            )
+        )
+
+        await #expect(throws: RecordingControllerError.preflightFailed("The recordings folder must be writable before recording.")) {
+            try await appState.startRecording()
+        }
+
+        #expect(appState.status == .error)
+        #expect(appState.recordingStartBlockingReason == "The recordings folder must be writable before recording.")
+    }
+
     private static func testOutputFolder() -> URL {
         let packageRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -167,6 +227,30 @@ struct AppStateTests {
             .appendingPathComponent(".build", isDirectory: true)
             .appendingPathComponent("test-recordings", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    }
+}
+
+private final class StaticPermissionChecker: RecordingPermissionChecking, @unchecked Sendable {
+    static let allGranted = StaticPermissionChecker(
+        snapshot: RecorderPermissionSnapshot(
+            microphone: .granted,
+            screenSystemAudio: .granted,
+            storage: .granted
+        )
+    )
+
+    private let snapshot: RecorderPermissionSnapshot
+
+    init(snapshot: RecorderPermissionSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func snapshot(
+        outputFolderURL: URL,
+        screenSystemAudioSettingsOpened: Bool,
+        lastErrorMessage: String?
+    ) -> RecorderPermissionSnapshot {
+        snapshot
     }
 }
 

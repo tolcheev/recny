@@ -137,6 +137,11 @@ public enum RecordingDisplayFormatter {
             return "Microphone permission is missing"
         }
 
+        if errorMessage.localizedCaseInsensitiveContains("recording preflight failed") {
+            return errorMessage
+                .replacingOccurrences(of: "Recording preflight failed: ", with: "")
+        }
+
         if errorMessage.localizedCaseInsensitiveContains("system audio")
             || errorMessage.localizedCaseInsensitiveContains("screencapturekit")
             || errorMessage.localizedCaseInsensitiveContains("screen & system") {

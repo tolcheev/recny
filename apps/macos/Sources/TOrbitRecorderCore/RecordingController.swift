@@ -30,6 +30,7 @@ public enum RecordingControllerError: Error, Equatable, Sendable, CustomStringCo
     case mixedAudioNoSourceTracks
     case mixedAudioSetupFailed(String)
     case mixedAudioWriteFailed(String)
+    case preflightFailed(String)
 
     public var description: String {
         switch self {
@@ -61,6 +62,8 @@ public enum RecordingControllerError: Error, Equatable, Sendable, CustomStringCo
             return "Failed to configure mixed audio preview: \(message)"
         case .mixedAudioWriteFailed(let message):
             return "Failed to write mixed audio preview: \(message)"
+        case .preflightFailed(let message):
+            return "Recording preflight failed: \(message)"
         }
     }
 }

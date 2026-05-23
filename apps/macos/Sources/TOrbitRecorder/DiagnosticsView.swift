@@ -1,6 +1,4 @@
 import AppKit
-import AVFoundation
-import CoreGraphics
 import Foundation
 import SwiftUI
 import TOrbitRecorderCore
@@ -11,7 +9,6 @@ struct DiagnosticsView: View {
     @State private var clearResult: String?
     @State private var testResult: String?
     @State private var isRunningTestRecording = false
-    @State private var permissionRefreshID = UUID()
     @State private var showRawError = false
 
     var body: some View {
@@ -29,6 +26,7 @@ struct DiagnosticsView: View {
         }
         .frame(minWidth: 700, minHeight: 560)
         .onAppear {
+            appState.refreshPermissionSnapshot()
             try? appState.reloadRecoverableRecordings()
         }
     }
@@ -45,37 +43,19 @@ struct DiagnosticsView: View {
 
     private var permissionsSection: some View {
         GroupBox("Permissions") {
-            VStack(alignment: .leading, spacing: 8) {
-                DiagnosticLine(label: "Microphone", value: microphonePermission)
-                DiagnosticLine(label: "Screen & System Audio Recording", value: screenCapturePermission)
-                DiagnosticLine(label: "Output folder", value: outputFolderWritable)
+            VStack(alignment: .leading, spacing: 10) {
+                PermissionChecklistContent(appState: appState)
 
-                if !isScreenCaptureAuthorized {
-                    Divider()
+                HStack {
+                    Spacer()
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("If TOrbitRecorder is already enabled in System Settings, quit and reopen this exact app build. macOS can keep the old permission state until restart, and dev builds from a different path may need approval again.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        HStack(spacing: 8) {
-                            Button {
-                                openScreenCapturePrivacySettings()
-                            } label: {
-                                Label("Open Privacy Settings", systemImage: "lock.shield")
-                            }
-
-                            Button {
-                                permissionRefreshID = UUID()
-                            } label: {
-                                Label("Recheck", systemImage: "arrow.clockwise")
-                            }
-                        }
+                    Button {
+                        appState.refreshPermissionSnapshot()
+                    } label: {
+                        Label("Recheck", systemImage: "arrow.clockwise")
                     }
                 }
             }
-            .id(permissionRefreshID)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -253,56 +233,8 @@ struct DiagnosticsView: View {
         }
     }
 
-    private var microphonePermission: String {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
-        case .authorized:
-            return "Authorized"
-        case .notDetermined:
-            return "Not determined"
-        case .denied:
-            return "Denied"
-        case .restricted:
-            return "Restricted"
-        @unknown default:
-            return "Unknown"
-        }
-    }
-
-    private var screenCapturePermission: String {
-        isScreenCaptureAuthorized ? "Authorized" : "Needs permission or app restart"
-    }
-
-    private var isScreenCaptureAuthorized: Bool {
-        CGPreflightScreenCaptureAccess()
-    }
-
-    private var outputFolderWritable: String {
-        do {
-            try FileManager.default.createDirectory(
-                at: appState.outputFolderURL,
-                withIntermediateDirectories: true
-            )
-            let testURL = appState.outputFolderURL.appendingPathComponent(".torbit-write-test")
-            try Data().write(to: testURL)
-            try? FileManager.default.removeItem(at: testURL)
-            return "Writable"
-        } catch {
-            return "Not writable"
-        }
-    }
-
     private var logsURL: URL {
         appState.outputFolderURL.appendingPathComponent("logs", isDirectory: true)
-    }
-
-    private func openScreenCapturePrivacySettings() {
-        guard let url = URL(
-            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
-        ) else {
-            return
-        }
-
-        NSWorkspace.shared.open(url)
     }
 
     private func openLogs() {

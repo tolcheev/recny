@@ -19,10 +19,30 @@ struct RecordingStatusCard: View {
 
     private var idleContent: some View {
         VStack(alignment: .leading, spacing: 14) {
-            statusHeader(title: "Ready", subtitle: "Ready to record microphone and system audio.", tone: .ready)
+            if appState.isRecordingStartAllowed {
+                statusHeader(title: "Ready", subtitle: "Ready to record microphone and system audio.", tone: .ready)
 
-            PrimaryRecordingButton(status: appState.status) {
-                startRecording()
+                PrimaryRecordingButton(status: appState.status) {
+                    startRecording()
+                }
+            } else {
+                statusHeader(
+                    title: "Permissions needed",
+                    subtitle: appState.recordingStartBlockingReason ?? "Fix permissions before recording.",
+                    tone: .warning
+                )
+
+                Button {
+                    AppWindows.openDiagnostics(appState: appState)
+                } label: {
+                    Label("Fix Permissions", systemImage: "lock.shield")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .accessibilityLabel("Fix Permissions")
             }
 
             captureRows

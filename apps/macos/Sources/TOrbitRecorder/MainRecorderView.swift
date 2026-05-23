@@ -8,6 +8,9 @@ struct MainRecorderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
+            if appState.shouldShowPermissionsOnboarding {
+                PermissionsOnboardingView(appState: appState)
+            }
             RecordingStatusCard(appState: appState)
             if let lastRecording = appState.lastRecording {
                 LatestRecordingStrip(recording: lastRecording) {
@@ -17,8 +20,14 @@ struct MainRecorderView: View {
             footerActions
         }
         .padding(20)
-        .frame(minWidth: 560, idealWidth: 600, maxWidth: 680, minHeight: 430)
+        .frame(minWidth: 560, idealWidth: 620, maxWidth: 720, minHeight: 520)
         .background(Color(nsColor: .windowBackgroundColor))
+        .onAppear {
+            appState.refreshPermissionSnapshot()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            appState.refreshPermissionSnapshot()
+        }
         .sheet(isPresented: $appState.isPostCallPanelPresented) {
             if let draft = appState.postCallDraft {
                 TagEditorView(draft: draft) { updatedDraft in

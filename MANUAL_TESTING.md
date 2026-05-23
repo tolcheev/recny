@@ -16,7 +16,8 @@ From the repository root:
 
 ```sh
 scripts/build_macos.sh
-open -n apps/macos/.build/app/TOrbitRecorder.app
+scripts/package_macos.sh
+open -n dist/TOrbitRecorder.app
 ```
 
 The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Last Recording Folder, Open Library, Settings, Diagnostics, and Quit.
@@ -42,14 +43,38 @@ Settings, Library, and Diagnostics open as separate app windows. If a window is 
 
 ## Permissions
 
+On first launch, the app shows a permissions onboarding panel if anything needed for recording is missing. The panel checks:
+
+- Microphone access
+- Screen & System Audio Recording access
+- Storage folder access
+
+Each row shows one user-facing state:
+
+- `Granted`: ready
+- `Missing`: enable it in System Settings
+- `Denied`: permission was blocked and must be changed in System Settings
+- `Not determined`: macOS has not granted it yet
+- `Restart required`: the setting was changed, but the current app process must be restarted
+- `Unknown`: the app cannot determine the state
+
 Grant permissions in macOS System Settings:
 
 - Privacy & Security -> Microphone -> `TOrbitRecorder`
 - Privacy & Security -> Screen & System Audio Recording -> `TOrbitRecorder`
 
-If macOS prompts during Start Recording, grant access, quit the app, reopen it, and run the test again.
+If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
+
+If the app shows `Restart required`, quit `TOrbitRecorder` completely and reopen the same app bundle:
+
+```sh
+pkill -x TOrbitRecorder 2>/dev/null || true
+open -n dist/TOrbitRecorder.app
+```
 
 When testing Screen & System Audio Recording, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted.
+
+For normal manual testing, prefer `dist/TOrbitRecorder.app` or `/Applications/TOrbitRecorder.app` over `.build/app/TOrbitRecorder.app`.
 
 ## Full Recording Checklist
 
@@ -240,6 +265,15 @@ Fix:
 5. Retry recording.
 
 If System Settings already shows `TOrbitRecorder` enabled but the app still reports a ScreenCaptureKit permission error, quit the app completely and reopen it. If you installed or opened another build path, approve that build too.
+
+Developer reset if TCC gets stuck:
+
+```sh
+tccutil reset Microphone com.torbit.recorder
+tccutil reset ScreenCapture com.torbit.recorder
+```
+
+After reset, reopen the same app bundle and grant permissions again.
 
 ### No System Audio
 

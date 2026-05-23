@@ -26,8 +26,10 @@ public final class AppState: ObservableObject {
     @Published public private(set) var availableMicrophoneDevices: [MicrophoneInputDevice]
     @Published public private(set) var selectedMicrophoneName: String
     @Published public private(set) var microphoneInputWarning: String?
+    @Published public private(set) var permissionSnapshot: RecorderPermissionSnapshot
 
     private let recordingController: RecordingController
+    private let permissionChecker: RecordingPermissionChecking
     private var recordingStore: FileSystemRecordingStore
     private let activeApplicationDetector: ActiveApplicationDetecting
     private let audioActivityDetector: AudioActivityDetecting
@@ -37,6 +39,7 @@ public final class AppState: ObservableObject {
     private var autoStartEngine: AutoStartEngine
     private var lastRecordingStoppedAt: Date?
     private var lastAutoStartDecisionLogKey: String?
+    private var screenSystemAudioSettingsOpened = false
 
     public var outputFolderPath: String {
         outputFolderURL.path(percentEncoded: false)
@@ -46,11 +49,39 @@ public final class AppState: ObservableObject {
         Self.formatDuration(currentRecordingDuration)
     }
 
+    public var shouldShowPermissionsOnboarding: Bool {
+        RecordingPermissionDisplay.shouldShowOnboarding(
+            permissionSnapshot,
+            systemAudioEnabled: recordingSettings.systemAudioEnabled
+        )
+    }
+
+    public var isRecordingStartAllowed: Bool {
+        status != .recording
+            && selectedMicrophoneName != "No input device"
+            && RecordingPermissionDisplay.canStartRecording(
+                permissionSnapshot,
+                systemAudioEnabled: recordingSettings.systemAudioEnabled
+            )
+    }
+
+    public var recordingStartBlockingReason: String? {
+        if selectedMicrophoneName == "No input device" {
+            return "No microphone input device is available."
+        }
+
+        return RecordingPermissionDisplay.blockingReason(
+            permissionSnapshot,
+            systemAudioEnabled: recordingSettings.systemAudioEnabled
+        )
+    }
+
     public init(
         recordingController: RecordingController? = nil,
         outputFolderURL: URL? = nil,
         activeApplicationDetector: ActiveApplicationDetecting? = nil,
         audioActivityDetector: AudioActivityDetecting? = nil,
+        permissionChecker: RecordingPermissionChecking? = nil,
         autoStartSettings: AutoStartSettings? = nil,
         appSettings: AppSettings = AppSettingsStore.load()
     ) {
@@ -63,6 +94,7 @@ public final class AppState: ObservableObject {
         }
 
         self.recordingController = recordingController ?? MacOSAudioRecordingController()
+        self.permissionChecker = permissionChecker ?? SystemRecordingPermissionChecker()
         self.outputFolderURL = resolvedSettings.storage.rootFolderURL
         self.activeApplicationDetector = activeApplicationDetector ?? WorkspaceActiveApplicationDetector()
         self.audioActivityDetector = audioActivityDetector ?? CoreAudioActivityDetector()
@@ -93,8 +125,10 @@ public final class AppState: ObservableObject {
         )
         self.selectedMicrophoneName = microphoneSelection?.device.name ?? "No input device"
         self.microphoneInputWarning = microphoneSelection?.warning
+        self.permissionSnapshot = .unknown
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
+        refreshPermissionSnapshot()
         reloadRecordingsSilently()
         reloadLastRecordingSilently()
         reloadRecoverableRecordingsSilently()
@@ -117,8 +151,21 @@ public final class AppState: ObservableObject {
     }
 
     public func startRecording(source: RecordingSource) async throws {
+        guard status != .recording else {
+            throw RecordingControllerError.alreadyRecording
+        }
+
         do {
             refreshMicrophoneDevices()
+            refreshPermissionSnapshot()
+
+            guard isRecordingStartAllowed else {
+                let message = recordingStartBlockingReason ?? "Required recording permissions are not ready."
+                let error = RecordingControllerError.preflightFailed(message)
+                applyError(error)
+                AppLogger.recording.error("Recording preflight failed before session creation: \(message, privacy: .public)")
+                throw error
+            }
 
             try FileManager.default.createDirectory(
                 at: outputFolderURL,
@@ -294,6 +341,7 @@ public final class AppState: ObservableObject {
 
     public func setSystemAudioEnabled(_ isEnabled: Bool) {
         recordingSettings.systemAudioEnabled = isEnabled
+        refreshPermissionSnapshot()
         saveSettings()
     }
 
@@ -305,6 +353,19 @@ public final class AppState: ObservableObject {
     public func refreshMicrophoneDevices() {
         availableMicrophoneDevices = MicrophoneDeviceProvider.availableInputDevices()
         refreshSelectedMicrophone()
+    }
+
+    public func refreshPermissionSnapshot() {
+        permissionSnapshot = permissionChecker.snapshot(
+            outputFolderURL: outputFolderURL,
+            screenSystemAudioSettingsOpened: screenSystemAudioSettingsOpened,
+            lastErrorMessage: errorMessage
+        )
+    }
+
+    public func markScreenSystemAudioSettingsOpened() {
+        screenSystemAudioSettingsOpened = true
+        refreshPermissionSnapshot()
     }
 
     public func setPreferredMicrophoneDeviceID(_ deviceID: String?) {
@@ -326,6 +387,7 @@ public final class AppState: ObservableObject {
         outputFolderURL = url
         storageSettings.rootFolderPath = url.path(percentEncoded: false)
         recordingStore = FileSystemRecordingStore(rootURL: url)
+        refreshPermissionSnapshot()
         reloadRecordingsSilently()
         reloadLastRecordingSilently()
         reloadRecoverableRecordingsSilently()
@@ -500,6 +562,8 @@ public final class AppState: ObservableObject {
             return .noInputDevice
         case .systemAudioPermissionDenied, .noShareableDisplay, .systemAudioSetupFailed, .systemAudioWriteFailed, .systemAudioNoSamples:
             return .idle
+        case .preflightFailed:
+            return .idle
         default:
             return .error
         }
@@ -517,6 +581,8 @@ public final class AppState: ObservableObject {
             return .permissionDenied
         case .noShareableDisplay, .systemAudioSetupFailed, .systemAudioWriteFailed, .systemAudioNoSamples:
             return .error
+        case .preflightFailed:
+            return .idle
         default:
             return .error
         }
