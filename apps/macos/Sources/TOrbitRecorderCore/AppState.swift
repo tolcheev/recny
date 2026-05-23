@@ -23,6 +23,9 @@ public final class AppState: ObservableObject {
     @Published public private(set) var privacySettings: PrivacySettings
     @Published public private(set) var autoStartLastDecision: String
     @Published public private(set) var outputFolderURL: URL
+    @Published public private(set) var availableMicrophoneDevices: [MicrophoneInputDevice]
+    @Published public private(set) var selectedMicrophoneName: String
+    @Published public private(set) var microphoneInputWarning: String?
 
     private let recordingController: RecordingController
     private var recordingStore: FileSystemRecordingStore
@@ -82,6 +85,14 @@ public final class AppState: ObservableObject {
         self.hotkeySettings = resolvedSettings.hotkeys
         self.privacySettings = resolvedSettings.privacy
         self.autoStartLastDecision = "not_checked"
+        let availableMicrophoneDevices = MicrophoneDeviceProvider.availableInputDevices()
+        self.availableMicrophoneDevices = availableMicrophoneDevices
+        let microphoneSelection = Self.resolveMicrophoneSelection(
+            devices: availableMicrophoneDevices,
+            preferredDeviceID: resolvedSettings.recording.microphoneDeviceID
+        )
+        self.selectedMicrophoneName = microphoneSelection?.device.name ?? "No input device"
+        self.microphoneInputWarning = microphoneSelection?.warning
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
         reloadRecordingsSilently()
@@ -107,6 +118,8 @@ public final class AppState: ObservableObject {
 
     public func startRecording(source: RecordingSource) async throws {
         do {
+            refreshMicrophoneDevices()
+
             try FileManager.default.createDirectory(
                 at: outputFolderURL,
                 withIntermediateDirectories: true
@@ -286,6 +299,17 @@ public final class AppState: ObservableObject {
 
     public func setMixedPreviewEnabled(_ isEnabled: Bool) {
         recordingSettings.mixedPreviewEnabled = isEnabled
+        saveSettings()
+    }
+
+    public func refreshMicrophoneDevices() {
+        availableMicrophoneDevices = MicrophoneDeviceProvider.availableInputDevices()
+        refreshSelectedMicrophone()
+    }
+
+    public func setPreferredMicrophoneDeviceID(_ deviceID: String?) {
+        recordingSettings.microphoneDeviceID = deviceID?.isEmpty == true ? nil : deviceID
+        refreshSelectedMicrophone()
         saveSettings()
     }
 
@@ -547,7 +571,27 @@ public final class AppState: ObservableObject {
         RecordingRuntimeSettings(
             systemAudioEnabled: recordingSettings.systemAudioEnabled,
             mixedPreviewEnabled: recordingSettings.mixedPreviewEnabled,
-            shortRecordingThresholdSeconds: autoStartSettings.shortRecordingThresholdSeconds
+            shortRecordingThresholdSeconds: autoStartSettings.shortRecordingThresholdSeconds,
+            preferredMicrophoneDeviceID: recordingSettings.microphoneDeviceID
+        )
+    }
+
+    private func refreshSelectedMicrophone() {
+        let selection = Self.resolveMicrophoneSelection(
+            devices: availableMicrophoneDevices,
+            preferredDeviceID: recordingSettings.microphoneDeviceID
+        )
+        selectedMicrophoneName = selection?.device.name ?? "No input device"
+        microphoneInputWarning = selection?.warning
+    }
+
+    private static func resolveMicrophoneSelection(
+        devices: [MicrophoneInputDevice],
+        preferredDeviceID: String?
+    ) -> MicrophoneDeviceSelection? {
+        MicrophoneDeviceResolver.resolve(
+            devices: devices,
+            preferredDeviceID: preferredDeviceID
         )
     }
 

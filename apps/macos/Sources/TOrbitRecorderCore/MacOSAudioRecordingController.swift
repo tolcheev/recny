@@ -8,8 +8,10 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
     private var store: FileSystemRecordingStore?
     private var microphoneRecorder: AVAudioRecorder?
     private var systemAudioRecorder: ScreenCaptureKitSystemAudioRecorder?
+    private var microphoneInputOverride: CoreAudioInputDeviceOverride?
     private let mixedAudioPreviewGenerator: MixedAudioPreviewGenerator
     private var runtimeSettings = RecordingRuntimeSettings()
+    private var selectedMicrophoneDevice: MicrophoneDeviceSelection?
 
     public override init() {
         self.mixedAudioPreviewGenerator = MixedAudioPreviewGenerator()
@@ -26,54 +28,65 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         }
 
         try await ensureMicrophonePermission()
-        try ensureInputDeviceAvailable()
+        let microphoneSelection = try selectMicrophoneInput(settings: settings)
 
-        let startDate = Date()
-        let store = FileSystemRecordingStore(rootURL: outputFolder)
-        let session = try store.startSession(
-            startedAt: startDate,
-            source: source
-        )
+        do {
+            let startDate = Date()
+            let store = FileSystemRecordingStore(rootURL: outputFolder)
+            let session = try store.startSession(
+                startedAt: startDate,
+                source: source
+            )
 
-        let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
-        let systemSegmentURL = session.segmentsURL.appendingPathComponent("system-0001.m4a")
-        let micRecorder = try AVAudioRecorder(
-            url: micSegmentURL,
-            settings: AVFoundationMicrophoneRecordingController.audioRecorderSettings
-        )
-        micRecorder.delegate = self
+            let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
+            let systemSegmentURL = session.segmentsURL.appendingPathComponent("system-0001.m4a")
+            let micRecorder = try AVAudioRecorder(
+                url: micSegmentURL,
+                settings: AVFoundationMicrophoneRecordingController.audioRecorderSettings
+            )
+            micRecorder.delegate = self
 
-        let systemRecorder: ScreenCaptureKitSystemAudioRecorder?
-        if settings.systemAudioEnabled {
-            let recorder = ScreenCaptureKitSystemAudioRecorder()
-            try await recorder.start(outputURL: systemSegmentURL)
-            systemRecorder = recorder
-        } else {
-            systemRecorder = nil
+            let systemRecorder: ScreenCaptureKitSystemAudioRecorder?
+            if settings.systemAudioEnabled {
+                let recorder = ScreenCaptureKitSystemAudioRecorder()
+                try await recorder.start(outputURL: systemSegmentURL)
+                systemRecorder = recorder
+            } else {
+                systemRecorder = nil
+            }
+
+            guard micRecorder.prepareToRecord(), micRecorder.record() else {
+                _ = try? await systemRecorder?.stop()
+                throw RecordingControllerError.recorderSetupFailed("AVAudioRecorder failed to start")
+            }
+
+            self.startedAt = startDate
+            self.activeSession = session
+            self.store = store
+            self.microphoneRecorder = micRecorder
+            self.systemAudioRecorder = systemRecorder
+            self.selectedMicrophoneDevice = microphoneSelection
+            self.runtimeSettings = settings
+
+            AppLogger.recording.info("Microphone recording started. mic=\(microphoneSelection.device.name, privacy: .public), system_audio_enabled=\(settings.systemAudioEnabled, privacy: .public), mixed_preview_enabled=\(settings.mixedPreviewEnabled, privacy: .public)")
+            if let warning = microphoneSelection.warning {
+                AppLogger.recording.error("\(warning, privacy: .public)")
+            }
+
+            return RecordingControllerUpdate(
+                status: .recording,
+                micStatus: .recording,
+                systemAudioStatus: settings.systemAudioEnabled ? .recording : .idle,
+                startedAt: startDate,
+                duration: 0,
+                session: session
+            )
+        } catch {
+            microphoneInputOverride?.restore()
+            microphoneInputOverride = nil
+            selectedMicrophoneDevice = nil
+            throw error
         }
-
-        guard micRecorder.prepareToRecord(), micRecorder.record() else {
-            _ = try? await systemRecorder?.stop()
-            throw RecordingControllerError.recorderSetupFailed("AVAudioRecorder failed to start")
-        }
-
-        self.startedAt = startDate
-        self.activeSession = session
-        self.store = store
-        self.microphoneRecorder = micRecorder
-        self.systemAudioRecorder = systemRecorder
-        self.runtimeSettings = settings
-
-        AppLogger.recording.info("Microphone recording started. system_audio_enabled=\(settings.systemAudioEnabled, privacy: .public), mixed_preview_enabled=\(settings.mixedPreviewEnabled, privacy: .public)")
-
-        return RecordingControllerUpdate(
-            status: .recording,
-            micStatus: .recording,
-            systemAudioStatus: settings.systemAudioEnabled ? .recording : .idle,
-            startedAt: startDate,
-            duration: 0,
-            session: session
-        )
     }
 
     public func stopRecording() async throws -> RecordingControllerUpdate {
@@ -268,10 +281,19 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         }
     }
 
-    private func ensureInputDeviceAvailable() throws {
-        guard AVCaptureDevice.default(for: .audio) != nil else {
+    private func selectMicrophoneInput(settings: RecordingRuntimeSettings) throws -> MicrophoneDeviceSelection {
+        let devices = MicrophoneDeviceProvider.availableInputDevices()
+        guard let selection = MicrophoneDeviceResolver.resolve(
+            devices: devices,
+            preferredDeviceID: settings.preferredMicrophoneDeviceID
+        ) else {
             throw RecordingControllerError.noInputDevice
         }
+
+        #if canImport(CoreAudio)
+        microphoneInputOverride = try CoreAudioInputDeviceOverride(selectedDeviceUID: selection.device.id)
+        #endif
+        return selection
     }
 
     private func sourceTrackMetadata(
@@ -409,6 +431,9 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         store = nil
         microphoneRecorder = nil
         systemAudioRecorder = nil
+        microphoneInputOverride?.restore()
+        microphoneInputOverride = nil
+        selectedMicrophoneDevice = nil
         runtimeSettings = RecordingRuntimeSettings()
     }
 

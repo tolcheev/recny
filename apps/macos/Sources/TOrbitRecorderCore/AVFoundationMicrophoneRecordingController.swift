@@ -20,6 +20,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
     private var activeSession: RecordingSession?
     private var store: FileSystemRecordingStore?
     private var recorder: AVAudioRecorder?
+    private var microphoneInputOverride: CoreAudioInputDeviceOverride?
     private var runtimeSettings = RecordingRuntimeSettings()
 
     public override init() {}
@@ -34,45 +35,56 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         }
 
         try await ensureMicrophonePermission()
-        try ensureInputDeviceAvailable()
+        let microphoneSelection = try selectMicrophoneInput(settings: settings)
 
-        let startDate = Date()
-        let store = FileSystemRecordingStore(rootURL: outputFolder)
-        let session = try store.startSession(
-            startedAt: startDate,
-            source: source
-        )
+        do {
+            let startDate = Date()
+            let store = FileSystemRecordingStore(rootURL: outputFolder)
+            let session = try store.startSession(
+                startedAt: startDate,
+                source: source
+            )
 
-        let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
-        let recorder = try AVAudioRecorder(url: micSegmentURL, settings: Self.audioRecorderSettings)
-        recorder.delegate = self
-        recorder.isMeteringEnabled = false
+            let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
+            let recorder = try AVAudioRecorder(url: micSegmentURL, settings: Self.audioRecorderSettings)
+            recorder.delegate = self
+            recorder.isMeteringEnabled = false
 
-        guard recorder.prepareToRecord(), recorder.record() else {
-            throw RecordingControllerError.recorderSetupFailed("AVAudioRecorder failed to start")
+            guard recorder.prepareToRecord(), recorder.record() else {
+                throw RecordingControllerError.recorderSetupFailed("AVAudioRecorder failed to start")
+            }
+
+            self.startedAt = startDate
+            self.activeSession = session
+            self.store = store
+            self.recorder = recorder
+            self.runtimeSettings = settings
+
+            AppLogger.recording.info("Microphone recording started: \(micSegmentURL.path(percentEncoded: false), privacy: .public)")
+            if let warning = microphoneSelection.warning {
+                AppLogger.recording.error("\(warning, privacy: .public)")
+            }
+
+            return RecordingControllerUpdate(
+                status: .recording,
+                micStatus: .recording,
+                systemAudioStatus: .idle,
+                startedAt: startDate,
+                duration: 0,
+                session: session
+            )
+        } catch {
+            clearActiveRecordingState()
+            throw error
         }
-
-        self.startedAt = startDate
-        self.activeSession = session
-        self.store = store
-        self.recorder = recorder
-        self.runtimeSettings = settings
-
-        AppLogger.recording.info("Microphone recording started: \(micSegmentURL.path(percentEncoded: false), privacy: .public)")
-
-        return RecordingControllerUpdate(
-            status: .recording,
-            micStatus: .recording,
-            systemAudioStatus: .idle,
-            startedAt: startDate,
-            duration: 0,
-            session: session
-        )
     }
 
     public func stopRecording() async throws -> RecordingControllerUpdate {
         guard let startedAt, let activeSession, let store, let recorder else {
             throw RecordingControllerError.notRecording
+        }
+        defer {
+            clearActiveRecordingState()
         }
 
         recorder.stop()
@@ -159,12 +171,6 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             shortRecordingThresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
         )
 
-        self.startedAt = nil
-        self.activeSession = nil
-        self.store = nil
-        self.recorder = nil
-        self.runtimeSettings = RecordingRuntimeSettings()
-
         AppLogger.recording.info("Microphone recording stopped after \(duration, privacy: .public) seconds")
 
         return RecordingControllerUpdate(
@@ -194,11 +200,20 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         }
     }
 
-    private func ensureInputDeviceAvailable() throws {
-        guard AVCaptureDevice.default(for: .audio) != nil else {
+    private func selectMicrophoneInput(settings: RecordingRuntimeSettings) throws -> MicrophoneDeviceSelection {
+        let devices = MicrophoneDeviceProvider.availableInputDevices()
+        guard let selection = MicrophoneDeviceResolver.resolve(
+            devices: devices,
+            preferredDeviceID: settings.preferredMicrophoneDeviceID
+        ) else {
             AppLogger.recording.error("No microphone input device available")
             throw RecordingControllerError.noInputDevice
         }
+
+        #if canImport(CoreAudio)
+        microphoneInputOverride = try CoreAudioInputDeviceOverride(selectedDeviceUID: selection.device.id)
+        #endif
+        return selection
     }
 
     private func validateRecordedFile(at url: URL) throws -> Int64 {
@@ -260,6 +275,16 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
+    }
+
+    private func clearActiveRecordingState() {
+        startedAt = nil
+        activeSession = nil
+        store = nil
+        recorder = nil
+        microphoneInputOverride?.restore()
+        microphoneInputOverride = nil
+        runtimeSettings = RecordingRuntimeSettings()
     }
 
     nonisolated public func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {

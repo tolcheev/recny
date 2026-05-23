@@ -20,7 +20,7 @@
 - SQLite recordings index for local filters and library actions.
 - Recordings list filters: date, status, source app, title, and tags.
 - Local recording actions: Open in Finder, Play mixed preview, edit title, add tags, delete with confirmation.
-- Settings screen with recording toggles, auto-start rules, storage root actions, disabled hotkey placeholders, and local privacy controls.
+- Settings screen with preferred microphone selection, recording toggles, auto-start rules, storage root actions, disabled hotkey placeholders, and local privacy controls.
 - Local storage under `~/Recordings/TOrbitRecorder/`.
 - Local logs for lifecycle events and failures.
 - Basic failure classification into `Inbox/Failed/`.
@@ -74,6 +74,7 @@
 - Recordings can be filtered by date, status, source app, title, and tag in the app.
 - Local records can be opened, played, retitled, retagged, and deleted with confirmation.
 - Settings persist locally and keep unimplemented controls disabled.
+- Preferred microphone defaults to `Auto, recommended`, avoids AirPods/Bluetooth headset microphones when a built-in or external microphone is available, and never changes the macOS output device.
 - Logs explain start, stop, success, short recording, and failure cases.
 - The app can run without T-Orbit backend availability.
 

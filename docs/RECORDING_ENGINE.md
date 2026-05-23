@@ -30,6 +30,24 @@ The engine is a testable core package, not SwiftUI view logic.
 
 Any capture limitation must be represented as a real failure state. Tests may use fixtures for state and storage behavior, but they must not fake a successful production audio capture path.
 
+## Microphone Input Policy
+
+The recorder selects a microphone input device deterministically before starting the microphone track. It must not change the macOS system output device.
+
+Default selection is `Auto, recommended`:
+
+1. Prefer external microphones: Shure, MV7, Hollyland, USB microphones, audio interfaces, and other non-built-in external microphone devices.
+2. Fall back to the built-in MacBook microphone: `MacBook Pro Microphone` or `Built-in Microphone`.
+3. Use AirPods, AirPods Pro, AirPods Max, Bluetooth headset, or hands-free profile microphones only when no other input device is available.
+
+If the selected input is the Bluetooth fallback, the app must show:
+
+```text
+Only Bluetooth headset microphone is available. Recording quality may be degraded.
+```
+
+The selected microphone name is visible in the main recorder UI and can be overridden from Settings > Recording > Preferred microphone. A preferred Bluetooth headset microphone is ignored while a non-Bluetooth microphone is available.
+
 ## Session State Model
 
 Suggested states:
@@ -54,7 +72,7 @@ State transitions must be logged with timestamps and session id.
 3. Resolve the session staging path.
 4. Create `source/`, `source/segments/`, `export/`, and `recovery.json`.
 5. Check microphone permission.
-6. Check microphone input device availability.
+6. Resolve the microphone input device using the deterministic input policy and temporarily select only that input device for the microphone writer.
 7. Start ScreenCaptureKit system audio writer at `source/segments/system-0001.m4a`.
 8. Start microphone writer at `source/segments/mic-0001.m4a`.
 9. Emit a lifecycle log event.
@@ -142,6 +160,8 @@ Every track in `metadata.json` should include:
 The engine must distinguish:
 
 - microphone permission denied
+- no usable microphone input device
+- selected microphone input no longer available
 - system audio permission denied or unavailable
 - source app detection failure
 - writer creation failure
@@ -162,6 +182,7 @@ Package-level tests should cover:
 - short-session classification
 - failed-session classification
 - track status mapping
+- microphone device priority resolution
 - log event formatting
 
 Real capture validation remains a manual or device-level integration check because macOS permissions and audio devices are involved.

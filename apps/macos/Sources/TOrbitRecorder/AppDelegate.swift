@@ -8,9 +8,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var cancellables: Set<AnyCancellable> = []
-    private var startItem: NSMenuItem?
-    private var stopItem: NSMenuItem?
-    private var openLatestItem: NSMenuItem?
+    private var recordingToggleItem: NSMenuItem?
+    private var playLastItem: NSMenuItem?
+    private var openLastFolderItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -41,34 +41,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        let startItem = NSMenuItem(
+        let recordingToggleItem = NSMenuItem(
             title: "Start Recording",
             action: #selector(startRecording),
             keyEquivalent: ""
         )
-        startItem.target = self
-        menu.addItem(startItem)
-        self.startItem = startItem
-
-        let stopItem = NSMenuItem(
-            title: "Stop Recording",
-            action: #selector(stopRecording),
-            keyEquivalent: ""
-        )
-        stopItem.target = self
-        menu.addItem(stopItem)
-        self.stopItem = stopItem
+        recordingToggleItem.target = self
+        menu.addItem(recordingToggleItem)
+        self.recordingToggleItem = recordingToggleItem
 
         menu.addItem(.separator())
 
-        let openLatestItem = NSMenuItem(
-            title: "Open Latest Recording",
-            action: #selector(openLatestRecording),
+        let playLastItem = NSMenuItem(
+            title: "Play Last Recording",
+            action: #selector(playLastRecording),
             keyEquivalent: ""
         )
-        openLatestItem.target = self
-        menu.addItem(openLatestItem)
-        self.openLatestItem = openLatestItem
+        playLastItem.target = self
+        menu.addItem(playLastItem)
+        self.playLastItem = playLastItem
+
+        let openLastFolderItem = NSMenuItem(
+            title: "Open Last Recording Folder",
+            action: #selector(openLastRecordingFolder),
+            keyEquivalent: ""
+        )
+        openLastFolderItem.target = self
+        menu.addItem(openLastFolderItem)
+        self.openLastFolderItem = openLastFolderItem
 
         let openLibraryItem = NSMenuItem(
             title: "Open Library",
@@ -85,6 +85,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         settingsItem.target = self
         menu.addItem(settingsItem)
+
+        let diagnosticsItem = NSMenuItem(
+            title: "Diagnostics",
+            action: #selector(showDiagnostics),
+            keyEquivalent: ""
+        )
+        diagnosticsItem.target = self
+        menu.addItem(diagnosticsItem)
 
         menu.addItem(.separator())
 
@@ -130,9 +138,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshMenuState() {
-        startItem?.isEnabled = appState.status != .recording
-        stopItem?.isEnabled = appState.status == .recording
-        openLatestItem?.isEnabled = appState.lastRecording != nil
+        recordingToggleItem?.title = appState.status == .recording ? "Stop Recording" : "Start Recording"
+        recordingToggleItem?.action = appState.status == .recording ? #selector(stopRecording) : #selector(startRecording)
+        recordingToggleItem?.isEnabled = true
+        playLastItem?.isEnabled = hasPlayableLastRecording
+        openLastFolderItem?.isEnabled = appState.lastRecording != nil
         let symbolName = appState.status == .recording && appState.privacySettings.showRecordingIndicator
             ? "record.circle.fill"
             : "record.circle"
@@ -167,7 +177,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func openLatestRecording() {
+    @objc private func playLastRecording() {
+        guard let lastRecording = appState.lastRecording,
+              FileManager.default.fileExists(atPath: lastRecording.mixedAudioURL.path(percentEncoded: false))
+        else {
+            return
+        }
+
+        NSWorkspace.shared.open(lastRecording.mixedAudioURL)
+        AppLogger.storage.info("Played latest recording mixed preview")
+    }
+
+    @objc private func openLastRecordingFolder() {
         guard let lastRecording = appState.lastRecording else {
             openLibrary()
             return
@@ -178,21 +199,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openLibrary() {
-        do {
-            try FileManager.default.createDirectory(
-                at: appState.outputFolderURL,
-                withIntermediateDirectories: true
-            )
-            NSWorkspace.shared.open(appState.outputFolderURL)
-            AppLogger.storage.info("Opened recording library")
-        } catch {
-            AppLogger.storage.error("Failed to open recording library: \(String(describing: error), privacy: .public)")
-        }
+        AppWindows.openLibrary(appState: appState)
     }
 
     @objc private func showSettings() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+
+    @objc private func showDiagnostics() {
+        AppWindows.openDiagnostics(appState: appState)
     }
 
     private func showMainWindow() {
@@ -203,6 +219,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         mainWindow?.makeKeyAndOrderFront(nil)
         mainWindow?.orderFrontRegardless()
+    }
+
+    private var hasPlayableLastRecording: Bool {
+        guard let lastRecording = appState.lastRecording else {
+            return false
+        }
+
+        return FileManager.default.fileExists(atPath: lastRecording.mixedAudioURL.path(percentEncoded: false))
     }
 
     @objc private func quit() {

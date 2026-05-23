@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import TOrbitRecorderCore
 
@@ -5,21 +6,14 @@ struct RecorderPanelView: View {
     @ObservedObject var appState: AppState
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
-                recordingStatusSection
-                lastRecordingSection
-
-                if !appState.recoverableRecordings.isEmpty {
-                    recoverableSection
-                }
-
-                librarySection
-            }
-            .padding(24)
+        VStack(alignment: .leading, spacing: 18) {
+            header
+            recordingBlock
+            lastRecordingBlock
+            footerActions
         }
-        .frame(minWidth: 760, minHeight: 720)
+        .padding(24)
+        .frame(minWidth: 520, minHeight: 560)
         .sheet(isPresented: $appState.isPostCallPanelPresented) {
             if let draft = appState.postCallDraft {
                 PostCallTaggingView(draft: draft) { updatedDraft in
@@ -29,116 +23,136 @@ struct RecorderPanelView: View {
         }
     }
 
-    private var recordingStatusSection: some View {
-        GroupBox("Recording Status") {
-            VStack(alignment: .leading, spacing: 12) {
-                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
-                    StatusRow(label: "Status", value: appState.status.rawValue)
-                    StatusRow(label: "Duration", value: appState.formattedDuration)
-                    StatusRow(label: "Mic", value: appState.micStatus.rawValue)
-                    StatusRow(label: "System Audio", value: appState.systemAudioStatus.rawValue)
-                    StatusRow(label: "Mixed Preview", value: mixedPreviewState)
-                    StatusRow(label: "Output Folder", value: "TOrbitRecorder Library")
+    private var header: some View {
+        HStack(alignment: .center) {
+            Text("TOrbit Recorder")
+                .font(.title2.weight(.semibold))
+
+            Spacer()
+
+            StatusPill(text: statusLabel, color: statusColor)
+        }
+    }
+
+    private var recordingBlock: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(appState.formattedDuration)
+                    .font(.system(size: 56, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 6)
+
+                Button {
+                    Task {
+                        do {
+                            if appState.status == .recording {
+                                try await appState.stopRecording()
+                            } else {
+                                try await appState.startRecording()
+                            }
+                        } catch {
+                            AppLogger.recording.error("Main recording button failed: \(String(describing: error), privacy: .public)")
+                        }
+                    }
+                } label: {
+                    Label(
+                        appState.status == .recording ? "Stop Recording" : "Start Recording",
+                        systemImage: appState.status == .recording ? "stop.fill" : "record.circle"
+                    )
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(appState.status == .recording ? .red : .accentColor)
+                .disabled(appState.status == .error)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    DetailLine(label: "Mic", value: appState.selectedMicrophoneName)
+                    DetailLine(label: "System audio", value: systemAudioLabel)
+                    DetailLine(label: "Auto-start", value: appState.autoStartSettings.isEnabled ? "On" : "Off")
                 }
 
-                Text(appState.outputFolderPath)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-
-                if let errorMessage = appState.errorMessage {
-                    Text(errorMessage)
-                        .font(.callout)
-                        .foregroundStyle(.red)
+                if let warning = appState.microphoneInputWarning {
+                    Text(warning)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                         .textSelection(.enabled)
                 }
 
-                HStack(spacing: 10) {
-                    Button("Start") {
-                        Task {
-                            try? await appState.startRecording()
+                if appState.status == .error {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                        Text("Recording failed. Open diagnostics.")
+                            .font(.callout)
+                            .foregroundStyle(.red)
+                        Spacer()
+                        Button("Diagnostics") {
+                            AppWindows.openDiagnostics(appState: appState)
                         }
-                    }
-                    .disabled(appState.status == .recording)
-
-                    Button("Stop") {
-                        Task {
-                            try? await appState.stopRecording()
-                        }
-                    }
-                    .disabled(appState.status != .recording)
-
-                    Button("Open Library") {
-                        openLibrary()
                     }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Text("Recording")
+                .font(.headline)
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 10) {
-            Image(systemName: appState.status == .recording ? "record.circle.fill" : "record.circle")
-                .font(.title2)
-                .foregroundStyle(appState.status == .recording ? .red : .secondary)
-
-            Text("TOrbitRecorder")
-                .font(.title2.weight(.semibold))
-        }
-    }
-
-    private var lastRecordingSection: some View {
-        GroupBox("Last Recording") {
-            if let lastRecording = appState.lastRecording {
+    private var lastRecordingBlock: some View {
+        GroupBox {
+            if let recording = appState.lastRecording {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .firstTextBaseline) {
-                        Text(lastRecording.displayStatus)
-                            .font(.headline)
-                            .foregroundStyle(statusColor(for: lastRecording.status))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(recording.displayStatus)
+                                .font(.headline)
+                                .foregroundStyle(lastRecordingColor(recording.status))
 
-                        if lastRecording.status == .shortRecording {
-                            Text("Short recording, saved to Inbox/Short")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
+                            if recording.status == .shortRecording {
+                                Text("Saved to Inbox/Short")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            } else if recording.status == .failed {
+                                Text("Recording failed. Open diagnostics.")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
 
                         Spacer()
                     }
 
-                    Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                        StatusRow(label: "Title", value: lastRecording.title)
-                        StatusRow(label: "Duration", value: formatDuration(lastRecording.durationSec))
-                        StatusRow(label: "Folder", value: lastRecording.folderName)
-                        StatusRow(label: "Mic", value: formatBytes(lastRecording.micFileSizeBytes))
-                        StatusRow(label: "System", value: formatBytes(lastRecording.systemFileSizeBytes))
-                        StatusRow(label: "Mixed", value: formatBytes(lastRecording.mixedFileSizeBytes))
+                    Text(recording.title)
+                        .font(.callout.weight(.medium))
+                        .lineLimit(1)
+
+                    HStack(spacing: 18) {
+                        DetailLine(label: "Duration", value: formatDuration(recording.durationSec))
+                        DetailLine(label: "Audio", value: audioSummary(for: recording))
                     }
 
                     HStack(spacing: 10) {
                         Button {
-                            playMixed(lastRecording)
+                            playMixed(recording)
                         } label: {
-                            Label("Play mixed", systemImage: "play.fill")
+                            Label("Play", systemImage: "play.fill")
                         }
-                        .disabled(lastRecording.mixedPreviewState != "Ready")
+                        .disabled(recording.mixedPreviewState != "Ready")
 
                         Button {
-                            NSWorkspace.shared.open(lastRecording.sessionFolderURL)
+                            NSWorkspace.shared.open(recording.sessionFolderURL)
                         } label: {
-                            Label("Open recording folder", systemImage: "folder")
-                        }
-
-                        Button {
-                            openLibrary()
-                        } label: {
-                            Label("Open library", systemImage: "tray.full")
+                            Label("Open Folder", systemImage: "folder")
                         }
 
                         Button {
                             appState.editLastRecordingTags()
                         } label: {
-                            Label("Edit tags", systemImage: "tag")
+                            Label("Tag", systemImage: "tag")
                         }
                     }
                 }
@@ -147,177 +161,99 @@ struct RecorderPanelView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+        } label: {
+            Text("Last Recording")
+                .font(.headline)
         }
     }
 
-    private var librarySection: some View {
-        GroupBox("Library") {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Recordings")
-                        .font(.headline)
-
-                    Spacer()
-
-                    Button {
-                        try? appState.reloadRecordings()
-                        try? appState.reloadLastRecording()
-                    } label: {
-                        Label("Refresh", systemImage: "arrow.clockwise")
-                    }
-
-                    Button {
-                        _ = try? appState.clearEmptyRecoverableRecordings()
-                    } label: {
-                        Label("Clear empty recoverables", systemImage: "trash")
-                    }
-
-                    Button {
-                        appState.clearRecordingFilters()
-                    } label: {
-                        Label("Clear Filters", systemImage: "line.3.horizontal.decrease.circle")
-                    }
-                }
-
-                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
-                    GridRow {
-                        Text("Date")
-                            .foregroundStyle(.secondary)
-                        TextField(
-                            "YYYY-MM-DD or YYYY-MM",
-                            text: Binding(
-                                get: { appState.recordingFilters.dateText },
-                                set: { appState.setDateFilter($0) }
-                            )
-                        )
-                        .textFieldStyle(.roundedBorder)
-
-                        Text("Status")
-                            .foregroundStyle(.secondary)
-                        Picker(
-                            "Status",
-                            selection: Binding(
-                                get: { appState.recordingFilters.status?.rawValue ?? "" },
-                                set: { appState.setStatusFilter(TaggingStatus(rawValue: $0)) }
-                            )
-                        ) {
-                            Text("Any").tag("")
-                            ForEach(TaggingStatus.allCases, id: \.self) { status in
-                                Text(status.rawValue).tag(status.rawValue)
-                            }
-                        }
-                        .labelsHidden()
-                    }
-
-                    GridRow {
-                        Text("Source")
-                            .foregroundStyle(.secondary)
-                        TextField(
-                            "App name",
-                            text: Binding(
-                                get: { appState.recordingFilters.sourceAppText },
-                                set: { appState.setSourceAppFilter($0) }
-                            )
-                        )
-                        .textFieldStyle(.roundedBorder)
-
-                        Text("Title")
-                            .foregroundStyle(.secondary)
-                        TextField(
-                            "Title contains",
-                            text: Binding(
-                                get: { appState.recordingFilters.titleText },
-                                set: { appState.setTitleFilter($0) }
-                            )
-                        )
-                        .textFieldStyle(.roundedBorder)
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    Text("Tags")
-                        .foregroundStyle(.secondary)
-
-                    Menu(appState.selectedTagFilter ?? "All Tags") {
-                        Button("All Tags") {
-                            appState.setTagFilter(nil)
-                        }
-
-                        Divider()
-
-                        ForEach(MVPTags.all, id: \.self) { tag in
-                            Button(tag) {
-                                appState.setTagFilter(tag)
-                            }
-                        }
-                    }
-
-                    if let selectedTag = appState.selectedTagFilter {
-                        Text(selectedTag)
-                            .font(.caption)
-                            .foregroundStyle(.blue)
-                    }
-                }
-
-                if appState.recordings.isEmpty {
-                    Text("No recordings")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    LazyVStack(alignment: .leading, spacing: 8) {
-                        ForEach(appState.recordings) { recording in
-                            RecordingRow(recording: recording, appState: appState)
-                        }
-                    }
-                }
+    private var footerActions: some View {
+        HStack(spacing: 12) {
+            Button {
+                AppWindows.openLibrary(appState: appState)
+            } label: {
+                Label("Library", systemImage: "tray.full")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
 
-    private func openLibrary() {
-        do {
-            try FileManager.default.createDirectory(
-                at: appState.outputFolderURL,
-                withIntermediateDirectories: true
-            )
-            NSWorkspace.shared.open(appState.outputFolderURL)
-        } catch {
-            AppLogger.storage.error("Failed to open library from panel: \(String(describing: error), privacy: .public)")
-        }
-    }
-
-    private var recoverableSection: some View {
-        GroupBox("Recoverable") {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Interrupted recordings with usable audio files")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button("Refresh") {
-                        try? appState.reloadRecoverableRecordings()
-                    }
-                }
-
-                LazyVStack(alignment: .leading, spacing: 8) {
-                    ForEach(appState.recoverableRecordings) { recording in
-                        RecoverableRecordingRow(recording: recording, appState: appState)
-                    }
-                }
+            Button {
+                showSettings()
+            } label: {
+                Label("Settings", systemImage: "gearshape")
             }
+
+            Spacer()
+
+            Button("Diagnostics") {
+                AppWindows.openDiagnostics(appState: appState)
+            }
+            .buttonStyle(.link)
         }
     }
 
-    private var mixedPreviewState: String {
-        if appState.status == .recording {
-            return "Pending"
+    private var statusLabel: String {
+        switch appState.status {
+        case .idle:
+            return "Idle"
+        case .recording:
+            return "Recording"
+        case .error:
+            return "Error"
+        }
+    }
+
+    private var statusColor: Color {
+        switch appState.status {
+        case .idle:
+            return .secondary
+        case .recording:
+            return .red
+        case .error:
+            return .orange
+        }
+    }
+
+    private var systemAudioLabel: String {
+        guard appState.recordingSettings.systemAudioEnabled else {
+            return "Off"
         }
 
-        return appState.lastRecording?.mixedPreviewState ?? "Missing"
+        switch appState.systemAudioStatus {
+        case .recording:
+            return "Active"
+        case .permissionDenied:
+            return "Missing permission"
+        case .error:
+            return "Error"
+        default:
+            return appState.status == .recording ? "Active" : "Ready"
+        }
+    }
+
+    private func lastRecordingColor(_ status: TaggingStatus) -> Color {
+        switch status {
+        case .failed:
+            return .red
+        case .shortRecording:
+            return .orange
+        default:
+            return .green
+        }
+    }
+
+    private func audioSummary(for recording: LastRecordingSummary) -> String {
+        let hasMic = (recording.micFileSizeBytes ?? 0) > 0
+        let hasSystem = (recording.systemFileSizeBytes ?? 0) > 0
+
+        switch (hasMic, hasSystem) {
+        case (true, true):
+            return "mic + system"
+        case (true, false):
+            return "mic only"
+        case (false, true):
+            return "system only"
+        case (false, false):
+            return "missing"
+        }
     }
 
     private func playMixed(_ recording: LastRecordingSummary) {
@@ -326,6 +262,11 @@ struct RecorderPanelView: View {
         }
 
         NSWorkspace.shared.open(recording.mixedAudioURL)
+    }
+
+    private func showSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -339,351 +280,39 @@ struct RecorderPanelView: View {
         }
         return String(format: "%02d:%02d", minutes, seconds)
     }
-
-    private func formatBytes(_ value: Int64?) -> String {
-        guard let value, value > 0 else {
-            return "Missing"
-        }
-
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useKB, .useMB]
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: value)
-    }
-
-    private func statusColor(for status: TaggingStatus) -> Color {
-        switch status {
-        case .failed:
-            return .red
-        case .shortRecording:
-            return .orange
-        default:
-            return .green
-        }
-    }
 }
 
-private struct StatusRow: View {
+private struct DetailLine: View {
     let label: String
     let value: String
 
     var body: some View {
-        GridRow {
-            Text(label)
+        HStack(spacing: 6) {
+            Text("\(label):")
                 .font(.callout.weight(.medium))
                 .foregroundStyle(.secondary)
-                .frame(width: 110, alignment: .leading)
-
             Text(value)
-                .font(.callout.monospacedDigit())
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.callout)
+                .lineLimit(1)
+            Spacer(minLength: 0)
         }
     }
 }
 
-private struct RecordingRow: View {
-    let recording: RecordingSummary
-    let appState: AppState
-
-    @State private var editedTitle: String
-    @State private var editedTags: Set<String>
-    @State private var actionError: String?
-    @State private var isDeleteConfirmationPresented = false
-
-    init(recording: RecordingSummary, appState: AppState) {
-        self.recording = recording
-        self.appState = appState
-        self._editedTitle = State(initialValue: recording.title)
-        self._editedTags = State(initialValue: Set(recording.tags))
-    }
+private struct StatusPill: View {
+    let text: String
+    let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                TextField("Title", text: $editedTitle)
-                    .font(.callout.weight(.semibold))
-                    .textFieldStyle(.roundedBorder)
-
-                Spacer()
-
-                Text(recording.status.rawValue)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack(spacing: 6) {
-                Text(recording.sourceApp)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text(recording.category)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if !recording.participant.isEmpty {
-                    Text(recording.participant)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            HStack(spacing: 8) {
-                Menu("Add Tags") {
-                    ForEach(MVPTags.all, id: \.self) { tag in
-                        Button(tag) {
-                            toggleTag(tag)
-                        }
-                    }
-                }
-
-                Button {
-                    saveEdits()
-                } label: {
-                    Label("Save", systemImage: "checkmark")
-                }
-
-                Button {
-                    NSWorkspace.shared.open(recording.sessionFolderURL)
-                } label: {
-                    Label("Open in Finder", systemImage: "folder")
-                }
-
-                Button {
-                    playMixedAudio()
-                } label: {
-                    Label("Play", systemImage: "play.fill")
-                }
-                .disabled(!FileManager.default.fileExists(atPath: recording.mixedAudioURL.path(percentEncoded: false)))
-
-                Button(role: .destructive) {
-                    isDeleteConfirmationPresented = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
-
-            if !editedTags.isEmpty {
-                Text(editedTags.sorted().joined(separator: " "))
-                    .font(.caption)
-                    .foregroundStyle(.blue)
-                    .lineLimit(2)
-            }
-
-            if let actionError {
-                Text(actionError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
-            }
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(text)
+                .font(.caption.weight(.medium))
         }
-        .padding(10)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
-        .confirmationDialog(
-            "Delete local recording?",
-            isPresented: $isDeleteConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Delete Local Record", role: .destructive) {
-                deleteRecording()
-            }
-
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This removes the recording folder and its SQLite index row.")
-        }
-    }
-
-    private func toggleTag(_ tag: String) {
-        if editedTags.contains(tag) {
-            editedTags.remove(tag)
-        } else {
-            editedTags.insert(tag)
-        }
-    }
-
-    private func saveEdits() {
-        do {
-            try appState.updateRecording(
-                recording,
-                title: editedTitle,
-                tags: editedTags.sorted()
-            )
-            actionError = nil
-        } catch {
-            actionError = String(describing: error)
-        }
-    }
-
-    private func playMixedAudio() {
-        guard FileManager.default.fileExists(atPath: recording.mixedAudioURL.path(percentEncoded: false)) else {
-            actionError = "mixed.m4a is missing"
-            return
-        }
-
-        NSWorkspace.shared.open(recording.mixedAudioURL)
-    }
-
-    private func deleteRecording() {
-        do {
-            try appState.deleteLocalRecord(recording)
-            actionError = nil
-        } catch {
-            actionError = String(describing: error)
-        }
-    }
-}
-
-private struct RecoverableRecordingRow: View {
-    let recording: RecoverableRecordingSummary
-    let appState: AppState
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(recording.id)
-                    .font(.callout.weight(.semibold))
-                    .lineLimit(1)
-
-                Spacer()
-
-                Text("failed / \(recording.status.rawValue)")
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.orange)
-            }
-
-            HStack(spacing: 8) {
-                Text("\(recording.segmentCount) segments")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text("\(recording.recoverableFileCount) recoverable files")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text(recording.startedAt)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            HStack(spacing: 8) {
-                Button("Recover Recording") {
-                    Task {
-                        try? await appState.recoverRecording(recording)
-                    }
-                }
-
-                Button("Open Folder") {
-                    NSWorkspace.shared.open(recording.folderURL)
-                }
-            }
-        }
-        .padding(10)
-        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-    }
-}
-
-private struct PostCallTaggingView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var draft: PostCallDraft
-    @State private var saveError: String?
-
-    let onSave: (PostCallDraft) throws -> Void
-
-    init(draft: PostCallDraft, onSave: @escaping (PostCallDraft) throws -> Void) {
-        self._draft = State(initialValue: draft)
-        self.onSave = onSave
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Post-call tagging")
-                .font(.title3.weight(.semibold))
-
-            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 12) {
-                GridRow {
-                    Text("Title")
-                        .foregroundStyle(.secondary)
-                    TextField("Recording title", text: $draft.title)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                GridRow {
-                    Text("Category")
-                        .foregroundStyle(.secondary)
-                    TextField("unsorted", text: $draft.category)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                GridRow {
-                    Text("Participant")
-                        .foregroundStyle(.secondary)
-                    TextField("Name or free text", text: $draft.participant)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                GridRow {
-                    Text("Status")
-                        .foregroundStyle(.secondary)
-                    Picker("Status", selection: $draft.status) {
-                        ForEach(TaggingStatus.allCases, id: \.self) { status in
-                            Text(status.rawValue).tag(status)
-                        }
-                    }
-                    .labelsHidden()
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Tags")
-                    .font(.callout.weight(.medium))
-
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 8)], alignment: .leading, spacing: 8) {
-                    ForEach(MVPTags.all, id: \.self) { tag in
-                        Button(tag) {
-                            toggleTag(tag)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(draft.tags.contains(tag) ? .blue : .secondary)
-                    }
-                }
-            }
-
-            if let saveError {
-                Text(saveError)
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
-            }
-
-            HStack {
-                Spacer()
-
-                Button("Close") {
-                    dismiss()
-                }
-
-                Button("Save") {
-                    do {
-                        try onSave(draft)
-                        dismiss()
-                    } catch {
-                        saveError = String(describing: error)
-                    }
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(20)
-        .frame(width: 520)
-    }
-
-    private func toggleTag(_ tag: String) {
-        if let index = draft.tags.firstIndex(of: tag) {
-            draft.tags.remove(at: index)
-        } else {
-            draft.tags.append(tag)
-        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(.quaternary.opacity(0.45), in: Capsule())
     }
 }

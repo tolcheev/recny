@@ -19,7 +19,7 @@ scripts/build_macos.sh
 open -n apps/macos/.build/app/TOrbitRecorder.app
 ```
 
-The app runs as a menu bar app. Use the menu bar icon or the main panel for Start Recording, Stop Recording, Open Recordings Folder, Settings, and Quit.
+The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Last Recording Folder, Open Library, Settings, Diagnostics, and Quit.
 
 ## Preflight
 
@@ -27,6 +27,7 @@ The app runs as a menu bar app. Use the menu bar icon or the main panel for Star
 2. Build and open the app.
 3. Open Settings.
 4. Confirm Recording settings:
+   - Preferred microphone: Auto, recommended
    - System audio enabled: on
    - Mixed preview enabled: on
 5. Confirm Storage root is the intended local folder, normally:
@@ -59,13 +60,11 @@ Use this path for the normal MVP success case.
 7. Confirm the post-call tagging panel opens.
 8. Fill:
    - title
-   - category
    - participant free text
    - at least one MVP tag
-   - status
 9. Save the post-call panel.
-10. Confirm the recording appears in Recordings List.
-11. Filter the list by the saved tag.
+10. Open Library and confirm the recording appears in recent recordings.
+11. Expand Library filters and filter the list by the saved tag.
 12. Click Open in Finder on the recording row.
 13. Confirm Finder opens the recording folder.
 
@@ -105,8 +104,8 @@ Expected metadata:
 2. Confirm the post-call tagging panel appears.
 3. Close the panel without saving.
 4. Confirm the metadata status remains `needs_tagging`.
-5. Open the recording from the list.
-6. Edit title and tags from the list row.
+5. Open Library.
+6. Click Edit on the recording row and edit title/tags in the edit dialog.
 7. Save edits.
 8. Confirm `metadata.json` and the SQLite list reflect the changed title/tags.
 
@@ -145,7 +144,7 @@ With default settings, the short recording threshold is 60 seconds.
 ```
 
 6. Confirm post-call tagging does not open automatically.
-7. Confirm metadata still exists for false-positive review.
+7. Confirm Last Recording shows `Short recording`, Play/Open/Tag work, and metadata still exists for false-positive review.
 
 ## Auto-Start: Zoom
 
@@ -265,8 +264,29 @@ Fix:
 
 1. Check Microphone permission for `TOrbitRecorder`.
 2. Check macOS Sound input device.
-3. Confirm the microphone input level moves in System Settings.
-4. Reopen the app and retry.
+3. Open Settings -> Recording -> Preferred microphone and confirm Auto selects an external or built-in microphone before AirPods.
+4. Confirm the microphone input level moves in System Settings.
+5. Reopen the app and retry.
+
+### AirPods Selected As Microphone
+
+Symptom:
+
+- The selected mic is AirPods or another Bluetooth headset.
+- Incoming system audio quality degrades during recording.
+
+Expected behavior:
+
+- Auto microphone selection should choose Shure/MV7/Hollyland/USB/audio interface devices first.
+- If no external mic exists, it should choose `MacBook Pro Microphone` or `Built-in Microphone`.
+- AirPods/Bluetooth headset microphones should be used only when no other input device is available.
+
+Fix:
+
+1. Open Settings -> Recording -> Preferred microphone.
+2. Keep `Auto, recommended` unless you need a specific external microphone.
+3. Click Refresh.
+4. Confirm the main window shows `Mic: MacBook Pro Microphone` or the external mic name while AirPods remain connected for output.
 
 ### Mixed File Missing One Side
 

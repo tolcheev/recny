@@ -26,9 +26,39 @@ struct SettingsView: View {
             }
             .disabled(true)
 
-            TextField("Mic device", text: .constant("Default system input"))
-                .textFieldStyle(.roundedBorder)
-                .disabled(true)
+            Picker(
+                "Preferred microphone",
+                selection: Binding(
+                    get: { appState.recordingSettings.microphoneDeviceID ?? MicrophoneDeviceResolver.autoRecommendedID },
+                    set: { appState.setPreferredMicrophoneDeviceID($0) }
+                )
+            ) {
+                Text("Auto, recommended").tag(MicrophoneDeviceResolver.autoRecommendedID)
+                ForEach(appState.availableMicrophoneDevices) { device in
+                    Text(device.name).tag(device.id)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Text("Selected: \(appState.selectedMicrophoneName)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button {
+                    appState.refreshMicrophoneDevices()
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+            }
+
+            if let warning = appState.microphoneInputWarning {
+                Text(warning)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .textSelection(.enabled)
+            }
 
             Toggle(
                 "System audio enabled",

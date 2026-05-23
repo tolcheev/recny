@@ -27,15 +27,18 @@ public struct RecordingRuntimeSettings: Equatable, Sendable {
     public var systemAudioEnabled: Bool
     public var mixedPreviewEnabled: Bool
     public var shortRecordingThresholdSeconds: TimeInterval
+    public var preferredMicrophoneDeviceID: String?
 
     public init(
         systemAudioEnabled: Bool = true,
         mixedPreviewEnabled: Bool = true,
-        shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds
+        shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds,
+        preferredMicrophoneDeviceID: String? = nil
     ) {
         self.systemAudioEnabled = systemAudioEnabled
         self.mixedPreviewEnabled = mixedPreviewEnabled
         self.shortRecordingThresholdSeconds = max(0, shortRecordingThresholdSeconds)
+        self.preferredMicrophoneDeviceID = preferredMicrophoneDeviceID
     }
 }
 
