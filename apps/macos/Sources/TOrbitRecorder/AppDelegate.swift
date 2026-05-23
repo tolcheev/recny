@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables: Set<AnyCancellable> = []
     private var startItem: NSMenuItem?
     private var stopItem: NSMenuItem?
+    private var openLatestItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -29,6 +30,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
+
+        let showWindowItem = NSMenuItem(
+            title: "Show Window",
+            action: #selector(showWindow),
+            keyEquivalent: ""
+        )
+        showWindowItem.target = self
+        menu.addItem(showWindowItem)
+
+        menu.addItem(.separator())
 
         let startItem = NSMenuItem(
             title: "Start Recording",
@@ -50,13 +61,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        let openFolderItem = NSMenuItem(
-            title: "Open Recordings Folder",
-            action: #selector(openRecordingsFolder),
+        let openLatestItem = NSMenuItem(
+            title: "Open Latest Recording",
+            action: #selector(openLatestRecording),
             keyEquivalent: ""
         )
-        openFolderItem.target = self
-        menu.addItem(openFolderItem)
+        openLatestItem.target = self
+        menu.addItem(openLatestItem)
+        self.openLatestItem = openLatestItem
+
+        let openLibraryItem = NSMenuItem(
+            title: "Open Library",
+            action: #selector(openLibrary),
+            keyEquivalent: ""
+        )
+        openLibraryItem.target = self
+        menu.addItem(openLibraryItem)
 
         let settingsItem = NSMenuItem(
             title: "Settings",
@@ -90,6 +110,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        appState.$lastRecording
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.refreshMenuState()
+                }
+            }
+            .store(in: &cancellables)
+
         appState.$privacySettings
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -103,6 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func refreshMenuState() {
         startItem?.isEnabled = appState.status != .recording
         stopItem?.isEnabled = appState.status == .recording
+        openLatestItem?.isEnabled = appState.lastRecording != nil
         let symbolName = appState.status == .recording && appState.privacySettings.showRecordingIndicator
             ? "record.circle.fill"
             : "record.circle"
@@ -110,6 +140,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             systemSymbolName: symbolName,
             accessibilityDescription: "TOrbitRecorder"
         )
+    }
+
+    @objc private func showWindow() {
+        showMainWindow()
     }
 
     @objc private func startRecording() {
@@ -133,16 +167,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func openRecordingsFolder() {
+    @objc private func openLatestRecording() {
+        guard let lastRecording = appState.lastRecording else {
+            openLibrary()
+            return
+        }
+
+        NSWorkspace.shared.open(lastRecording.sessionFolderURL)
+        AppLogger.storage.info("Opened latest recording folder")
+    }
+
+    @objc private func openLibrary() {
         do {
             try FileManager.default.createDirectory(
                 at: appState.outputFolderURL,
                 withIntermediateDirectories: true
             )
             NSWorkspace.shared.open(appState.outputFolderURL)
-            AppLogger.storage.info("Opened recordings folder")
+            AppLogger.storage.info("Opened recording library")
         } catch {
-            AppLogger.storage.error("Failed to open recordings folder: \(String(describing: error), privacy: .public)")
+            AppLogger.storage.error("Failed to open recording library: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -153,7 +197,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.windows.first?.makeKeyAndOrderFront(nil)
+        let mainWindow = NSApp.windows.first { window in
+            window.title == "TOrbitRecorder"
+        } ?? NSApp.windows.first
+
+        mainWindow?.makeKeyAndOrderFront(nil)
+        mainWindow?.orderFrontRegardless()
     }
 
     @objc private func quit() {

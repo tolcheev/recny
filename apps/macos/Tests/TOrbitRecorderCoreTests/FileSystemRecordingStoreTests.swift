@@ -62,6 +62,58 @@ struct FileSystemRecordingStoreTests {
     }
 
     @Test
+    func recoverableSessionsSkipsEmptyInterruptedFolders() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        _ = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+
+        #expect(try store.recoverableSessions().isEmpty)
+    }
+
+    @Test
+    func recoverableSessionsIncludesFinalAudioWithoutSegments() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let session = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        try Data([1, 2, 3]).write(to: session.sourceURL.appendingPathComponent("mic.m4a"))
+
+        let recoverable = try store.recoverableSessions()
+
+        let summary = try #require(recoverable.first)
+        #expect(summary.id == session.id)
+        #expect(summary.segmentCount == 0)
+        #expect(summary.recoverableFileCount == 1)
+    }
+
+    @Test
+    func clearEmptyRecoverableSessionsRemovesOnlyEmptyInterruptedFolders() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let empty = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let usable = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_030),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        try Data([1, 2, 3]).write(to: usable.segmentsURL.appendingPathComponent("mic-0001.m4a"))
+
+        let removed = try store.clearEmptyRecoverableSessions()
+
+        #expect(removed == 1)
+        #expect(!FileManager.default.fileExists(atPath: empty.folderURL.path(percentEncoded: false)))
+        #expect(FileManager.default.fileExists(atPath: usable.folderURL.path(percentEncoded: false)))
+        #expect(try store.recoverableSessions().map(\.id) == [usable.id])
+    }
+
+    @Test
     func stopSessionWritesMetadataAndMovesToLibrary() throws {
         let root = Self.testOutputFolder()
         let store = FileSystemRecordingStore(rootURL: root)
@@ -319,6 +371,40 @@ struct FileSystemRecordingStoreTests {
         let indexed = try #require(store.recordings(filters: RecordingListFilters(status: .shortRecording)).first)
         #expect(indexed.id == draft.id)
         #expect(indexed.sessionFolderURL == draft.sessionFolderURL)
+    }
+
+    @Test
+    func latestRecordingSummaryIncludesStatusFolderAndFileSizes() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let session = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let endedAt = Date(timeIntervalSince1970: 1_716_468_120)
+
+        let draft = try store.stopSession(
+            session,
+            endedAt: endedAt,
+            duration: 120,
+            status: .needsTagging,
+            audioTracks: [
+                AudioTrackMetadata(kind: "microphone", relativePath: "source/mic.m4a", fileSizeBytes: 11, status: "completed"),
+                AudioTrackMetadata(kind: "system", relativePath: "source/system.m4a", fileSizeBytes: 22, status: "completed"),
+                AudioTrackMetadata(kind: "mixed", relativePath: "export/mixed.m4a", fileSizeBytes: 33, status: "completed")
+            ]
+        )
+
+        let latest = try #require(try store.latestRecordingSummary())
+        #expect(latest.id == draft.id)
+        #expect(latest.status == .needsTagging)
+        #expect(latest.displayStatus == "Saved")
+        #expect(latest.folderName == draft.sessionFolderURL.lastPathComponent)
+        #expect(latest.durationSec == 120)
+        #expect(latest.micFileSizeBytes == 11)
+        #expect(latest.systemFileSizeBytes == 22)
+        #expect(latest.mixedFileSizeBytes == 33)
+        #expect(latest.mixedPreviewState == "Ready")
     }
 
     private static func testOutputFolder() -> URL {

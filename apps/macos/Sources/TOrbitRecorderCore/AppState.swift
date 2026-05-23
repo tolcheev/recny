@@ -13,6 +13,7 @@ public final class AppState: ObservableObject {
     @Published public var isPostCallPanelPresented: Bool
     @Published public private(set) var recordings: [RecordingSummary]
     @Published public private(set) var recoverableRecordings: [RecoverableRecordingSummary]
+    @Published public private(set) var lastRecording: LastRecordingSummary?
     @Published public private(set) var selectedTagFilter: String?
     @Published public private(set) var recordingFilters: RecordingListFilters
     @Published public private(set) var recordingSettings: RecordingSettings
@@ -72,6 +73,7 @@ public final class AppState: ObservableObject {
         self.isPostCallPanelPresented = false
         self.recordings = []
         self.recoverableRecordings = []
+        self.lastRecording = nil
         self.selectedTagFilter = nil
         self.recordingFilters = RecordingListFilters()
         self.recordingSettings = resolvedSettings.recording
@@ -83,6 +85,7 @@ public final class AppState: ObservableObject {
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
         reloadRecordingsSilently()
+        reloadLastRecordingSilently()
         reloadRecoverableRecordingsSilently()
     }
 
@@ -143,6 +146,7 @@ public final class AppState: ObservableObject {
             isPostCallPanelPresented = draft.status != .shortRecording && draft.status != .failed
             lastRecordingStoppedAt = Date()
             try reloadRecordings()
+            try reloadLastRecording()
             try reloadRecoverableRecordings()
             errorMessage = nil
             if draft.status == .shortRecording {
@@ -162,6 +166,7 @@ public final class AppState: ObservableObject {
         postCallDraft = draft
         isPostCallPanelPresented = false
         try reloadRecordings()
+        try reloadLastRecording()
         AppLogger.recording.info("Saved post-call tags for \(draft.id, privacy: .public)")
     }
 
@@ -201,14 +206,20 @@ public final class AppState: ObservableObject {
         recordings = try recordingStore.recordings(filters: recordingFilters)
     }
 
+    public func reloadLastRecording() throws {
+        lastRecording = try recordingStore.latestRecordingSummary()
+    }
+
     public func updateRecording(_ recording: RecordingSummary, title: String, tags: [String]) throws {
         try recordingStore.updateRecording(id: recording.id, title: title, tags: tags)
         try reloadRecordings()
+        try reloadLastRecording()
     }
 
     public func deleteLocalRecord(_ recording: RecordingSummary) throws {
         try recordingStore.deleteLocalRecord(recording)
         try reloadRecordings()
+        try reloadLastRecording()
     }
 
     public func setAutoStartEnabled(_ isEnabled: Bool) {
@@ -292,6 +303,7 @@ public final class AppState: ObservableObject {
         storageSettings.rootFolderPath = url.path(percentEncoded: false)
         recordingStore = FileSystemRecordingStore(rootURL: url)
         reloadRecordingsSilently()
+        reloadLastRecordingSilently()
         reloadRecoverableRecordingsSilently()
         saveSettings()
     }
@@ -370,6 +382,14 @@ public final class AppState: ObservableObject {
         recoverableRecordings = try recordingStore.recoverableSessions()
     }
 
+    @discardableResult
+    public func clearEmptyRecoverableRecordings() throws -> Int {
+        let removed = try recordingStore.clearEmptyRecoverableSessions()
+        try reloadRecoverableRecordings()
+        AppLogger.storage.info("Cleared \(removed, privacy: .public) empty recoverable recording folders")
+        return removed
+    }
+
     public func recoverRecording(_ summary: RecoverableRecordingSummary) async throws {
         do {
             let draft = try await RecordingRecoveryController(store: recordingStore).recover(summary)
@@ -377,6 +397,7 @@ public final class AppState: ObservableObject {
             mixedPreviewPath = mixedPreviewPath(for: draft)
             isPostCallPanelPresented = draft.status != .failed
             try reloadRecordings()
+            try reloadLastRecording()
             try reloadRecoverableRecordings()
             errorMessage = nil
             AppLogger.recording.info("Recovered interrupted recording \(summary.id, privacy: .public)")
@@ -384,6 +405,31 @@ public final class AppState: ObservableObject {
             applyError(error)
             AppLogger.recording.error("Failed to recover recording \(summary.id, privacy: .public): \(String(describing: error), privacy: .public)")
             throw error
+        }
+    }
+
+    public func editLastRecordingTags() {
+        guard let lastRecording else {
+            return
+        }
+
+        do {
+            let metadata = try recordingStore.readMetadata(at: lastRecording.metadataURL)
+            postCallDraft = PostCallDraft(
+                id: metadata.id,
+                title: metadata.title,
+                category: metadata.category,
+                participant: metadata.participants.first ?? "",
+                tags: metadata.tags,
+                status: metadata.status,
+                sessionFolderURL: lastRecording.sessionFolderURL,
+                metadataURL: lastRecording.metadataURL
+            )
+            isPostCallPanelPresented = true
+            errorMessage = nil
+        } catch {
+            applyError(error)
+            AppLogger.storage.error("Failed to open last recording tags: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -455,6 +501,14 @@ public final class AppState: ObservableObject {
             try reloadRecordings()
         } catch {
             AppLogger.storage.error("Failed to reload recordings: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    private func reloadLastRecordingSilently() {
+        do {
+            try reloadLastRecording()
+        } catch {
+            AppLogger.storage.error("Failed to reload last recording: \(String(describing: error), privacy: .public)")
         }
     }
 

@@ -87,4 +87,5 @@ public struct RecoverableRecordingSummary: Equatable, Identifiable, Sendable {
     public let folderURL: URL
     public let recoveryMetadataURL: URL
     public let segmentCount: Int
+    public let recoverableFileCount: Int
 }

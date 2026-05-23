@@ -187,6 +187,11 @@ public final class FileSystemRecordingStore {
             try writeRecoveryMetadata(recovery, to: recoveryURL)
 
             let segmentCount = try usableSegmentURLs(in: folderURL).count
+            let recoverableFileCount = try usableRecoverableFileURLs(in: folderURL).count
+            guard recoverableFileCount > 0 else {
+                continue
+            }
+
             summaries.append(
                 RecoverableRecordingSummary(
                     id: recovery.recordingID,
@@ -195,7 +200,8 @@ public final class FileSystemRecordingStore {
                     updatedAt: recovery.updatedAt,
                     folderURL: folderURL,
                     recoveryMetadataURL: recoveryURL,
-                    segmentCount: segmentCount
+                    segmentCount: segmentCount,
+                    recoverableFileCount: recoverableFileCount
                 )
             )
         }
@@ -220,6 +226,15 @@ public final class FileSystemRecordingStore {
         return try index.recordings(filters: filters)
     }
 
+    public func latestRecordingSummary() throws -> LastRecordingSummary? {
+        guard let latest = try recordings(filters: RecordingListFilters()).first else {
+            return nil
+        }
+
+        let metadata = try readMetadata(at: latest.metadataURL)
+        return lastRecordingSummary(from: latest, metadata: metadata)
+    }
+
     public func updateRecording(id: String, title: String, tags: [String]) throws {
         let index = SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL)
         if try index.isEmpty() {
@@ -242,6 +257,43 @@ public final class FileSystemRecordingStore {
         let index = SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL)
         try FileManager.default.removeItemIfExists(at: summary.sessionFolderURL)
         try index.delete(recordingID: summary.id)
+    }
+
+    public func clearEmptyRecoverableSessions() throws -> Int {
+        try prepareRoot()
+
+        let folderURLs = try FileManager.default.contentsOfDirectory(
+            at: paths.inboxUnsortedURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        var removed = 0
+        for folderURL in folderURLs {
+            let values = try folderURL.resourceValues(forKeys: [.isDirectoryKey])
+            guard values.isDirectory == true else {
+                continue
+            }
+
+            let recoveryURL = folderURL.appendingPathComponent("recovery.json")
+            guard FileManager.default.fileExists(atPath: recoveryURL.path(percentEncoded: false)) else {
+                continue
+            }
+
+            let recovery = try readRecoveryMetadata(at: recoveryURL)
+            guard recovery.status == .recording || recovery.status == .recoverable else {
+                continue
+            }
+
+            guard try usableRecoverableFileURLs(in: folderURL).isEmpty else {
+                continue
+            }
+
+            try FileManager.default.removeItem(at: folderURL)
+            removed += 1
+        }
+
+        return removed
     }
 
     private func write(
@@ -270,6 +322,45 @@ public final class FileSystemRecordingStore {
                 AppLogger.storage.error("Failed to index metadata file \(metadataURL.path(percentEncoded: false), privacy: .public): \(String(describing: error), privacy: .public)")
             }
         }
+    }
+
+    private func lastRecordingSummary(
+        from summary: RecordingSummary,
+        metadata: RecordingMetadata
+    ) -> LastRecordingSummary {
+        let micTrack = metadata.audioTracks.first { $0.kind == "microphone" }
+        let systemTrack = metadata.audioTracks.first { $0.kind == "system" }
+        let mixedTrack = metadata.audioTracks.first { $0.kind == "mixed" }
+
+        return LastRecordingSummary(
+            id: metadata.id,
+            title: metadata.title,
+            status: metadata.status,
+            durationSec: metadata.durationSec,
+            folderName: summary.sessionFolderURL.lastPathComponent,
+            sessionFolderURL: summary.sessionFolderURL,
+            metadataURL: summary.metadataURL,
+            micFileSizeBytes: fileSize(from: micTrack, fallbackURL: summary.sessionFolderURL.appendingPathComponent("source/mic.m4a")),
+            systemFileSizeBytes: fileSize(from: systemTrack, fallbackURL: summary.sessionFolderURL.appendingPathComponent("source/system.m4a")),
+            mixedFileSizeBytes: fileSize(from: mixedTrack, fallbackURL: summary.sessionFolderURL.appendingPathComponent("export/mixed.m4a")),
+            micTrackStatus: micTrack?.status,
+            systemTrackStatus: systemTrack?.status,
+            mixedTrackStatus: mixedTrack?.status
+        )
+    }
+
+    private func fileSize(from track: AudioTrackMetadata?, fallbackURL: URL) -> Int64? {
+        if let size = track?.fileSizeBytes {
+            return size
+        }
+
+        guard isNonEmptyFile(fallbackURL),
+              let size = try? FileManager.default.attributesOfItem(atPath: fallbackURL.path(percentEncoded: false))[.size] as? NSNumber
+        else {
+            return nil
+        }
+
+        return size.int64Value
     }
 
     private func metadataURLsForReindex() throws -> [URL] {
@@ -373,6 +464,35 @@ public final class FileSystemRecordingStore {
         .filter { url in
             ((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) > 0
         }
+    }
+
+    private func usableRecoverableFileURLs(in folderURL: URL) throws -> [URL] {
+        var urls = try usableSegmentURLs(in: folderURL)
+        let finalCandidates = [
+            folderURL.appendingPathComponent("source/mic.m4a"),
+            folderURL.appendingPathComponent("source/system.m4a"),
+            folderURL.appendingPathComponent("export/mixed.m4a")
+        ]
+
+        for url in finalCandidates where isNonEmptyFile(url) {
+            urls.append(url)
+        }
+
+        var seen = Set<String>()
+        return urls.filter { url in
+            seen.insert(url.path(percentEncoded: false)).inserted
+        }
+    }
+
+    private func isNonEmptyFile(_ url: URL) -> Bool {
+        let path = url.path(percentEncoded: false)
+        guard FileManager.default.fileExists(atPath: path),
+              let size = try? FileManager.default.attributesOfItem(atPath: path)[.size] as? NSNumber
+        else {
+            return false
+        }
+
+        return size.int64Value > 0
     }
 
     private func uniqueFinalSessionURL(

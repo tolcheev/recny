@@ -87,7 +87,36 @@ tests/              Integration fixtures and test assets
 scripts/build_macos.sh
 ```
 
-The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`.
+The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`. This `.build/app` bundle is a development artifact, not the normal launch location.
+
+## Install Dev Build
+
+Package the app into `dist/`:
+
+```sh
+./scripts/package_macos.sh
+```
+
+This creates:
+
+```text
+dist/TOrbitRecorder.app
+dist/TOrbitRecorder-macOS-MVP.zip
+```
+
+Install the packaged app into `/Applications`:
+
+```sh
+./scripts/install_macos.sh
+```
+
+Launch the installed app:
+
+```sh
+open /Applications/TOrbitRecorder.app
+```
+
+Use `dist/` for shareable local artifacts and `/Applications/TOrbitRecorder.app` for a normal macOS launch. Do not use `apps/macos/.build/app/TOrbitRecorder.app` except when debugging the build script output directly.
 
 Current recording implementation starts from the menu bar UI or Auto-start Engine v1 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The app shows a local recordings list backed by SQLite and can open folders, play mixed previews, edit titles/tags, and delete local records with confirmation.
 
@@ -95,7 +124,7 @@ Settings currently cover recording toggles, auto-start rules, storage actions, h
 
 Active settings are persisted locally with `UserDefaults`. MVP defaults keep system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Audio quality, microphone device selection, hotkey capture, add marker, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
-## Run The App
+## Run The Dev Artifact
 
 From the repository root:
 
@@ -105,6 +134,15 @@ open -n apps/macos/.build/app/TOrbitRecorder.app
 ```
 
 The app runs as a menu bar app. Use the menu bar icon for Start Recording, Stop Recording, Open Recordings Folder, Settings, and Quit.
+
+For normal dev usage prefer:
+
+```sh
+./scripts/install_macos.sh
+open /Applications/TOrbitRecorder.app
+```
+
+The menu bar app provides Show Window, Start Recording, Stop Recording, Open Latest Recording, Open Library, Settings, and Quit.
 
 ## Manual MVP End-To-End Check
 

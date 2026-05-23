@@ -261,6 +261,51 @@ public struct RecordingSummary: Equatable, Identifiable, Sendable {
     }
 }
 
+public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let status: TaggingStatus
+    public let durationSec: Double
+    public let folderName: String
+    public let sessionFolderURL: URL
+    public let metadataURL: URL
+    public let micFileSizeBytes: Int64?
+    public let systemFileSizeBytes: Int64?
+    public let mixedFileSizeBytes: Int64?
+    public let micTrackStatus: String?
+    public let systemTrackStatus: String?
+    public let mixedTrackStatus: String?
+
+    public var mixedAudioURL: URL {
+        sessionFolderURL
+            .appendingPathComponent("export", isDirectory: true)
+            .appendingPathComponent("mixed.m4a")
+    }
+
+    public var displayStatus: String {
+        switch status {
+        case .shortRecording:
+            return "Short recording"
+        case .failed:
+            return "Failed"
+        default:
+            return "Saved"
+        }
+    }
+
+    public var mixedPreviewState: String {
+        if mixedTrackStatus == "failed" {
+            return "Failed"
+        }
+
+        if (mixedFileSizeBytes ?? 0) > 0 {
+            return "Ready"
+        }
+
+        return "Missing"
+    }
+}
+
 public struct RecordingListFilters: Equatable, Sendable {
     public var dateText: String
     public var status: TaggingStatus?
