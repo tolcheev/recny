@@ -13,6 +13,9 @@ Scope:
 - Full system audio capture.
 - Local storage.
 - Per-session `metadata.json`.
+- Post-call tagging.
+- MVP tag filtering.
+- Local SQLite index for recording tags.
 - Mixed `m4a` export.
 - Logs for lifecycle and failures.
 
@@ -22,12 +25,11 @@ Goal: make local recordings easier to browse and manage.
 
 Candidate work:
 
-- SQLite index at `db/app.sqlite`.
 - Local recording list.
 - Search by title, date, category, source app, and status.
 - Editable titles.
 - Editable categories.
-- Tags.
+- Advanced tag management.
 - Better handling for `Inbox/Unsorted/`, `Inbox/Short/`, and `Inbox/Failed/`.
 
 ## Next: Better Autostart

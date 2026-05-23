@@ -72,13 +72,13 @@ Failed sessions may have missing audio files, but `metadata.json` should be writ
 
 ## SQLite Index
 
-`db/app.sqlite` is reserved for a later local index.
+`db/app.sqlite` stores the MVP local index for post-call tags and recording list filtering.
 
 MVP rules:
 
 - The app must not require SQLite to recover a recording.
 - `metadata.json` remains the source of truth for a session.
-- SQLite may be introduced later for fast search, tags, categories, and library views.
+- SQLite mirrors local recording metadata needed for list and tag filtering.
 
 ## Metadata Schema
 
@@ -140,7 +140,7 @@ MVP rules:
   "participants": [],
   "tags": [],
   "category": "student_call",
-  "status": "completed",
+  "status": "needs_tagging",
   "ai_status": "not_started",
   "sync_status": "local_only"
 }
@@ -150,19 +150,37 @@ MVP rules:
 
 - `owner_id`, `workspace_id`, and `mentor_id` may use local placeholder ids in MVP.
 - `participants` is an array because future versions may attach leads, students, or interview participants.
-- `tags` exists now but editing tags is later.
+- `tags` stores the MVP post-call tag selection.
 - `ai_status` exists now but AI is later.
 - `sync_status` exists now but T-Orbit sync is later.
+
+## MVP Tags
+
+```text
+#ученик
+#лид
+#клиент
+#мок
+#собес
+#разбор
+#продажа
+#конфликт
+#важное
+#разобрать
+#плохой_звук
+#сильный_созвон
+#просадка_продажи
+```
 
 ## Suggested Status Values
 
 Recording `status`:
 
-- `recording`
-- `completed`
-- `short`
+- `needs_tagging`
+- `saved`
+- `needs_review`
+- `reviewed`
 - `failed`
-- `permission_blocked`
 
 AI `ai_status`:
 
