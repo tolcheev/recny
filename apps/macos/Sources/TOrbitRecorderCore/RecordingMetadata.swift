@@ -9,25 +9,25 @@ public enum TaggingStatus: String, CaseIterable, Codable, Sendable {
 }
 
 public struct RecordingSource: Codable, Equatable, Sendable {
-    public var app: String
+    public var appName: String
     public var bundleID: String
     public var trigger: String
     public var ruleID: String
 
     public init(
-        app: String = "Manual",
+        appName: String = "Manual",
         bundleID: String = "com.torbit.recorder",
         trigger: String = "manual",
         ruleID: String = "manual.stub"
     ) {
-        self.app = app
+        self.appName = appName
         self.bundleID = bundleID
         self.trigger = trigger
         self.ruleID = ruleID
     }
 
     enum CodingKeys: String, CodingKey {
-        case app
+        case appName = "app_name"
         case bundleID = "bundle_id"
         case trigger
         case ruleID = "rule_id"
@@ -72,8 +72,8 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
     public var tags: [String]
     public var category: String
     public var status: TaggingStatus
-    public var aiStatus: String
-    public var syncStatus: String
+    public var ai: String
+    public var sync: String
 
     public init(
         id: String,
@@ -81,6 +81,8 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         startedAt: String,
         endedAt: String,
         durationSec: Double,
+        source: RecordingSource = RecordingSource(),
+        audioTracks: [AudioTrackMetadata] = [],
         category: String = "unsorted",
         status: TaggingStatus = .needsTagging,
         participants: [String] = [],
@@ -96,14 +98,14 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         self.endedAt = endedAt
         self.durationSec = durationSec
         self.recordingMode = "audio_only"
-        self.source = RecordingSource()
-        self.audioTracks = []
+        self.source = source
+        self.audioTracks = audioTracks
         self.participants = participants
         self.tags = tags
         self.category = category
         self.status = status
-        self.aiStatus = "not_started"
-        self.syncStatus = "local_only"
+        self.ai = "not_started"
+        self.sync = "local_only"
     }
 
     enum CodingKeys: String, CodingKey {
@@ -123,8 +125,33 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         case tags
         case category
         case status
-        case aiStatus = "ai_status"
-        case syncStatus = "sync_status"
+        case ai
+        case sync
+    }
+}
+
+public struct RecordingSession: Equatable, Identifiable, Sendable {
+    public let id: String
+    public let startedAt: Date
+    public let source: RecordingSource
+    public let folderURL: URL
+    public let sourceURL: URL
+    public let exportURL: URL
+    public let metadataURL: URL
+
+    public init(
+        id: String,
+        startedAt: Date,
+        source: RecordingSource,
+        folderURL: URL
+    ) {
+        self.id = id
+        self.startedAt = startedAt
+        self.source = source
+        self.folderURL = folderURL
+        self.sourceURL = folderURL.appendingPathComponent("source", isDirectory: true)
+        self.exportURL = folderURL.appendingPathComponent("export", isDirectory: true)
+        self.metadataURL = folderURL.appendingPathComponent("metadata.json")
     }
 }
 

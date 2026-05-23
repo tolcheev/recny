@@ -77,16 +77,16 @@ MVP metadata must include:
 - `ended_at`
 - `duration_sec`
 - `recording_mode`
-- source app, bundle id, trigger, and rule id
+- source app name, bundle id, trigger, and rule id
 - audio tracks
 - participants
 - tags
 - category
 - status
-- AI status
-- sync status
+- AI state
+- sync state
 
-AI status and sync status exist in the schema even though AI processing and T-Orbit sync are later features.
+AI and sync fields exist in the schema even though AI processing and T-Orbit sync are later features.
 
 ## Explicit Non-Goals For MVP
 

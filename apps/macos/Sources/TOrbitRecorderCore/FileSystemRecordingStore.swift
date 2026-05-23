@@ -1,17 +1,92 @@
 import Foundation
 import SQLite3
 
-public final class RecordingMetadataStore {
+public final class FileSystemRecordingStore {
     public let rootURL: URL
+    public let paths: StoragePathBuilder
 
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
+    private let codec: RecordingMetadataCodec
 
-    public init(rootURL: URL) {
+    public init(rootURL: URL = RecordingPaths.defaultRoot) {
         self.rootURL = rootURL
-        self.encoder = JSONEncoder()
-        self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        self.decoder = JSONDecoder()
+        self.paths = StoragePathBuilder(rootURL: rootURL)
+        self.codec = RecordingMetadataCodec()
+    }
+
+    public func prepareRoot() throws {
+        for directory in paths.baseDirectories() {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+        }
+    }
+
+    public func startSession(
+        startedAt: Date,
+        source: RecordingSource = RecordingSource()
+    ) throws -> RecordingSession {
+        try prepareRoot()
+
+        let id = makeRecordingID(startedAt: startedAt)
+        let folderURL = paths.temporarySessionURL(id: id)
+        let session = RecordingSession(
+            id: id,
+            startedAt: startedAt,
+            source: source,
+            folderURL: folderURL
+        )
+
+        try FileManager.default.createDirectory(
+            at: session.sourceURL,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: session.exportURL,
+            withIntermediateDirectories: true
+        )
+
+        AppLogger.storage.info("Created temporary recording session folder: \(folderURL.path(percentEncoded: false), privacy: .public)")
+
+        return session
+    }
+
+    public func stopSession(
+        _ session: RecordingSession,
+        endedAt: Date,
+        duration: TimeInterval,
+        status: TaggingStatus
+    ) throws -> PostCallDraft {
+        try prepareRoot()
+
+        let finalFolderURL = try uniqueLibrarySessionURL(for: session)
+        try FileManager.default.createDirectory(
+            at: finalFolderURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.moveItem(at: session.folderURL, to: finalFolderURL)
+
+        let finalMetadataURL = finalFolderURL.appendingPathComponent("metadata.json")
+        let metadata = makeMetadata(
+            session: session,
+            endedAt: endedAt,
+            duration: duration,
+            status: status
+        )
+
+        try write(metadata, metadataURL: finalMetadataURL, sessionFolderURL: finalFolderURL)
+        AppLogger.storage.info("Finalized recording metadata: \(finalMetadataURL.path(percentEncoded: false), privacy: .public)")
+
+        return PostCallDraft(
+            id: metadata.id,
+            title: metadata.title,
+            category: metadata.category,
+            participant: metadata.participants.first ?? "",
+            tags: metadata.tags,
+            status: metadata.status,
+            sessionFolderURL: finalFolderURL,
+            metadataURL: finalMetadataURL
+        )
     }
 
     public func createNeedsTaggingDraft(
@@ -19,39 +94,15 @@ public final class RecordingMetadataStore {
         endedAt: Date,
         duration: TimeInterval
     ) throws -> PostCallDraft {
-        let id = Self.makeRecordingID(startedAt: startedAt)
-        let sessionFolderURL = sessionFolder(startedAt: startedAt, id: id)
-        let metadataURL = sessionFolderURL.appendingPathComponent("metadata.json")
-
-        try FileManager.default.createDirectory(
-            at: sessionFolderURL.appendingPathComponent("source", isDirectory: true),
-            withIntermediateDirectories: true
+        let session = try startSession(
+            startedAt: startedAt,
+            source: RecordingSource()
         )
-        try FileManager.default.createDirectory(
-            at: sessionFolderURL.appendingPathComponent("export", isDirectory: true),
-            withIntermediateDirectories: true
-        )
-
-        let metadata = RecordingMetadata(
-            id: id,
-            title: "Untitled recording",
-            startedAt: Self.formatISO8601(startedAt),
-            endedAt: Self.formatISO8601(endedAt),
-            durationSec: max(0, duration),
+        return try stopSession(
+            session,
+            endedAt: endedAt,
+            duration: duration,
             status: .needsTagging
-        )
-
-        try write(metadata, metadataURL: metadataURL, sessionFolderURL: sessionFolderURL)
-
-        return PostCallDraft(
-            id: id,
-            title: metadata.title,
-            category: metadata.category,
-            participant: metadata.participants.first ?? "",
-            tags: metadata.tags,
-            status: metadata.status,
-            sessionFolderURL: sessionFolderURL,
-            metadataURL: metadataURL
         )
     }
 
@@ -61,26 +112,26 @@ public final class RecordingMetadataStore {
         if metadata.title.isEmpty {
             metadata.title = "Untitled recording"
         }
+
         metadata.category = draft.category.trimmingCharacters(in: .whitespacesAndNewlines)
         if metadata.category.isEmpty {
             metadata.category = "unsorted"
         }
-        metadata.participants = draft.participant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? []
-            : [draft.participant.trimmingCharacters(in: .whitespacesAndNewlines)]
-        metadata.tags = Self.normalizedTags(draft.tags)
+
+        let participant = draft.participant.trimmingCharacters(in: .whitespacesAndNewlines)
+        metadata.participants = participant.isEmpty ? [] : [participant]
+        metadata.tags = normalizedTags(draft.tags)
         metadata.status = draft.status
 
         try write(metadata, metadataURL: draft.metadataURL, sessionFolderURL: draft.sessionFolderURL)
     }
 
     public func readMetadata(at url: URL) throws -> RecordingMetadata {
-        let data = try Data(contentsOf: url)
-        return try decoder.decode(RecordingMetadata.self, from: data)
+        try codec.read(from: url)
     }
 
     public func recordings(filterTag: String?) throws -> [RecordingSummary] {
-        try SQLiteRecordingIndex(rootURL: rootURL).recordings(filterTag: filterTag)
+        try SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL).recordings(filterTag: filterTag)
     }
 
     private func write(
@@ -88,33 +139,95 @@ public final class RecordingMetadataStore {
         metadataURL: URL,
         sessionFolderURL: URL
     ) throws {
-        let data = try encoder.encode(metadata)
-        try data.write(to: metadataURL, options: [.atomic])
-        try SQLiteRecordingIndex(rootURL: rootURL).upsert(
+        try codec.write(metadata, to: metadataURL)
+        try SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL).upsert(
             metadata: metadata,
             metadataURL: metadataURL,
             sessionFolderURL: sessionFolderURL
         )
     }
 
-    private func sessionFolder(startedAt: Date, id: String) -> URL {
-        let calendar = Calendar(identifier: .gregorian)
-        let year = String(calendar.component(.year, from: startedAt))
-        let month = String(format: "%02d", calendar.component(.month, from: startedAt))
-        let folderName = "\(Self.formatFolderDate(startedAt))_manual_audio-\(id.suffix(6))"
-
-        return rootURL
-            .appendingPathComponent("Library", isDirectory: true)
-            .appendingPathComponent(year, isDirectory: true)
-            .appendingPathComponent(month, isDirectory: true)
-            .appendingPathComponent(folderName, isDirectory: true)
+    private func makeMetadata(
+        session: RecordingSession,
+        endedAt: Date,
+        duration: TimeInterval,
+        status: TaggingStatus
+    ) -> RecordingMetadata {
+        RecordingMetadata(
+            id: session.id,
+            title: "Untitled recording",
+            startedAt: formatISO8601(session.startedAt),
+            endedAt: formatISO8601(endedAt),
+            durationSec: max(0, duration),
+            source: session.source,
+            audioTracks: [
+                AudioTrackMetadata(
+                    kind: "microphone",
+                    relativePath: "source/mic.m4a",
+                    status: "not_written",
+                    error: "stub controller does not write audio"
+                ),
+                AudioTrackMetadata(
+                    kind: "system",
+                    relativePath: "source/system.m4a",
+                    status: "not_written",
+                    error: "stub controller does not write audio"
+                ),
+                AudioTrackMetadata(
+                    kind: "mixed",
+                    relativePath: "export/mixed.m4a",
+                    status: "not_written",
+                    error: "stub controller does not write audio"
+                )
+            ],
+            status: status
+        )
     }
 
-    private static func makeRecordingID(startedAt: Date) -> String {
-        "rec_\(formatIDDate(startedAt))_\(UUID().uuidString.prefix(8).lowercased())"
+    private func uniqueLibrarySessionURL(for session: RecordingSession) throws -> URL {
+        var suffix: String?
+        var candidate = paths.librarySessionURL(
+            startedAt: session.startedAt,
+            sourceAppName: session.source.appName,
+            suffix: suffix
+        )
+
+        if !FileManager.default.fileExists(atPath: candidate.path(percentEncoded: false)) {
+            return candidate
+        }
+
+        suffix = String(session.id.suffix(8))
+        candidate = paths.librarySessionURL(
+            startedAt: session.startedAt,
+            sourceAppName: session.source.appName,
+            suffix: suffix
+        )
+
+        if !FileManager.default.fileExists(atPath: candidate.path(percentEncoded: false)) {
+            return candidate
+        }
+
+        var index = 2
+        while true {
+            candidate = paths.librarySessionURL(
+                startedAt: session.startedAt,
+                sourceAppName: session.source.appName,
+                suffix: "\(suffix ?? session.id)-\(index)"
+            )
+
+            if !FileManager.default.fileExists(atPath: candidate.path(percentEncoded: false)) {
+                return candidate
+            }
+
+            index += 1
+        }
     }
 
-    private static func normalizedTags(_ tags: [String]) -> [String] {
+    private func makeRecordingID(startedAt: Date) -> String {
+        "rec_\(paths.formatDate(startedAt, format: "yyyy-MM-dd_HH-mm-ss"))_\(UUID().uuidString.prefix(8).lowercased())"
+    }
+
+    private func normalizedTags(_ tags: [String]) -> [String] {
         var seen = Set<String>()
         return tags.compactMap { tag in
             let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -125,36 +238,21 @@ public final class RecordingMetadataStore {
         }
     }
 
-    private static func formatISO8601(_ date: Date) -> String {
+    private func formatISO8601(_ date: Date) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
-    }
-
-    private static func formatIDDate(_ date: Date) -> String {
-        let formatter = posixFormatter(format: "yyyy-MM-dd_HH-mm-ss")
-        return formatter.string(from: date)
-    }
-
-    private static func formatFolderDate(_ date: Date) -> String {
-        let formatter = posixFormatter(format: "yyyy-MM-dd_HH-mm")
-        return formatter.string(from: date)
-    }
-
-    private static func posixFormatter(format: String) -> DateFormatter {
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.dateFormat = format
-        return dateFormatter
     }
 }
 
 private final class SQLiteRecordingIndex {
     private let rootURL: URL
+    private let dbURL: URL
     private var db: OpaquePointer?
 
-    init(rootURL: URL) {
+    init(rootURL: URL, dbURL: URL) {
         self.rootURL = rootURL
+        self.dbURL = dbURL
     }
 
     deinit {
@@ -273,10 +371,6 @@ private final class SQLiteRecordingIndex {
             return
         }
 
-        let dbURL = rootURL
-            .appendingPathComponent("db", isDirectory: true)
-            .appendingPathComponent("app.sqlite")
-
         try FileManager.default.createDirectory(
             at: dbURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -313,9 +407,7 @@ private final class SQLiteRecordingIndex {
             );
             """
         )
-        try execute(
-            "CREATE INDEX IF NOT EXISTS idx_recording_tags_tag ON recording_tags(tag);"
-        )
+        try execute("CREATE INDEX IF NOT EXISTS idx_recording_tags_tag ON recording_tags(tag);")
     }
 
     private func execute(_ sql: String) throws {
@@ -351,6 +443,7 @@ private final class SQLiteRecordingIndex {
         while sqlite3_step(statement) == SQLITE_ROW {
             let columnCount = sqlite3_column_count(statement)
             var row: [String] = []
+
             for index in 0..<columnCount {
                 if let text = sqlite3_column_text(statement, index) {
                     row.append(String(cString: text))
@@ -358,6 +451,7 @@ private final class SQLiteRecordingIndex {
                     row.append("")
                 }
             }
+
             rows.append(row)
         }
 

@@ -26,6 +26,7 @@ apps/macos/.build/app/TOrbitRecorder.app
 - Compact post-call tagging panel after Stop.
 - MVP tags saved to `metadata.json` and SQLite.
 - Recording list filtering by tag.
+- File-system storage with temporary sessions in `Inbox/Unsorted` and finalized sessions in `Library/YYYY/MM`.
 - Basic OSLog logging.
 - Permission descriptions for microphone and future system audio capture.
 

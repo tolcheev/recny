@@ -23,19 +23,25 @@ public struct RecordingControllerUpdate: Equatable, Sendable {
     public let systemAudioStatus: CaptureStatus
     public let startedAt: Date?
     public let duration: TimeInterval?
+    public let session: RecordingSession?
+    public let postCallDraft: PostCallDraft?
 
     public init(
         status: RecordingStatus,
         micStatus: CaptureStatus,
         systemAudioStatus: CaptureStatus,
         startedAt: Date? = nil,
-        duration: TimeInterval? = nil
+        duration: TimeInterval? = nil,
+        session: RecordingSession? = nil,
+        postCallDraft: PostCallDraft? = nil
     ) {
         self.status = status
         self.micStatus = micStatus
         self.systemAudioStatus = systemAudioStatus
         self.startedAt = startedAt
         self.duration = duration
+        self.session = session
+        self.postCallDraft = postCallDraft
     }
 }
 
