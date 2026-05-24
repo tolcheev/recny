@@ -1,6 +1,19 @@
 import Foundation
 
 public enum MVPTags {
+    public static let quick: [String] = [
+        "#ученик",
+        "#лид",
+        "#мок",
+        "#собес",
+        "#разбор",
+        "#продажа",
+        "#конфликт",
+        "#важное",
+        "#разобрать",
+        "#плохой_звук"
+    ]
+
     public static let all: [String] = [
         "#ученик",
         "#лид",

@@ -18,7 +18,7 @@ The app now uses a recorder-first information architecture:
 - Library Window: recent recordings, search, collapsed filters, and per-recording actions
 - Settings Window: grouped recording, auto-start, storage, hotkeys, and privacy controls in a dedicated app window
 - Diagnostics Window: permissions, device diagnostics, writable storage check, recoverable recordings, logs, and test recording
-- Tag Dialog: optional title, optional participant, quick tags, Save/Cancel
+- Tag Dialog: optional title, optional participant, quick tags, custom tags, status, Save/Cancel
 
 The main window deliberately avoids database controls, raw technical status, recovery details, long paths, and permanent tag fields.
 
@@ -110,9 +110,27 @@ Library is a separate window opened from the main footer or menu bar. It default
 - compact row actions: Play, Open, and an icon-only More menu
 - a details panel for the selected recording with files, metadata summary, tags, and actions
 - an `Open Library Folder` action for jumping to local storage
-- More actions: Edit / Tag and Delete Local Recording
+- More actions: Tag and Delete Local Recording
 
 Title, participant, and tags are edited through the Tag dialog instead of inline fields.
+
+## Tag Dialog Behavior
+
+The Tag dialog opens from the main Latest strip or from a Library row/details action. It includes:
+
+- optional title
+- optional participant
+- quick tag chips for the MVP review tags
+- custom tags input with normalization to `#tag`
+- status choices: `Saved`, `Needs review`, and `Reviewed`
+
+Keyboard behavior:
+
+- Enter saves from text fields.
+- Cmd+Enter saves.
+- Escape closes without saving.
+
+Tags are persisted to both `metadata.json` and the local SQLite index.
 
 ## Diagnostics Behavior
 

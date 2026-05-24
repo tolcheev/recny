@@ -21,6 +21,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 - `metadata.json` stored next to every recording.
 - Compact post-call tagging after recording stops.
 - MVP tags saved to `metadata.json` and `db/app.sqlite`.
+- Tag dialog supports quick tags, custom tags, and status selection without permanent tag controls on the main screen.
 - Local recordings list with filters by date, status, source app, title, and tag.
 - No Electron.
 - No screen recording, cloud upload, T-Orbit sync, AI, or Windows support in MVP.

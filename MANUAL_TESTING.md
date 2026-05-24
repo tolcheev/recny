@@ -33,6 +33,7 @@ The main window should stay recorder-first:
 - Recording shows a large timer, one large `Stop Recording` button, and recording copy.
 - Error shows `Recording failed`, a short reason, `Open Diagnostics`, and `Try Again`.
 - If a latest recording exists, it appears as one compact row: `Last: ...` with Play, Open, and Tag.
+- If the latest recording has tags, the latest row shows compact tag chips only.
 - The main window should not show file sizes, folder names, library filters, recoverable sessions, or a full recordings list.
 
 ## Menu Bar And Window Behavior
@@ -229,9 +230,10 @@ Clipping check:
 3. Close the panel without saving.
 4. Confirm the metadata status remains `needs_tagging`.
 5. Open Library.
-6. Click More -> Tag on the recording row and edit title/tags in the tag dialog.
-7. Save edits.
-8. Confirm `metadata.json` and the SQLite list reflect the changed title/tags.
+6. Click More -> Tag on the recording row and edit title, participant, quick tags, custom tags, and status.
+7. Confirm Enter saves from text fields, Cmd+Enter saves, and Escape closes without saving.
+8. Save edits.
+9. Confirm `metadata.json` and the SQLite list reflect the changed title/tags/status.
 
 ## Library
 

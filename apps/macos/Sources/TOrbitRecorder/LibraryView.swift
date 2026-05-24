@@ -517,7 +517,7 @@ private struct LibraryRecordingRow: View {
 
                 Menu {
                     Button(action: onEdit) {
-                        Label("Edit / Tag", systemImage: "tag")
+                        Label("Tag", systemImage: "tag")
                     }
 
                     Divider()
@@ -607,7 +607,7 @@ private struct LibraryRecordingDetailsPanel: View {
                     }
 
                     Button(action: onEdit) {
-                        Label("Edit", systemImage: "tag")
+                        Label("Tag", systemImage: "tag")
                     }
                 }
 

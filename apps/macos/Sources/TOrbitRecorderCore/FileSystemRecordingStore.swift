@@ -348,7 +348,8 @@ public final class FileSystemRecordingStore {
             mixedTrackStatus: mixedTrack?.status,
             startConfidence: metadata.source.confidence,
             startReason: metadata.source.reason,
-            qualityWarnings: metadata.qualityWarnings
+            qualityWarnings: metadata.qualityWarnings,
+            tags: metadata.tags
         )
     }
 
@@ -605,14 +606,7 @@ public final class FileSystemRecordingStore {
     }
 
     private func normalizedTags(_ tags: [String]) -> [String] {
-        var seen = Set<String>()
-        return tags.compactMap { tag in
-            let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, seen.insert(trimmed).inserted else {
-                return nil
-            }
-            return trimmed
-        }
+        TagEditorLogic.normalizedTags(tags)
     }
 
     private func formatISO8601(_ date: Date) -> String {

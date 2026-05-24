@@ -58,6 +58,27 @@ struct LatestRecordingStrip: View {
                     .lineLimit(2)
                     .accessibilityLabel(recording.qualityWarnings.joined(separator: " "))
             }
+
+            if !recording.tags.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(Array(recording.tags.prefix(3)), id: \.self) { tag in
+                        Text(tag)
+                            .font(.caption)
+                            .lineLimit(1)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor.opacity(0.14), in: Capsule())
+                            .foregroundStyle(Color.accentColor)
+                    }
+
+                    if recording.tags.count > 3 {
+                        Text("+\(recording.tags.count - 3)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityLabel("Latest recording tags \(recording.tags.joined(separator: " "))")
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)

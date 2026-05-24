@@ -317,6 +317,7 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     public let startConfidence: String?
     public let startReason: String?
     public let qualityWarnings: [String]
+    public let tags: [String]
 
     public var mixedAudioURL: URL {
         sessionFolderURL
