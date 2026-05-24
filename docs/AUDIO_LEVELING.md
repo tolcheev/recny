@@ -16,6 +16,7 @@ Current behavior:
 - Latest and Library expose Original playback through More/Details actions.
 - Latest and Library show compact audio health badges: `Audio OK`, `Audio warning`, or `Audio failed`.
 - Diagnostics exposes the latest `analysis/audio_analysis.json`.
+- Existing recordings can be reprocessed from Library or Diagnostics to create missing balanced audio.
 
 V1 uses conservative track-level gain plus safe peak protection. It does not perform real-time AGC, AI enhancement, noise cancellation, or advanced mastering.
 
@@ -149,6 +150,38 @@ Audio leveling runs after `Stop Recording`, after the raw tracks are finalized.
    - Prefer `mixed_balanced.m4a` for playback when available.
    - Show warnings if one side was silent or clipping.
    - Keep original playback available through details.
+
+## Reprocessing Existing Recordings
+
+Audio Leveling can be run again for recordings that were created before `mixed_balanced.m4a` existed.
+
+Single recording:
+
+```text
+Library -> recording row -> More -> Reprocess Audio
+```
+
+Batch:
+
+```text
+Diagnostics -> Audio Processing -> Reprocess Missing Balanced Audio
+```
+
+Reprocessing behavior:
+
+- Reads `source/mic.m4a` and `source/system.m4a`.
+- Writes or rewrites `analysis/audio_analysis.json`.
+- Creates `export/mixed_balanced.m4a`.
+- Updates `metadata.json` `audio.processing` and `audio.health`.
+- Updates the SQLite index through the same metadata write path.
+- Does not modify `source/mic.m4a`, `source/system.m4a`, or `export/mixed.m4a`.
+
+Safety:
+
+- If `mixed_balanced.m4a` already exists for a single Library action, the UI asks whether to overwrite or skip.
+- Batch reprocessing targets recordings missing balanced audio and skips existing balanced exports.
+- Failed recordings are reported in the summary and do not stop the batch.
+- If both source tracks are missing or unusable, the recording is marked `failed` and the analysis file records the failed plan.
 
 ## Audio Metrics
 

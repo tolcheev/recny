@@ -13,6 +13,8 @@ struct DiagnosticsView: View {
     @State private var logLines: [String] = []
     @State private var logsResult: String?
     @State private var isClearLogsConfirmationPresented = false
+    @State private var isReprocessingMissingAudio = false
+    @State private var reprocessResult: String?
 
     var body: some View {
         ScrollView {
@@ -277,13 +279,85 @@ struct DiagnosticsView: View {
                         }
                         .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: latest.audioAnalysisURL) == nil)
                     }
+
+                    Divider()
+
+                    HStack(spacing: 8) {
+                        Button {
+                            runBatchAudioReprocess()
+                        } label: {
+                            Label("Reprocess Missing Balanced Audio", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .disabled(isReprocessingMissingAudio || appState.audioReprocessProgress != nil)
+
+                        if isReprocessingMissingAudio {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+
+                    if let progress = appState.audioReprocessProgress {
+                        Text(progress.displayText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+
+                    if let reprocessResult {
+                        Text(reprocessResult)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
                 } else {
                     Text("No latest recording yet.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
+
+                    Button {
+                        runBatchAudioReprocess()
+                    } label: {
+                        Label("Reprocess Missing Balanced Audio", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(isReprocessingMissingAudio || appState.audioReprocessProgress != nil)
+
+                    if let progress = appState.audioReprocessProgress {
+                        Text(progress.displayText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+
+                    if let reprocessResult {
+                        Text(reprocessResult)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func runBatchAudioReprocess() {
+        guard !isReprocessingMissingAudio else {
+            return
+        }
+
+        isReprocessingMissingAudio = true
+        reprocessResult = "Reprocessing missing balanced audio..."
+
+        Task {
+            do {
+                let summary = try await appState.reprocessMissingBalancedAudio()
+                reprocessResult = summary.results.isEmpty
+                    ? "No recordings need balanced audio."
+                    : summary.displayText
+            } catch {
+                reprocessResult = "Reprocess failed: \(String(describing: error))"
+            }
+            isReprocessingMissingAudio = false
         }
     }
 

@@ -12,7 +12,10 @@ struct LibraryView: View {
     @State private var selectedRecordingID: String?
     @State private var tagDraft: PostCallDraft?
     @State private var deleteCandidate: RecordingSummary?
+    @State private var reprocessCandidate: RecordingSummary?
+    @State private var reprocessingRecordingIDs: Set<String> = []
     @State private var actionError: String?
+    @State private var actionMessage: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -21,6 +24,12 @@ struct LibraryView: View {
                 Label(actionError, systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(.red)
+                    .textSelection(.enabled)
+            }
+            if let actionMessage {
+                Label(actionMessage, systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
 
@@ -79,6 +88,33 @@ struct LibraryView: View {
             }
         } message: {
             Text("This removes metadata, SQLite index entry, and local audio files for this recording.")
+        }
+        .confirmationDialog(
+            "Balanced audio already exists",
+            isPresented: Binding(
+                get: { reprocessCandidate != nil },
+                set: { if !$0 { reprocessCandidate = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Overwrite Balanced Audio") {
+                if let reprocessCandidate {
+                    runReprocess(for: reprocessCandidate, overwriteExisting: true)
+                }
+                reprocessCandidate = nil
+            }
+
+            Button("Skip") {
+                actionMessage = "Reprocess skipped. Existing balanced audio was kept."
+                actionError = nil
+                reprocessCandidate = nil
+            }
+
+            Button("Cancel", role: .cancel) {
+                reprocessCandidate = nil
+            }
+        } message: {
+            Text("Reprocessing replaces only export/mixed_balanced.m4a and analysis/audio_analysis.json. Raw source files stay unchanged.")
         }
     }
 
@@ -270,6 +306,10 @@ struct LibraryView: View {
                                 onShowAnalysis: {
                                     openIfExists(recording.audioAnalysisURL)
                                 },
+                                onReprocess: {
+                                    requestReprocess(for: recording)
+                                },
+                                isReprocessing: reprocessingRecordingIDs.contains(recording.id),
                                 onEdit: {
                                     openTagEditor(for: recording)
                                 },
@@ -466,6 +506,7 @@ struct LibraryView: View {
     private func openIfExists(_ url: URL) {
         guard RecordingPlaybackResolver.nonEmptyFileSize(at: url) != nil else {
             actionError = "\(url.lastPathComponent) is missing"
+            actionMessage = nil
             return
         }
 
@@ -483,8 +524,52 @@ struct LibraryView: View {
             deleteCandidate = nil
             selectedRecordingID = displayedRecordings.first?.id
             actionError = nil
+            actionMessage = "Recording deleted."
         } catch {
             actionError = String(describing: error)
+            actionMessage = nil
+        }
+    }
+
+    private func requestReprocess(for recording: RecordingSummary) {
+        actionError = nil
+        actionMessage = nil
+        guard RecordingPlaybackResolver.nonEmptyFileSize(at: recording.balancedMixedAudioURL) == nil else {
+            reprocessCandidate = recording
+            return
+        }
+
+        runReprocess(for: recording, overwriteExisting: false)
+    }
+
+    private func runReprocess(for recording: RecordingSummary, overwriteExisting: Bool) {
+        guard !reprocessingRecordingIDs.contains(recording.id) else {
+            return
+        }
+
+        reprocessingRecordingIDs.insert(recording.id)
+        actionError = nil
+        actionMessage = "Reprocessing audio..."
+
+        Task {
+            do {
+                let result = try await appState.reprocessAudio(
+                    for: recording,
+                    overwriteExisting: overwriteExisting
+                )
+                if result.status == .failed {
+                    actionError = "\(result.title): \(result.message)"
+                    actionMessage = nil
+                } else {
+                    actionMessage = "\(result.title): \(result.message)"
+                    actionError = nil
+                }
+                reloadLibrary()
+            } catch {
+                actionError = String(describing: error)
+                actionMessage = nil
+            }
+            reprocessingRecordingIDs.remove(recording.id)
         }
     }
 
@@ -497,6 +582,7 @@ struct LibraryView: View {
             NSWorkspace.shared.open(appState.outputFolderURL)
         } catch {
             actionError = String(describing: error)
+            actionMessage = nil
             AppLogger.storage.error("Failed to open library folder: \(String(describing: error), privacy: .public)")
         }
     }
@@ -514,6 +600,8 @@ private struct LibraryRecordingRow: View {
     let onPlayBalanced: () -> Void
     let onPlayOriginal: () -> Void
     let onShowAnalysis: () -> Void
+    let onReprocess: () -> Void
+    let isReprocessing: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -584,6 +672,11 @@ private struct LibraryRecordingRow: View {
                         Label("Show Audio Analysis", systemImage: "doc.text.magnifyingglass")
                     }
                     .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
+
+                    Button(action: onReprocess) {
+                        Label("Reprocess Audio", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(isReprocessing)
 
                     Divider()
 

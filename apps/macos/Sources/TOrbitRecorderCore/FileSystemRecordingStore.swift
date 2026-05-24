@@ -168,6 +168,14 @@ public final class FileSystemRecordingStore {
         try codec.read(from: url)
     }
 
+    public func writeMetadata(
+        _ metadata: RecordingMetadata,
+        metadataURL: URL,
+        sessionFolderURL: URL
+    ) throws {
+        try write(metadata, metadataURL: metadataURL, sessionFolderURL: sessionFolderURL)
+    }
+
     public func readRecoveryMetadata(at url: URL) throws -> RecoveryMetadata {
         let data = try Data(contentsOf: url)
         let decoder = JSONDecoder()

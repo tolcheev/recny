@@ -147,6 +147,8 @@ Use `dist/` for shareable local artifacts and `/Applications/TOrbitRecorder.app`
 
 Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. When Audio leveling is enabled, it also creates `export/mixed_balanced.m4a` plus `analysis/audio_analysis.json`, and stores `audio.health` warnings in `metadata.json`. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows. While recording, quick markers can be added for Important, Objection, Conflict, Review, and Bad audio moments.
 
+Older recordings can be reprocessed for balanced audio from `Library -> More -> Reprocess Audio`. Batch reprocessing for recordings missing `export/mixed_balanced.m4a` is available in `Diagnostics -> Audio Processing`.
+
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
 
 Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.

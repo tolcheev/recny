@@ -33,6 +33,8 @@ public final class AppState: ObservableObject {
     @Published public private(set) var microphoneInputWarning: String?
     @Published public private(set) var microphoneSelectionReason: String
     @Published public private(set) var permissionSnapshot: RecorderPermissionSnapshot
+    @Published public private(set) var audioReprocessProgress: AudioReprocessProgress?
+    @Published public private(set) var audioReprocessLastSummary: AudioReprocessBatchSummary?
 
     private let recordingController: RecordingController
     private let permissionChecker: RecordingPermissionChecking
@@ -151,6 +153,8 @@ public final class AppState: ObservableObject {
             preferredDeviceID: resolvedSettings.recording.microphoneDeviceID
         )
         self.permissionSnapshot = .unknown
+        self.audioReprocessProgress = nil
+        self.audioReprocessLastSummary = nil
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
         AppLogger.configureFileLogging(rootURL: resolvedSettings.storage.rootFolderURL)
@@ -340,6 +344,76 @@ public final class AppState: ObservableObject {
         try recordingStore.deleteLocalRecord(recording)
         try reloadRecordings()
         try reloadLastRecording()
+    }
+
+    public func reprocessAudio(
+        for recording: RecordingSummary,
+        overwriteExisting: Bool
+    ) async throws -> AudioReprocessResult {
+        audioReprocessProgress = AudioReprocessProgress(
+            completed: 0,
+            total: 1,
+            currentTitle: recording.title
+        )
+        defer {
+            audioReprocessProgress = nil
+        }
+
+        let reprocessor = audioLevelingReprocessor()
+        let result = try await reprocessor.reprocess(
+            recording: recording,
+            overwritePolicy: overwriteExisting ? .overwriteExisting : .skipExisting
+        )
+        audioReprocessLastSummary = AudioReprocessBatchSummary(results: [result])
+        try reloadRecordings()
+        try reloadLastRecording()
+        return result
+    }
+
+    public func reprocessMissingBalancedAudio() async throws -> AudioReprocessBatchSummary {
+        let allRecordings = try recordingStore.recordings(filters: RecordingListFilters())
+        let candidates = allRecordings.filter {
+            RecordingPlaybackResolver.nonEmptyFileSize(at: $0.balancedMixedAudioURL) == nil
+        }
+        let reprocessor = audioLevelingReprocessor()
+        var results: [AudioReprocessResult] = []
+
+        defer {
+            audioReprocessProgress = nil
+        }
+
+        for (index, recording) in candidates.enumerated() {
+            audioReprocessProgress = AudioReprocessProgress(
+                completed: index,
+                total: candidates.count,
+                currentTitle: recording.title
+            )
+            do {
+                let result = try await reprocessor.reprocess(
+                    recording: recording,
+                    overwritePolicy: .skipExisting
+                )
+                results.append(result)
+            } catch {
+                AppLogger.file(.warning, category: "recording", "audio reprocess batch item failed recording_id=\(recording.id) error=\(String(describing: error))")
+                results.append(
+                    AudioReprocessResult(
+                        recordingID: recording.id,
+                        title: recording.title,
+                        status: .failed,
+                        message: String(describing: error),
+                        balancedAudioURL: recording.balancedMixedAudioURL,
+                        analysisURL: recording.audioAnalysisURL
+                    )
+                )
+            }
+        }
+
+        let summary = AudioReprocessBatchSummary(results: results)
+        audioReprocessLastSummary = summary
+        try reloadRecordings()
+        try reloadLastRecording()
+        return summary
     }
 
     public func setAutoStartEnabled(_ isEnabled: Bool) {
@@ -823,6 +897,14 @@ public final class AppState: ObservableObject {
             audioLevelingMode: recordingSettings.audioLevelingMode,
             shortRecordingThresholdSeconds: autoStartSettings.shortRecordingThresholdSeconds,
             preferredMicrophoneDeviceID: recordingSettings.microphoneDeviceID
+        )
+    }
+
+    private func audioLevelingReprocessor() -> AudioLevelingReprocessor {
+        AudioLevelingReprocessor(
+            store: recordingStore,
+            qualityPreset: recordingSettings.audioQualityPreset,
+            mode: recordingSettings.audioLevelingMode
         )
     }
 

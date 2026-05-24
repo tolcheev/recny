@@ -311,6 +311,34 @@ Expected behavior:
 - Library rows also show a compact audio warning badge for problematic recordings.
 - Library details show original mixed size, balanced mixed size, mic gain, system gain, audio health, and audio warnings.
 
+Reprocess one old recording:
+
+1. Open Library.
+2. Pick a recording that has `export/mixed.m4a` but no `export/mixed_balanced.m4a`.
+3. Open row `More`.
+4. Click `Reprocess Audio`.
+5. Confirm `export/mixed_balanced.m4a` and `analysis/audio_analysis.json` are created.
+6. Confirm `metadata.json` now has `audio.processing.balanced_mix_status` and `audio.health.status`.
+7. Confirm the Library row updates to show balanced/audio health state.
+
+Overwrite existing balanced audio:
+
+1. Open Library on a recording that already has `export/mixed_balanced.m4a`.
+2. Open row `More`.
+3. Click `Reprocess Audio`.
+4. Confirm the overwrite/skip prompt appears.
+5. Choose `Skip` and confirm the existing file remains.
+6. Repeat and choose `Overwrite Balanced Audio`.
+7. Confirm only `export/mixed_balanced.m4a`, `analysis/audio_analysis.json`, and `metadata.json` changed.
+
+Reprocess all old recordings:
+
+1. Open Diagnostics.
+2. In `Audio Processing`, click `Reprocess Missing Balanced Audio`.
+3. Confirm progress text shows the current recording and total count.
+4. Confirm the final summary shows processed/skipped/failed counts.
+5. Open Library and verify old recordings now have balanced playback where source files were usable.
+
 Manual balance check: loud YouTube + quiet voice
 
 1. Open Settings -> Recording.
