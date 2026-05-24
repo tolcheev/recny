@@ -102,6 +102,14 @@ Run and paste relevant output:
 log show --predicate 'subsystem == "com.torbit.recorder"' --last 30m --style compact
 ```
 
+Or copy visible file logs from Diagnostics -> Logs -> Copy Logs.
+
+Local file log:
+
+```sh
+tail -n 100 ~/Recordings/TOrbitRecorder/logs/app.log
+```
+
 For live reproduction:
 
 ```sh

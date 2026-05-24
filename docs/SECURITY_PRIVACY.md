@@ -92,3 +92,21 @@ The app should make recording state visible in the menu bar UI and provide a loc
 Settings include local privacy controls for local-only mode, recording indicator visibility, and Focus Mode reminder. Local-only mode and Focus Mode reminder remain disabled placeholders in the MVP until additional behavior exists; the recording indicator can be toggled locally.
 
 Autostart must be explainable through metadata and logs so the user can understand why a recording started.
+
+## Local Logs
+
+The MVP writes a simple local app log to:
+
+```text
+~/Recordings/TOrbitRecorder/logs/app.log
+```
+
+Rotation keeps one archive:
+
+```text
+~/Recordings/TOrbitRecorder/logs/app.1.log
+```
+
+Local file logs are for troubleshooting recorder lifecycle and permission issues. They may include file paths, app names, bundle IDs, device names, selected microphone names, auto-start decisions, and error messages.
+
+Local logs must not include raw transcript text, raw audio content, call content, or screen content.

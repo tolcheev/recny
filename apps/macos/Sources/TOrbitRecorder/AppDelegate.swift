@@ -24,6 +24,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appState.startAutoStartMonitoring()
         appState.startMicrophoneDeviceMonitoring()
         AppLogger.app.info("TOrbitRecorder launched")
+        AppLogger.file(.info, category: "app", "app start version=\(BuildInfo.appVersion) commit=\(BuildInfo.gitCommit)")
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        AppLogger.file(.info, category: "app", "app stop")
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -326,6 +331,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quit() {
         AppLogger.app.info("TOrbitRecorder quit requested")
+        AppLogger.file(.info, category: "app", "quit requested")
         NSApp.terminate(nil)
     }
 
@@ -341,6 +347,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         guard alert.runModal() == .alertFirstButtonReturn else {
             AppLogger.app.info("Quit cancelled while recording is active")
+            AppLogger.file(.info, category: "app", "quit cancelled while recording is active")
             return
         }
 
@@ -348,11 +355,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 try await appState.stopRecording()
                 AppLogger.app.info("Active recording stopped before quit")
+                AppLogger.file(.info, category: "recording", "active recording stopped before quit")
                 isTerminatingAfterRecordingStop = true
                 NSApp.terminate(nil)
             } catch {
                 isTerminatingAfterRecordingStop = false
                 AppLogger.recording.error("Failed to stop recording before quit: \(String(describing: error), privacy: .public)")
+                AppLogger.file(.error, category: "recording", "failed to stop recording before quit error=\(String(describing: error))")
                 showMainWindow()
             }
         }

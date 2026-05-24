@@ -147,12 +147,15 @@ Diagnostics is separate from daily use. It includes:
 - last recorder error
 - recoverable recordings with recovery/open actions
 - clear empty recoverables
-- log folder
+- local file log viewer showing the last 100 `app.log` lines
+- copy logs, open logs folder, and clear logs actions
 - 10 second test recording
 - Screen & System Audio Recording guidance for the macOS case where permission is enabled but the current app bundle still needs restart or re-approval
 - collapsed raw recorder errors so the default view stays readable
 
 Recoverable recordings are never shown on the main screen.
+
+Diagnostics reads local logs from `~/Recordings/TOrbitRecorder/logs/app.log`. The app rotates that file to `app.1.log` when it reaches the local size limit, so the viewer combines the archive and active log before showing the latest lines.
 
 ## Design System
 

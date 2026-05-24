@@ -46,6 +46,7 @@ public final class AppState: ObservableObject {
     private var autoStartEngine: AutoStartEngine
     private var lastRecordingStoppedAt: Date?
     private var lastAutoStartDecisionLogKey: String?
+    private var lastLoggedSelectedMicrophoneName: String?
     private var screenSystemAudioSettingsOpened = false
 
     public var outputFolderPath: String {
@@ -150,10 +151,12 @@ public final class AppState: ObservableObject {
         self.permissionSnapshot = .unknown
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
+        AppLogger.configureFileLogging(rootURL: resolvedSettings.storage.rootFolderURL)
         refreshPermissionSnapshot()
         reloadRecordingsSilently()
         reloadLastRecordingSilently()
         reloadRecoverableRecordingsSilently()
+        logSelectedMicrophoneIfNeeded()
     }
 
     deinit {
@@ -187,6 +190,7 @@ public final class AppState: ObservableObject {
                 let error = RecordingControllerError.preflightFailed(message)
                 applyError(error)
                 AppLogger.recording.error("Recording preflight failed before session creation: \(message, privacy: .public)")
+                AppLogger.file(.error, category: "permissions", "recording preflight failed: \(message)")
                 throw error
             }
 
@@ -207,9 +211,11 @@ public final class AppState: ObservableObject {
             errorMessage = nil
             startDurationClock()
             AppLogger.recording.info("Recording state changed to recording. trigger=\(source.trigger, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), rule_id=\(source.ruleID, privacy: .public)")
+            AppLogger.file(.info, category: "recording", "recording start trigger=\(source.trigger) app=\(source.appName) bundle_id=\(source.bundleID) rule_id=\(source.ruleID) output_root=\(outputFolderPath) selected_mic=\(selectedMicrophoneName)")
         } catch {
             applyError(error)
             AppLogger.recording.error("Failed to start recording: \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "recording", "recording failure during start error=\(String(describing: error))")
             throw error
         }
     }
@@ -237,9 +243,11 @@ public final class AppState: ObservableObject {
             } else {
                 AppLogger.recording.info("Recording stopped; post-call tagging required for \(draft.id, privacy: .public)")
             }
+            AppLogger.file(.info, category: "recording", "recording stop id=\(draft.id) status=\(draft.status.rawValue) folder=\(draft.sessionFolderURL.path(percentEncoded: false)) mixed=\(mixedPreviewPath ?? "missing")")
         } catch {
             applyError(error)
             AppLogger.recording.error("Failed to stop recording: \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "recording", "recording failure during stop error=\(String(describing: error))")
             throw error
         }
     }
@@ -251,6 +259,7 @@ public final class AppState: ObservableObject {
         try reloadRecordings()
         try reloadLastRecording()
         AppLogger.recording.info("Saved post-call tags for \(draft.id, privacy: .public)")
+        AppLogger.file(.info, category: "recording", "saved post-call tags id=\(draft.id) status=\(draft.status.rawValue) tags=\(draft.tags.joined(separator: ","))")
     }
 
     public func setTagFilter(_ tag: String?) {
@@ -437,6 +446,7 @@ public final class AppState: ObservableObject {
         outputFolderURL = url
         storageSettings.rootFolderPath = url.path(percentEncoded: false)
         recordingStore = FileSystemRecordingStore(rootURL: url)
+        AppLogger.configureFileLogging(rootURL: url)
         refreshPermissionSnapshot()
         reloadRecordingsSilently()
         reloadLastRecordingSilently()
@@ -546,6 +556,7 @@ public final class AppState: ObservableObject {
         } catch {
             applyError(error)
             AppLogger.recording.error("Auto-start failed: reason=\(decision.reason.rawValue, privacy: .public), confidence=\(decision.confidence, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), error=\(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "autostart", "auto-start failed reason=\(decision.reason.rawValue) confidence=\(decision.confidence) app=\(source.appName) bundle_id=\(source.bundleID) error=\(String(describing: error))")
         }
     }
 
@@ -562,6 +573,7 @@ public final class AppState: ObservableObject {
         let removed = try recordingStore.clearEmptyRecoverableSessions()
         try reloadRecoverableRecordings()
         AppLogger.storage.info("Cleared \(removed, privacy: .public) empty recoverable recording folders")
+        AppLogger.file(.info, category: "storage", "cleared empty recoverables count=\(removed)")
         return removed
     }
 
@@ -576,9 +588,11 @@ public final class AppState: ObservableObject {
             try reloadRecoverableRecordings()
             errorMessage = nil
             AppLogger.recording.info("Recovered interrupted recording \(summary.id, privacy: .public)")
+            AppLogger.file(.info, category: "recording", "recovered recording id=\(summary.id) folder=\(summary.folderURL.path(percentEncoded: false))")
         } catch {
             applyError(error)
             AppLogger.recording.error("Failed to recover recording \(summary.id, privacy: .public): \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "recording", "failed to recover recording id=\(summary.id) error=\(String(describing: error))")
             throw error
         }
     }
@@ -599,6 +613,7 @@ public final class AppState: ObservableObject {
         } catch {
             applyError(error)
             AppLogger.storage.error("Failed to open last recording tags: \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "storage", "failed to open last recording tags error=\(String(describing: error))")
         }
     }
 
@@ -637,6 +652,7 @@ public final class AppState: ObservableObject {
             max(0, autoStartSettings.cooldownSeconds - now.timeIntervalSince($0))
         } ?? 0
         AppLogger.recording.info("Auto-start decision: action=\(String(describing: decision.action), privacy: .public), reason=\(decision.reason.rawValue, privacy: .public), confidence=\(decision.confidence, privacy: .public), active_app=\(activeApplication?.name ?? "none", privacy: .public), bundle_id=\(activeApplication?.bundleID ?? "", privacy: .public), mic_active=\(audioActivity.microphoneActive, privacy: .public), system_active=\(audioActivity.systemAudioActive, privacy: .public), cooldown_remaining=\(Int(cooldownRemaining.rounded(.up)), privacy: .public), message=\(decision.message, privacy: .public)")
+        AppLogger.file(.info, category: "autostart", "decision action=\(decision.action) reason=\(decision.reason.rawValue) confidence=\(decision.confidence) active_app=\(activeApplication?.name ?? "none") bundle_id=\(activeApplication?.bundleID ?? "") mic_active=\(audioActivity.microphoneActive) system_active=\(audioActivity.systemAudioActive) cooldown_remaining=\(Int(cooldownRemaining.rounded(.up))) message=\(decision.message)")
     }
 
     private func publishAutoStartNotification(_ message: String) {
@@ -705,6 +721,7 @@ public final class AppState: ObservableObject {
             try reloadRecordings()
         } catch {
             AppLogger.storage.error("Failed to reload recordings: \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "storage", "failed to reload recordings error=\(String(describing: error))")
         }
     }
 
@@ -713,6 +730,7 @@ public final class AppState: ObservableObject {
             try reloadLastRecording()
         } catch {
             AppLogger.storage.error("Failed to reload last recording: \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "storage", "failed to reload last recording error=\(String(describing: error))")
         }
     }
 
@@ -721,6 +739,7 @@ public final class AppState: ObservableObject {
             try reloadRecoverableRecordings()
         } catch {
             AppLogger.storage.error("Failed to reload recoverable recordings: \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "storage", "failed to reload recoverable recordings error=\(String(describing: error))")
         }
     }
 
@@ -779,6 +798,20 @@ public final class AppState: ObservableObject {
             selection: selection,
             preferredDeviceID: recordingSettings.microphoneDeviceID
         )
+        logSelectedMicrophoneIfNeeded()
+    }
+
+    private func logSelectedMicrophoneIfNeeded() {
+        guard selectedMicrophoneName != lastLoggedSelectedMicrophoneName else {
+            return
+        }
+
+        lastLoggedSelectedMicrophoneName = selectedMicrophoneName
+        AppLogger.file(.info, category: "recording", "selected mic=\(selectedMicrophoneName) recommended=\(recommendedMicrophoneName) reason=\(microphoneSelectionReason)")
+
+        if let microphoneInputWarning {
+            AppLogger.file(.warning, category: "recording", microphoneInputWarning)
+        }
     }
 
     private static func resolveMicrophoneSelection(

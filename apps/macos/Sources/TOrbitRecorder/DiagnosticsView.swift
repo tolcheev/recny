@@ -10,6 +10,9 @@ struct DiagnosticsView: View {
     @State private var testResult: String?
     @State private var isRunningTestRecording = false
     @State private var showRawError = false
+    @State private var logLines: [String] = []
+    @State private var logsResult: String?
+    @State private var isClearLogsConfirmationPresented = false
 
     var body: some View {
         ScrollView {
@@ -29,6 +32,15 @@ struct DiagnosticsView: View {
             appState.refreshMicrophoneDevices()
             appState.refreshPermissionSnapshot()
             try? appState.reloadRecoverableRecordings()
+            loadRecentLogs()
+        }
+        .alert("Clear logs?", isPresented: $isClearLogsConfirmationPresented) {
+            Button("Clear Logs", role: .destructive) {
+                clearLogs()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes app.log and app.1.log. Future app events will create a new app.log.")
         }
     }
 
@@ -208,22 +220,68 @@ struct DiagnosticsView: View {
 
     private var logsSection: some View {
         GroupBox("Logs") {
-            HStack(spacing: 10) {
-                Text(logsURL.path(percentEncoded: false))
-                    .font(.callout.monospaced())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    Text(logFileURL.path(percentEncoded: false))
+                        .font(.callout.monospaced())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
 
-                Spacer()
+                    Spacer()
 
-                Button {
-                    openLogs()
-                } label: {
-                    Label("Open Logs", systemImage: "folder")
+                    Button {
+                        loadRecentLogs()
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+
+                    Button {
+                        copyLogs()
+                    } label: {
+                        Label("Copy Logs", systemImage: "doc.on.doc")
+                    }
+                    .disabled(logLines.isEmpty)
+
+                    Button {
+                        openLogs()
+                    } label: {
+                        Label("Open Logs", systemImage: "folder")
+                    }
+
+                    Button(role: .destructive) {
+                        isClearLogsConfirmationPresented = true
+                    } label: {
+                        Label("Clear Logs", systemImage: "trash")
+                    }
+                }
+
+                if logLines.isEmpty {
+                    Text("No local log lines yet.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ScrollView {
+                        Text(logLines.joined(separator: "\n"))
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                    }
+                    .frame(minHeight: 160, maxHeight: 220)
+                    .background(Color(nsColor: .textBackgroundColor).opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+                }
+
+                if let logsResult {
+                    Text(logsResult)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -253,7 +311,11 @@ struct DiagnosticsView: View {
     }
 
     private var logsURL: URL {
-        appState.outputFolderURL.appendingPathComponent("logs", isDirectory: true)
+        AppLogger.fileLogStore.logDirectoryURL
+    }
+
+    private var logFileURL: URL {
+        AppLogger.fileLogStore.logFileURL
     }
 
     private func openLogs() {
@@ -265,6 +327,34 @@ struct DiagnosticsView: View {
             NSWorkspace.shared.open(logsURL)
         } catch {
             AppLogger.storage.error("Failed to open logs folder: \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "storage", "failed to open logs folder error=\(String(describing: error))")
+        }
+    }
+
+    private func loadRecentLogs() {
+        do {
+            logLines = try AppLogger.fileLogStore.recentLines(limit: 100)
+            logsResult = logLines.isEmpty ? "No app.log entries found." : "Loaded last \(logLines.count) log lines."
+        } catch {
+            logLines = []
+            logsResult = String(describing: error)
+        }
+    }
+
+    private func copyLogs() {
+        let text = logLines.joined(separator: "\n")
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        logsResult = "Copied \(logLines.count) log lines."
+    }
+
+    private func clearLogs() {
+        do {
+            try AppLogger.fileLogStore.clear()
+            logLines = []
+            logsResult = "Logs cleared."
+        } catch {
+            logsResult = String(describing: error)
         }
     }
 

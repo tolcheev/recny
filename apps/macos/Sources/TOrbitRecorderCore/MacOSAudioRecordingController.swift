@@ -73,8 +73,10 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             self.runtimeSettings = settings
 
             AppLogger.recording.info("Microphone recording started. mic=\(microphoneSelection.device.name, privacy: .public), system_audio_enabled=\(settings.systemAudioEnabled, privacy: .public), mixed_preview_enabled=\(settings.mixedPreviewEnabled, privacy: .public)")
+            AppLogger.file(.info, category: "recording", "writer ready mic=\(microphoneSelection.device.name) mic_segment=\(micSegmentURL.path(percentEncoded: false)) system_segment=\(systemSegmentURL.path(percentEncoded: false)) system_audio_enabled=\(settings.systemAudioEnabled) mixed_preview_enabled=\(settings.mixedPreviewEnabled)")
             if let warning = microphoneSelection.warning {
                 AppLogger.recording.error("\(warning, privacy: .public)")
+                AppLogger.file(.warning, category: "recording", warning)
             }
 
             return RecordingControllerUpdate(
@@ -113,6 +115,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 systemResult = .success(try await systemAudioRecorder.stop())
             } catch {
                 AppLogger.recording.error("System audio stop failed: \(String(describing: error), privacy: .public)")
+                AppLogger.file(.error, category: "recording", "system audio stop failed error=\(String(describing: error))")
                 systemResult = .failure(error)
             }
         } else {
@@ -209,6 +212,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                     thresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
                 )
             } catch RecordingControllerError.mixedAudioNoSourceTracks {
+                AppLogger.file(.error, category: "recording", "mixed audio preview failed no source tracks output=\(mixedURL.path(percentEncoded: false))")
                 audioTracks.append(
                     AudioTrackMetadata(
                         kind: "mixed",
@@ -226,6 +230,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 recoveryError = RecordingControllerError.mixedAudioNoSourceTracks.description
             } catch {
                 AppLogger.recording.error("Mixed audio preview failed: \(String(describing: error), privacy: .public)")
+                AppLogger.file(.error, category: "recording", "mixed audio preview failed error=\(String(describing: error)) output=\(mixedURL.path(percentEncoded: false))")
                 audioTracks.append(
                     AudioTrackMetadata(
                         kind: "mixed",
@@ -260,6 +265,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         )
 
         AppLogger.recording.info("Microphone and system audio recording stopped after \(duration, privacy: .public) seconds")
+        AppLogger.file(.info, category: "recording", "recording files finalized duration=\(duration) mic=\(micURL.path(percentEncoded: false)) system=\(systemURL.path(percentEncoded: false)) mixed=\(mixedURL.path(percentEncoded: false))")
 
         return RecordingControllerUpdate(
             status: .idle,
@@ -290,13 +296,16 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         case .authorized:
             return
         case .denied, .restricted:
+            AppLogger.file(.error, category: "permissions", "microphone permission denied or restricted")
             throw RecordingControllerError.microphonePermissionDenied
         case .notDetermined:
             let granted = await AVCaptureDevice.requestAccess(for: .audio)
             guard granted else {
+                AppLogger.file(.error, category: "permissions", "microphone permission request denied")
                 throw RecordingControllerError.microphonePermissionDenied
             }
         @unknown default:
+            AppLogger.file(.error, category: "permissions", "microphone permission unknown authorization state")
             throw RecordingControllerError.microphonePermissionDenied
         }
     }
@@ -307,6 +316,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             devices: devices,
             preferredDeviceID: settings.preferredMicrophoneDeviceID
         ) else {
+            AppLogger.file(.error, category: "recording", "no microphone input device available")
             throw RecordingControllerError.noInputDevice
         }
 
@@ -328,6 +338,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
     ) async -> AudioTrackMetadata {
         let path = url.path(percentEncoded: false)
         guard FileManager.default.fileExists(atPath: path) else {
+            AppLogger.file(.error, category: "recording", "missing \(kind) audio file path=\(path)")
             return AudioTrackMetadata(
                 kind: kind,
                 relativePath: relativePath,
@@ -359,6 +370,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 error: error
             )
         } catch {
+            AppLogger.file(.error, category: "recording", "\(kind) audio file failed integrity check path=\(path) error=\(String(describing: error))")
             return AudioTrackMetadata(
                 kind: kind,
                 relativePath: relativePath,

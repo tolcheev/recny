@@ -159,6 +159,10 @@ plutil -p metadata.json
 - [ ] Settings -> About shows version, build date, commit hash, and local storage path.
 - [ ] Diagnostics opens.
 - [ ] Diagnostics shows permissions, selected input, recommended input, last error, logs, and recoverables.
+- [ ] Diagnostics shows the last 100 local `app.log` lines.
+- [ ] Copy Logs copies visible log lines to the clipboard.
+- [ ] Open Logs opens `~/Recordings/TOrbitRecorder/logs/`.
+- [ ] Clear Logs asks for confirmation and clears local file logs.
 - [ ] Tag dialog opens from Latest.
 - [ ] Tag dialog opens from Library.
 - [ ] Tags save to `metadata.json`.
@@ -259,4 +263,11 @@ Local logs folder:
 
 ```sh
 open ~/Recordings/TOrbitRecorder/logs/
+```
+
+Local file logs:
+
+```sh
+tail -n 100 ~/Recordings/TOrbitRecorder/logs/app.log
+ls -lh ~/Recordings/TOrbitRecorder/logs/app.log ~/Recordings/TOrbitRecorder/logs/app.1.log 2>/dev/null
 ```

@@ -52,6 +52,7 @@ public final class FileSystemRecordingStore {
         try writeRecoveryMetadata(makeInitialRecoveryMetadata(for: session), to: session.recoveryMetadataURL)
 
         AppLogger.storage.info("Created temporary recording session folder: \(folderURL.path(percentEncoded: false), privacy: .public)")
+        AppLogger.file(.info, category: "storage", "created recording session folder=\(folderURL.path(percentEncoded: false)) source=\(session.sourceURL.path(percentEncoded: false)) export=\(session.exportURL.path(percentEncoded: false)) segments=\(session.segmentsURL.path(percentEncoded: false))")
 
         return session
     }
@@ -89,6 +90,7 @@ public final class FileSystemRecordingStore {
 
         try write(metadata, metadataURL: finalMetadataURL, sessionFolderURL: finalFolderURL)
         AppLogger.storage.info("Finalized recording metadata: \(finalMetadataURL.path(percentEncoded: false), privacy: .public)")
+        AppLogger.file(.info, category: "storage", "finalized recording metadata=\(finalMetadataURL.path(percentEncoded: false)) folder=\(finalFolderURL.path(percentEncoded: false)) status=\(finalStatus.rawValue) duration=\(duration)")
 
         return PostCallDraft(
             id: metadata.id,
