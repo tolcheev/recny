@@ -78,6 +78,11 @@ Expected shortcuts:
 - `Cmd+Shift+O`: Open Latest Recording Folder.
 - `Cmd+Shift+L`: Open Library.
 - `Cmd+Shift+D`: Open Diagnostics.
+- `Cmd+1`: Add Important marker while recording.
+- `Cmd+2`: Add Objection marker while recording.
+- `Cmd+3`: Add Conflict marker while recording.
+- `Cmd+4`: Add Review marker while recording.
+- `Cmd+5`: Add Bad audio marker while recording.
 
 Manual check:
 
@@ -87,9 +92,10 @@ Manual check:
 4. Press `Cmd+Shift+D` and confirm Diagnostics opens.
 5. Create or keep a latest recording, then press `Cmd+Shift+O` and confirm Finder opens that recording folder.
 6. Press `Cmd+Shift+R` while idle and confirm recording starts.
-7. Press `Cmd+Shift+R` while recording and confirm recording stops.
-8. Open Settings -> Hotkeys and confirm the same shortcuts are listed.
-9. Open a text field in Settings or Tag dialog and confirm normal typing still works.
+7. Press `Cmd+1` and `Cmd+5` while recording and confirm the marker count increases in the recording UI.
+8. Press `Cmd+Shift+R` while recording and confirm recording stops.
+9. Open Settings -> Hotkeys and confirm the same shortcuts are listed.
+10. Open a text field in Settings or Tag dialog and confirm normal typing still works.
 
 Global shortcuts are not implemented in this step. If another app is active, these shortcuts are not expected to control TOrbitRecorder.
 
@@ -208,19 +214,21 @@ Use this path for the normal MVP success case.
 1. Start playing audible system audio from another app.
 2. Click Start Recording.
 3. Speak into the microphone.
-4. Keep recording for at least 65 seconds with default settings.
-5. Click Stop Recording.
-6. Confirm the UI returns to Idle.
-7. Confirm the post-call tagging panel opens.
-8. Fill:
+4. Add at least two markers from the recording UI, for example `Important` and `Bad audio`.
+5. Keep recording for at least 65 seconds with default settings.
+6. Click Stop Recording.
+7. Confirm the UI returns to Idle.
+8. Confirm the post-call tagging panel opens.
+9. Fill:
    - title
    - participant free text
    - at least one MVP tag
-9. Save the post-call panel.
-10. Open Library and confirm the recording appears in recent recordings.
-11. Expand Library filters and filter the list by the saved tag.
-12. Click Open in Finder on the recording row.
-13. Confirm Finder opens the recording folder.
+10. Save the post-call panel.
+11. Open Library and confirm the recording appears in recent recordings.
+12. Select the recording and confirm the details panel shows marker timestamps and labels.
+13. Expand Library filters and filter the list by the saved tag.
+14. Click Open in Finder on the recording row.
+15. Confirm Finder opens the recording folder.
 
 ## Output Files
 
@@ -253,6 +261,21 @@ Expected metadata:
 - `source.trigger` is `manual` for manual starts.
 - `sync` remains `local_only`.
 - `ai` remains `not_started`.
+- `markers` contains timestamped marker objects when markers were added during recording.
+
+Marker metadata example:
+
+```json
+"markers": [
+  {
+    "id": "A1B2",
+    "time_sec": 12,
+    "label": "Important",
+    "tags": ["important"],
+    "created_at": "2026-05-24T01:00:12.000Z"
+  }
+]
+```
 
 ## Audio Quality Warnings
 

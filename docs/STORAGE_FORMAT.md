@@ -195,6 +195,22 @@ Deleting a local record removes the session folder and the SQLite index row. It 
       "status": "completed"
     }
   ],
+  "markers": [
+    {
+      "id": "marker_important_001",
+      "time_sec": 732,
+      "label": "Important",
+      "tags": ["important"],
+      "created_at": "2026-05-23T14:42:12.000Z"
+    },
+    {
+      "id": "marker_objection_001",
+      "time_sec": 1724,
+      "label": "Objection",
+      "tags": ["objection"],
+      "created_at": "2026-05-23T14:58:44.000Z"
+    }
+  ],
   "quality_warnings": [],
   "participants": [],
   "tags": [],
@@ -210,6 +226,7 @@ Deleting a local record removes the session folder and the SQLite index row. It 
 - `owner_id`, `workspace_id`, and `mentor_id` may use local placeholder ids in MVP.
 - `participants` is an array because future versions may attach leads, students, or interview participants.
 - `tags` stores the MVP post-call tag selection.
+- `markers` stores manual in-call markers with elapsed recording seconds, a human-readable label, quick tags, and creation time.
 - `file_size_bytes` is written for audio tracks that pass the integrity check.
 - `signal` stores lightweight quality diagnostics for completed audio tracks.
 - `quality_warnings` stores user-facing warnings derived from signal metadata.

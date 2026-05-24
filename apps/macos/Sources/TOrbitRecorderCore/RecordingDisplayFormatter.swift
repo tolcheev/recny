@@ -78,6 +78,10 @@ public enum RecordingDisplayFormatter {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
+    public static func markerTimestamp(_ timeSec: TimeInterval) -> String {
+        duration(timeSec)
+    }
+
     public static func fileSize(_ value: Int64?) -> String {
         guard let value, value > 0 else {
             return "Missing"

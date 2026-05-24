@@ -117,6 +117,103 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
     }
 }
 
+public enum RecordingMarkerKind: String, CaseIterable, Identifiable, Sendable {
+    case important
+    case objection
+    case conflict
+    case review
+    case badAudio = "bad_audio"
+
+    public var id: String {
+        rawValue
+    }
+
+    public var label: String {
+        switch self {
+        case .important:
+            return "Important"
+        case .objection:
+            return "Objection"
+        case .conflict:
+            return "Conflict"
+        case .review:
+            return "Review"
+        case .badAudio:
+            return "Bad audio"
+        }
+    }
+
+    public var tags: [String] {
+        [rawValue]
+    }
+
+    public var shortcutKey: String {
+        switch self {
+        case .important:
+            return "1"
+        case .objection:
+            return "2"
+        case .conflict:
+            return "3"
+        case .review:
+            return "4"
+        case .badAudio:
+            return "5"
+        }
+    }
+}
+
+public struct RecordingMarker: Codable, Equatable, Identifiable, Sendable {
+    public var id: String
+    public var timeSec: Double
+    public var label: String
+    public var tags: [String]
+    public var createdAt: String
+
+    public init(
+        id: String,
+        timeSec: Double,
+        label: String,
+        tags: [String],
+        createdAt: String
+    ) {
+        self.id = id
+        self.timeSec = max(0, timeSec.rounded(.down))
+        self.label = label
+        self.tags = tags
+        self.createdAt = createdAt
+    }
+
+    public static func make(
+        kind: RecordingMarkerKind,
+        elapsedTime: TimeInterval,
+        createdAt: Date = Date(),
+        id: String = UUID().uuidString
+    ) -> RecordingMarker {
+        RecordingMarker(
+            id: id,
+            timeSec: elapsedTime,
+            label: kind.label,
+            tags: kind.tags,
+            createdAt: formatISO8601(createdAt)
+        )
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case timeSec = "time_sec"
+        case label
+        case tags
+        case createdAt = "created_at"
+    }
+
+    private static func formatISO8601(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+}
+
 public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
     public var id: String
     public var schemaVersion: Int
@@ -134,6 +231,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
     public var tags: [String]
     public var category: String
     public var status: TaggingStatus
+    public var markers: [RecordingMarker]
     public var qualityWarnings: [String]
     public var ai: String
     public var sync: String
@@ -148,6 +246,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         audioTracks: [AudioTrackMetadata] = [],
         category: String = "unsorted",
         status: TaggingStatus = .needsTagging,
+        markers: [RecordingMarker] = [],
         qualityWarnings: [String] = [],
         participants: [String] = [],
         tags: [String] = []
@@ -168,6 +267,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         self.tags = tags
         self.category = category
         self.status = status
+        self.markers = markers
         self.qualityWarnings = qualityWarnings
         self.ai = "not_started"
         self.sync = "local_only"
@@ -190,6 +290,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         case tags
         case category
         case status
+        case markers
         case qualityWarnings = "quality_warnings"
         case ai
         case sync
@@ -213,6 +314,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         self.tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         self.category = try container.decodeIfPresent(String.self, forKey: .category) ?? "unsorted"
         self.status = try container.decodeIfPresent(TaggingStatus.self, forKey: .status) ?? .needsTagging
+        self.markers = try container.decodeIfPresent([RecordingMarker].self, forKey: .markers) ?? []
         self.qualityWarnings = try container.decodeIfPresent([String].self, forKey: .qualityWarnings) ?? []
         self.ai = try container.decodeIfPresent(String.self, forKey: .ai) ?? "not_started"
         self.sync = try container.decodeIfPresent(String.self, forKey: .sync) ?? "local_only"

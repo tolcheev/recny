@@ -131,6 +131,7 @@ Open the latest recording folder and verify:
 - [ ] Metadata lists mixed track.
 - [ ] Metadata has duration and file size fields.
 - [ ] Metadata trigger is correct: `manual` or `auto`.
+- [ ] Metadata has `markers` when markers were added during recording.
 
 Useful commands from inside the recording folder:
 
@@ -147,6 +148,8 @@ plutil -p metadata.json
 - [ ] Start button starts recording.
 - [ ] Stop button stops recording.
 - [ ] Timer updates during recording.
+- [ ] Marker buttons are visible while recording.
+- [ ] `Important`, `Objection`, `Conflict`, `Review`, and `Bad audio` markers can be added during recording.
 - [ ] Latest strip appears after a recording.
 - [ ] Latest strip does not show long absolute paths.
 - [ ] Play plays the mixed preview.
@@ -167,6 +170,7 @@ plutil -p metadata.json
 - [ ] Tag dialog opens from Library.
 - [ ] Tags save to `metadata.json`.
 - [ ] Tags save to SQLite and appear in Library.
+- [ ] Library details show marker timestamps and labels for recordings with markers.
 
 ## 6. Auto-Start
 

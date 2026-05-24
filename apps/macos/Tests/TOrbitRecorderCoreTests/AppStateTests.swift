@@ -166,6 +166,31 @@ struct AppStateTests {
     }
 
     @Test
+    func recordingMarkersPersistAfterStop() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+
+        try await appState.startRecording()
+        appState.addMarker(.important)
+        appState.addMarker(.badAudio)
+
+        #expect(appState.activeMarkers.map(\.label) == ["Important", "Bad audio"])
+
+        try await appState.stopRecording()
+        let draft = try #require(appState.postCallDraft)
+        let metadata = try FileSystemRecordingStore(rootURL: outputFolder)
+            .readMetadata(at: draft.metadataURL)
+
+        #expect(metadata.markers.map(\.label) == ["Important", "Bad audio"])
+        #expect(metadata.markers.map(\.tags) == [["important"], ["bad_audio"]])
+        #expect(appState.activeMarkers.isEmpty)
+    }
+
+    @Test
     func preflightBlocksStartWhenPermissionsAreMissing() async {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(

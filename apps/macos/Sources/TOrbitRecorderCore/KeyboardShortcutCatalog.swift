@@ -48,10 +48,33 @@ public enum KeyboardShortcutCatalog {
         displayText: "Cmd+Shift+D"
     )
 
+    public static let markerImportant = markerShortcut(for: .important)
+    public static let markerObjection = markerShortcut(for: .objection)
+    public static let markerConflict = markerShortcut(for: .conflict)
+    public static let markerReview = markerShortcut(for: .review)
+    public static let markerBadAudio = markerShortcut(for: .badAudio)
+
+    public static let markerShortcuts: [KeyboardShortcutDefinition] = [
+        markerImportant,
+        markerObjection,
+        markerConflict,
+        markerReview,
+        markerBadAudio
+    ]
+
     public static let appActiveShortcuts: [KeyboardShortcutDefinition] = [
         toggleRecording,
         openLatestRecordingFolder,
         openLibrary,
         openDiagnostics
-    ]
+    ] + markerShortcuts
+
+    private static func markerShortcut(for kind: RecordingMarkerKind) -> KeyboardShortcutDefinition {
+        KeyboardShortcutDefinition(
+            id: "marker_\(kind.rawValue)",
+            title: "Add \(kind.label) marker",
+            keyEquivalent: kind.shortcutKey,
+            displayText: "Cmd+\(kind.shortcutKey)"
+        )
+    }
 }

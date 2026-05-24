@@ -16,6 +16,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var recordings: [RecordingSummary]
     @Published public private(set) var recoverableRecordings: [RecoverableRecordingSummary]
     @Published public private(set) var lastRecording: LastRecordingSummary?
+    @Published public private(set) var activeMarkers: [RecordingMarker]
     @Published public private(set) var selectedTagFilter: String?
     @Published public private(set) var recordingFilters: RecordingListFilters
     @Published public private(set) var recordingSettings: RecordingSettings
@@ -121,6 +122,7 @@ public final class AppState: ObservableObject {
         self.recordings = []
         self.recoverableRecordings = []
         self.lastRecording = nil
+        self.activeMarkers = []
         self.selectedTagFilter = nil
         self.recordingFilters = RecordingListFilters()
         self.recordingSettings = resolvedSettings.recording
@@ -207,6 +209,7 @@ public final class AppState: ObservableObject {
             apply(update)
             recordingStartedAt = update.startedAt ?? Date()
             currentRecordingDuration = 0
+            activeMarkers = []
             mixedPreviewPath = nil
             errorMessage = nil
             startDurationClock()
@@ -231,6 +234,12 @@ public final class AppState: ObservableObject {
             }
 
             postCallDraft = draft
+            if !activeMarkers.isEmpty {
+                try recordingStore.appendMarkers(activeMarkers, to: draft)
+                AppLogger.recording.info("Saved \(self.activeMarkers.count, privacy: .public) recording markers for \(draft.id, privacy: .public)")
+                AppLogger.file(.info, category: "recording", "saved recording markers id=\(draft.id) count=\(activeMarkers.count)")
+                activeMarkers = []
+            }
             mixedPreviewPath = mixedPreviewPath(for: draft)
             isPostCallPanelPresented = draft.status != .shortRecording && draft.status != .failed
             lastRecordingStoppedAt = Date()
@@ -250,6 +259,25 @@ public final class AppState: ObservableObject {
             AppLogger.file(.error, category: "recording", "recording failure during stop error=\(String(describing: error))")
             throw error
         }
+    }
+
+    @discardableResult
+    public func addMarker(_ kind: RecordingMarkerKind, createdAt: Date = Date()) -> RecordingMarker? {
+        guard status == .recording else {
+            AppLogger.file(.info, category: "recording", "ignored marker label=\(kind.label) reason=not_recording")
+            return nil
+        }
+
+        let elapsedTime = recordingStartedAt.map { createdAt.timeIntervalSince($0) } ?? currentRecordingDuration
+        let marker = RecordingMarker.make(
+            kind: kind,
+            elapsedTime: elapsedTime,
+            createdAt: createdAt
+        )
+        activeMarkers.append(marker)
+        AppLogger.recording.info("Added recording marker label=\(kind.label, privacy: .public) time_sec=\(marker.timeSec, privacy: .public)")
+        AppLogger.file(.info, category: "recording", "marker added label=\(kind.label) time_sec=\(Int(marker.timeSec))")
+        return marker
     }
 
     public func savePostCallDraft(_ draft: PostCallDraft) throws {

@@ -141,6 +141,27 @@ public final class FileSystemRecordingStore {
         try write(metadata, metadataURL: draft.metadataURL, sessionFolderURL: draft.sessionFolderURL)
     }
 
+    public func appendMarkers(_ markers: [RecordingMarker], to draft: PostCallDraft) throws {
+        guard !markers.isEmpty else {
+            return
+        }
+
+        var metadata = try readMetadata(at: draft.metadataURL)
+        var seenIDs = Set(metadata.markers.map(\.id))
+        for marker in markers where seenIDs.insert(marker.id).inserted {
+            metadata.markers.append(marker)
+        }
+        metadata.markers.sort { lhs, rhs in
+            if lhs.timeSec == rhs.timeSec {
+                return lhs.createdAt < rhs.createdAt
+            }
+
+            return lhs.timeSec < rhs.timeSec
+        }
+
+        try write(metadata, metadataURL: draft.metadataURL, sessionFolderURL: draft.sessionFolderURL)
+    }
+
     public func readMetadata(at url: URL) throws -> RecordingMetadata {
         try codec.read(from: url)
     }

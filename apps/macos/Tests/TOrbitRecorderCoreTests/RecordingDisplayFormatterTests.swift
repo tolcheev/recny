@@ -18,6 +18,13 @@ struct RecordingDisplayFormatterTests {
     }
 
     @Test
+    func formatsMarkerTimestamps() {
+        #expect(RecordingDisplayFormatter.markerTimestamp(0) == "00:00")
+        #expect(RecordingDisplayFormatter.markerTimestamp(123) == "02:03")
+        #expect(RecordingDisplayFormatter.markerTimestamp(3_661) == "1:01:01")
+    }
+
+    @Test
     func formatsFileSizesCompactly() {
         #expect(RecordingDisplayFormatter.fileSize(nil) == "Missing")
         #expect(RecordingDisplayFormatter.fileSize(0) == "Missing")

@@ -68,6 +68,8 @@ struct RecordingStatusCard: View {
                 stopRecording()
             }
 
+            markerButtons
+
             VStack(spacing: 5) {
                 Text("Recording mic + system audio")
                     .font(.callout.weight(.medium))
@@ -89,6 +91,28 @@ struct RecordingStatusCard: View {
                 )
             }
             .frame(maxWidth: 360)
+        }
+    }
+
+    private var markerButtons: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                ForEach(RecordingMarkerKind.allCases) { markerKind in
+                    Button(markerKind.label) {
+                        appState.addMarker(markerKind)
+                    }
+                    .controlSize(.small)
+                    .help("Cmd+\(markerKind.shortcutKey)")
+                    .accessibilityLabel("Add \(markerKind.label) marker")
+                }
+            }
+
+            if !appState.activeMarkers.isEmpty {
+                Text("\(appState.activeMarkers.count) marker\(appState.activeMarkers.count == 1 ? "" : "s") added")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("\(appState.activeMarkers.count) recording markers added")
+            }
         }
     }
 

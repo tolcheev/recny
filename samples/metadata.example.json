@@ -61,6 +61,26 @@
   "ended_at": "2026-05-23T15:12:18Z",
   "id": "rec_2026-05-23_14-30-00_ab12cd34",
   "mentor_id": "local:vlad",
+  "markers": [
+    {
+      "created_at": "2026-05-23T14:42:12.000Z",
+      "id": "marker_important_001",
+      "label": "Important",
+      "tags": [
+        "important"
+      ],
+      "time_sec": 732
+    },
+    {
+      "created_at": "2026-05-23T14:58:44.000Z",
+      "id": "marker_objection_001",
+      "label": "Objection",
+      "tags": [
+        "objection"
+      ],
+      "time_sec": 1724
+    }
+  ],
   "owner_id": "local:vlad",
   "participants": [
     "Ivan Student"

@@ -430,6 +430,39 @@ struct FileSystemRecordingStoreTests {
         #expect(latest.startReason == "Zoom active with microphone activity.")
     }
 
+    @Test
+    func appendsMarkersToMetadata() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let session = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let draft = try store.stopSession(
+            session,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_120),
+            duration: 120,
+            status: .needsTagging,
+            audioTracks: []
+        )
+        let marker = RecordingMarker.make(
+            kind: .conflict,
+            elapsedTime: 42.9,
+            createdAt: Date(timeIntervalSince1970: 1_716_468_042),
+            id: "marker-conflict"
+        )
+
+        try store.appendMarkers([marker], to: draft)
+
+        let metadata = try store.readMetadata(at: draft.metadataURL)
+        #expect(metadata.markers == [marker])
+
+        let json = try String(contentsOf: draft.metadataURL, encoding: .utf8)
+        #expect(json.contains("\"markers\""))
+        #expect(json.contains("\"time_sec\""))
+        #expect(json.contains("\"Conflict\""))
+    }
+
     private static func testOutputFolder() -> URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

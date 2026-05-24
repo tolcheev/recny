@@ -324,6 +324,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showDiagnostics()
     }
 
+    func addMarkerFromShortcut(_ kind: RecordingMarkerKind) {
+        guard appState.status == .recording else {
+            return
+        }
+
+        if let marker = appState.addMarker(kind) {
+            AppLogger.file(.info, category: "app", "keyboard shortcut Cmd+\(kind.shortcutKey) marker=\(marker.label)")
+        }
+    }
+
     private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
         let mainWindow = NSApp.windows.first { window in

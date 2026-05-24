@@ -591,6 +591,7 @@ private struct LibraryRecordingDetailsPanel: View {
                     }
                 }
 
+                markersSection
                 filesSection
                 metadataSection
 
@@ -616,6 +617,40 @@ private struct LibraryRecordingDetailsPanel: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    @ViewBuilder
+    private var markersSection: some View {
+        let markers = (metadata?.markers ?? []).sorted {
+            if $0.timeSec == $1.timeSec {
+                return $0.createdAt < $1.createdAt
+            }
+
+            return $0.timeSec < $1.timeSec
+        }
+
+        if !markers.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Markers")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                ForEach(markers) { marker in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(RecordingDisplayFormatter.markerTimestamp(marker.timeSec))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .frame(width: 48, alignment: .leading)
+
+                        Text(marker.label)
+                            .font(.caption)
+                            .lineLimit(1)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Marker \(marker.label) at \(RecordingDisplayFormatter.markerTimestamp(marker.timeSec))")
+                }
+            }
         }
     }
 
