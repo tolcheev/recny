@@ -91,4 +91,52 @@ struct RecordingPermissionDisplayTests {
             )
         )
     }
+
+    @Test
+    func formatsPermissionOnboardingRows() {
+        #expect(PermissionOnboardingFormatter.title(for: .microphone) == "Microphone")
+        #expect(PermissionOnboardingFormatter.title(for: .screenSystemAudio) == "Screen & System Audio Recording")
+        #expect(PermissionOnboardingFormatter.title(for: .storage) == "Output folder writable")
+
+        #expect(
+            PermissionOnboardingFormatter.explanation(
+                for: .screenSystemAudio,
+                state: .restartRequired
+            ) == "Permission is enabled. Restart TOrbitRecorder to apply it."
+        )
+        #expect(
+            PermissionOnboardingFormatter.actionTitle(
+                for: .microphone,
+                state: .notDetermined
+            ) == "Request Microphone Access"
+        )
+        #expect(
+            PermissionOnboardingFormatter.actionTitle(
+                for: .microphone,
+                state: .denied
+            ) == "Open Microphone Settings"
+        )
+        #expect(
+            PermissionOnboardingFormatter.actionTitle(
+                for: .screenSystemAudio,
+                state: .missing
+            ) == "Open Screen & System Audio Recording Settings"
+        )
+    }
+
+    @Test
+    func formatsRestartInstructionForSameBundle() {
+        let snapshot = RecorderPermissionSnapshot(
+            microphone: .granted,
+            screenSystemAudio: .restartRequired,
+            storage: .granted
+        )
+
+        #expect(PermissionOnboardingFormatter.requiresRestart(snapshot))
+        #expect(
+            PermissionOnboardingFormatter.reopenInstruction(
+                bundlePath: "/Applications/TOrbitRecorder.app"
+            ).contains("open \"/Applications/TOrbitRecorder.app\"")
+        )
+    }
 }

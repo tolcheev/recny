@@ -1,5 +1,3 @@
-import AppKit
-import AVFoundation
 import SwiftUI
 import TOrbitRecorderCore
 
@@ -28,34 +26,51 @@ struct PermissionChecklistContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             PermissionStatusRow(
-                title: "Microphone access",
+                title: PermissionOnboardingFormatter.title(for: .microphone),
                 state: appState.permissionSnapshot.microphone,
-                explanation: microphoneExplanation,
-                actionTitle: microphoneActionTitle,
+                explanation: PermissionOnboardingFormatter.explanation(
+                    for: .microphone,
+                    state: appState.permissionSnapshot.microphone
+                ),
+                actionTitle: PermissionOnboardingFormatter.actionTitle(
+                    for: .microphone,
+                    state: appState.permissionSnapshot.microphone
+                ),
                 actionSystemImage: "mic"
             ) {
-                handleMicrophoneAction()
+                PermissionActionHandler.handleMicrophoneAction(appState: appState)
             }
 
             PermissionStatusRow(
-                title: "Screen & System Audio Recording access",
+                title: PermissionOnboardingFormatter.title(for: .screenSystemAudio),
                 state: appState.permissionSnapshot.screenSystemAudio,
-                explanation: screenSystemAudioExplanation,
-                actionTitle: "Open Screen & System Audio Recording Settings",
+                explanation: PermissionOnboardingFormatter.explanation(
+                    for: .screenSystemAudio,
+                    state: appState.permissionSnapshot.screenSystemAudio
+                ),
+                actionTitle: PermissionOnboardingFormatter.actionTitle(
+                    for: .screenSystemAudio,
+                    state: appState.permissionSnapshot.screenSystemAudio
+                ),
                 actionSystemImage: "speaker.wave.2"
             ) {
-                appState.markScreenSystemAudioSettingsOpened()
-                openScreenSystemAudioSettings()
+                PermissionActionHandler.openScreenSystemAudioSettings(appState: appState)
             }
 
             PermissionStatusRow(
-                title: "Storage access",
+                title: PermissionOnboardingFormatter.title(for: .storage),
                 state: appState.permissionSnapshot.storage,
-                explanation: "Recordings stay local. The recordings folder must exist and be writable.",
-                actionTitle: "Open Recordings Folder",
+                explanation: PermissionOnboardingFormatter.explanation(
+                    for: .storage,
+                    state: appState.permissionSnapshot.storage
+                ),
+                actionTitle: PermissionOnboardingFormatter.actionTitle(
+                    for: .storage,
+                    state: appState.permissionSnapshot.storage
+                ),
                 actionSystemImage: "folder"
             ) {
-                openRecordingsFolder()
+                PermissionActionHandler.openRecordingsFolder(appState: appState)
             }
 
             if requiresRestart {
@@ -63,7 +78,7 @@ struct PermissionChecklistContent: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Label(
-                        "Permission is enabled. Restart TOrbitRecorder to apply it.",
+                        PermissionOnboardingFormatter.restartMessage,
                         systemImage: "arrow.clockwise.circle"
                     )
                     .font(.callout.weight(.medium))
@@ -75,13 +90,13 @@ struct PermissionChecklistContent: View {
                         NSApp.terminate(nil)
                     }
 
-                    Button("Reopen Instruction") {
+                    Button("Open App Again") {
                         showsReopenInstruction.toggle()
                     }
                 }
 
                 if showsReopenInstruction {
-                    Text("After quitting, reopen the same app bundle you approved in System Settings: `dist/TOrbitRecorder.app` or `/Applications/TOrbitRecorder.app`. Switching bundle paths can require permission again.")
+                    Text(PermissionOnboardingFormatter.reopenInstruction(bundlePath: Bundle.main.bundleURL.path(percentEncoded: false)))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -93,96 +108,7 @@ struct PermissionChecklistContent: View {
     }
 
     private var requiresRestart: Bool {
-        appState.permissionSnapshot.microphone == .restartRequired
-            || appState.permissionSnapshot.screenSystemAudio == .restartRequired
-            || appState.permissionSnapshot.storage == .restartRequired
-    }
-
-    private var microphoneExplanation: String {
-        switch appState.permissionSnapshot.microphone {
-        case .granted:
-            return "Microphone recording is available."
-        case .notDetermined:
-            return "macOS has not granted microphone access yet."
-        case .denied:
-            return "Microphone access is denied. Enable it in System Settings."
-        case .restartRequired:
-            return "Microphone permission changed. Restart the app if macOS still blocks access."
-        case .missing:
-            return "Microphone access is required for source/mic.m4a."
-        case .unknown:
-            return "TOrbitRecorder cannot determine microphone permission."
-        }
-    }
-
-    private var microphoneActionTitle: String {
-        appState.permissionSnapshot.microphone == .notDetermined
-            ? "Request Microphone Access"
-            : "Open Microphone Settings"
-    }
-
-    private var screenSystemAudioExplanation: String {
-        switch appState.permissionSnapshot.screenSystemAudio {
-        case .granted:
-            return "System audio recording is available."
-        case .restartRequired:
-            return "Permission is enabled. Restart TOrbitRecorder to apply it."
-        case .denied:
-            return "System audio access is denied. Enable it in System Settings, then restart the app."
-        case .missing:
-            return "Required for source/system.m4a and mixed preview."
-        case .notDetermined:
-            return "macOS has not granted Screen & System Audio Recording access yet."
-        case .unknown:
-            return "TOrbitRecorder cannot determine system audio permission."
-        }
-    }
-
-    private func handleMicrophoneAction() {
-        guard appState.permissionSnapshot.microphone == .notDetermined else {
-            openMicrophoneSettings()
-            return
-        }
-
-        Task {
-            _ = await AVCaptureDevice.requestAccess(for: .audio)
-            await MainActor.run {
-                appState.refreshPermissionSnapshot()
-                if appState.permissionSnapshot.microphone != .granted {
-                    openMicrophoneSettings()
-                }
-            }
-        }
-    }
-
-    private func openMicrophoneSettings() {
-        openSystemSettings("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
-        appState.refreshPermissionSnapshot()
-    }
-
-    private func openScreenSystemAudioSettings() {
-        openSystemSettings("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
-    }
-
-    private func openRecordingsFolder() {
-        do {
-            try FileManager.default.createDirectory(
-                at: appState.outputFolderURL,
-                withIntermediateDirectories: true
-            )
-            NSWorkspace.shared.open(appState.outputFolderURL)
-            appState.refreshPermissionSnapshot()
-        } catch {
-            AppLogger.storage.error("Failed to open recordings folder from permissions onboarding: \(String(describing: error), privacy: .public)")
-        }
-    }
-
-    private func openSystemSettings(_ rawURL: String) {
-        guard let url = URL(string: rawURL) else {
-            return
-        }
-
-        NSWorkspace.shared.open(url)
+        PermissionOnboardingFormatter.requiresRestart(appState.permissionSnapshot)
     }
 }
 

@@ -40,7 +40,7 @@ struct RecordingStatusCard: View {
                 }
 
                 Button {
-                    AppWindows.openDiagnostics(appState: appState)
+                    PermissionActionHandler.handlePrimaryFixAction(appState: appState)
                 } label: {
                     Label("Fix Permissions", systemImage: "lock.shield")
                         .font(.headline)

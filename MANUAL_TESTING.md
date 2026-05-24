@@ -183,9 +183,9 @@ External mic check:
 
 On first launch, the app shows a permissions onboarding panel if anything needed for recording is missing. The panel checks:
 
-- Microphone access
-- Screen & System Audio Recording access
-- Storage folder access
+- Microphone
+- Screen & System Audio Recording
+- Output folder writable
 
 Each row shows one user-facing state:
 
@@ -203,6 +203,18 @@ Grant permissions in macOS System Settings:
 
 If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
 
+If Screen & System Audio Recording is missing:
+
+1. Click `Open Screen & System Audio Recording Settings`.
+2. Enable `TOrbitRecorder`.
+3. Return to the app.
+4. If the app shows `Permission is enabled. Restart TOrbitRecorder to apply it.`, quit the app from the onboarding button or menu bar.
+5. Reopen the same app bundle shown by onboarding. Normal manual test path:
+
+```sh
+open /Applications/TOrbitRecorder.app
+```
+
 If the app shows `Restart required`, quit `TOrbitRecorder` completely and reopen the same app bundle:
 
 ```sh
@@ -210,7 +222,7 @@ osascript -e 'tell application id "com.torbit.recorder" to quit' || true
 open /Applications/TOrbitRecorder.app
 ```
 
-When testing Screen & System Audio Recording, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted.
+When testing Screen & System Audio Recording, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted. This is why permission can look enabled in System Settings while the currently running process still reports missing access.
 
 For normal manual testing, prefer `/Applications/TOrbitRecorder.app` over `.build/app/TOrbitRecorder.app`.
 
