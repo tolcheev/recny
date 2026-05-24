@@ -1,7 +1,57 @@
 import Foundation
 
 public enum AudioQualityPreset: String, CaseIterable, Codable, Sendable {
+    case compact
     case standard
+    case high
+
+    public var displayName: String {
+        switch self {
+        case .compact:
+            return "Compact"
+        case .standard:
+            return "Standard"
+        case .high:
+            return "High"
+        }
+    }
+
+    public var sampleRate: Double {
+        48_000
+    }
+
+    public var microphoneBitrate: Int {
+        switch self {
+        case .compact:
+            return 96_000
+        case .standard:
+            return 128_000
+        case .high:
+            return 192_000
+        }
+    }
+
+    public var systemAudioBitrate: Int {
+        switch self {
+        case .compact:
+            return 96_000
+        case .standard:
+            return 128_000
+        case .high:
+            return 192_000
+        }
+    }
+
+    public var mixedPreviewBitrate: Int {
+        switch self {
+        case .compact:
+            return 80_000
+        case .standard:
+            return 96_000
+        case .high:
+            return 128_000
+        }
+    }
 }
 
 public struct RecordingSettings: Codable, Equatable, Sendable {
@@ -24,17 +74,20 @@ public struct RecordingSettings: Codable, Equatable, Sendable {
 }
 
 public struct RecordingRuntimeSettings: Equatable, Sendable {
+    public var audioQualityPreset: AudioQualityPreset
     public var systemAudioEnabled: Bool
     public var mixedPreviewEnabled: Bool
     public var shortRecordingThresholdSeconds: TimeInterval
     public var preferredMicrophoneDeviceID: String?
 
     public init(
+        audioQualityPreset: AudioQualityPreset = .standard,
         systemAudioEnabled: Bool = true,
         mixedPreviewEnabled: Bool = true,
         shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds,
         preferredMicrophoneDeviceID: String? = nil
     ) {
+        self.audioQualityPreset = audioQualityPreset
         self.systemAudioEnabled = systemAudioEnabled
         self.mixedPreviewEnabled = mixedPreviewEnabled
         self.shortRecordingThresholdSeconds = max(0, shortRecordingThresholdSeconds)

@@ -69,6 +69,7 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
     public var channels: Int?
     public var bitrate: Int?
     public var fileSizeBytes: Int64?
+    public var signal: AudioSignalMetadata?
     public var status: String
     public var error: String?
 
@@ -83,6 +84,7 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
         bitrate: Int? = nil,
         fileSizeBytes: Int64? = nil,
         status: String,
+        signal: AudioSignalMetadata? = nil,
         error: String? = nil
     ) {
         self.kind = kind
@@ -94,6 +96,7 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
         self.channels = channels
         self.bitrate = bitrate
         self.fileSizeBytes = fileSizeBytes
+        self.signal = signal
         self.status = status
         self.error = error
     }
@@ -108,6 +111,7 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
         case channels
         case bitrate
         case fileSizeBytes = "file_size_bytes"
+        case signal
         case status
         case error
     }
@@ -130,6 +134,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
     public var tags: [String]
     public var category: String
     public var status: TaggingStatus
+    public var qualityWarnings: [String]
     public var ai: String
     public var sync: String
 
@@ -143,6 +148,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         audioTracks: [AudioTrackMetadata] = [],
         category: String = "unsorted",
         status: TaggingStatus = .needsTagging,
+        qualityWarnings: [String] = [],
         participants: [String] = [],
         tags: [String] = []
     ) {
@@ -162,6 +168,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         self.tags = tags
         self.category = category
         self.status = status
+        self.qualityWarnings = qualityWarnings
         self.ai = "not_started"
         self.sync = "local_only"
     }
@@ -183,8 +190,32 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         case tags
         case category
         case status
+        case qualityWarnings = "quality_warnings"
         case ai
         case sync
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(String.self, forKey: .id)
+        self.schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        self.ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? "local:vlad"
+        self.workspaceID = try container.decodeIfPresent(String.self, forKey: .workspaceID) ?? "local:t-orbit-recorder"
+        self.mentorID = try container.decodeIfPresent(String.self, forKey: .mentorID) ?? "local:vlad"
+        self.title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Untitled recording"
+        self.startedAt = try container.decode(String.self, forKey: .startedAt)
+        self.endedAt = try container.decode(String.self, forKey: .endedAt)
+        self.durationSec = try container.decodeIfPresent(Double.self, forKey: .durationSec) ?? 0
+        self.recordingMode = try container.decodeIfPresent(String.self, forKey: .recordingMode) ?? "audio_only"
+        self.source = try container.decodeIfPresent(RecordingSource.self, forKey: .source) ?? RecordingSource()
+        self.audioTracks = try container.decodeIfPresent([AudioTrackMetadata].self, forKey: .audioTracks) ?? []
+        self.participants = try container.decodeIfPresent([String].self, forKey: .participants) ?? []
+        self.tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        self.category = try container.decodeIfPresent(String.self, forKey: .category) ?? "unsorted"
+        self.status = try container.decodeIfPresent(TaggingStatus.self, forKey: .status) ?? .needsTagging
+        self.qualityWarnings = try container.decodeIfPresent([String].self, forKey: .qualityWarnings) ?? []
+        self.ai = try container.decodeIfPresent(String.self, forKey: .ai) ?? "not_started"
+        self.sync = try container.decodeIfPresent(String.self, forKey: .sync) ?? "local_only"
     }
 }
 
@@ -285,6 +316,7 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     public let mixedTrackStatus: String?
     public let startConfidence: String?
     public let startReason: String?
+    public let qualityWarnings: [String]
 
     public var mixedAudioURL: URL {
         sessionFolderURL

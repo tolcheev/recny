@@ -7,47 +7,57 @@ struct LatestRecordingStrip: View {
     let onTag: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text(
-                RecordingDisplayFormatter.latestStripSummary(
-                    status: recording.status,
-                    duration: recording.durationSec,
-                    micFileSizeBytes: recording.micFileSizeBytes,
-                    systemFileSizeBytes: recording.systemFileSizeBytes
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 12) {
+                Text(
+                    RecordingDisplayFormatter.latestStripSummary(
+                        status: recording.status,
+                        duration: recording.durationSec,
+                        micFileSizeBytes: recording.micFileSizeBytes,
+                        systemFileSizeBytes: recording.systemFileSizeBytes
+                    )
                 )
-            )
-            .font(.callout.weight(.medium))
-            .foregroundStyle(.primary)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .accessibilityLabel("Latest recording summary")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .accessibilityLabel("Latest recording summary")
 
-            Spacer(minLength: 12)
+                Spacer(minLength: 12)
 
-            HStack(spacing: 6) {
-                Button {
-                    playMixed()
-                } label: {
-                    Label("Play", systemImage: "play.fill")
+                HStack(spacing: 6) {
+                    Button {
+                        playMixed()
+                    } label: {
+                        Label("Play", systemImage: "play.fill")
+                    }
+                    .disabled(recording.mixedPreviewState != "Ready")
+                    .accessibilityLabel("Play latest recording")
+
+                    Button {
+                        NSWorkspace.shared.open(recording.sessionFolderURL)
+                    } label: {
+                        Label("Open", systemImage: "folder")
+                    }
+                    .accessibilityLabel("Open latest recording folder")
+
+                    Button {
+                        onTag()
+                    } label: {
+                        Label("Tag", systemImage: "tag")
+                    }
+                    .accessibilityLabel("Tag latest recording")
                 }
-                .disabled(recording.mixedPreviewState != "Ready")
-                .accessibilityLabel("Play latest recording")
-
-                Button {
-                    NSWorkspace.shared.open(recording.sessionFolderURL)
-                } label: {
-                    Label("Open", systemImage: "folder")
-                }
-                .accessibilityLabel("Open latest recording folder")
-
-                Button {
-                    onTag()
-                } label: {
-                    Label("Tag", systemImage: "tag")
-                }
-                .accessibilityLabel("Tag latest recording")
+                .fixedSize()
             }
-            .fixedSize()
+
+            if !recording.qualityWarnings.isEmpty {
+                Label(recording.qualityWarnings.joined(separator: " "), systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .lineLimit(2)
+                    .accessibilityLabel(recording.qualityWarnings.joined(separator: " "))
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)

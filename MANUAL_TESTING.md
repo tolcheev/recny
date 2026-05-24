@@ -194,9 +194,33 @@ Expected metadata:
 - `status` is `needs_tagging`, `saved`, `needs_review`, or `reviewed` after a normal recording.
 - `audio_tracks` includes `microphone`, `system`, and `mixed`.
 - Completed audio tracks have `file_size_bytes` greater than 0.
+- Completed audio tracks include `signal.had_signal`, `signal.approximate_silence_ratio`, and `signal.clipping_detected`.
+- `quality_warnings` is empty for normal speech recordings.
 - `source.trigger` is `manual` for manual starts.
 - `sync` remains `local_only`.
 - `ai` remains `not_started`.
+
+## Audio Quality Warnings
+
+Silent microphone check:
+
+1. Start a short manual recording with the microphone muted or without speaking.
+2. Stop the recording.
+3. Confirm the Latest strip shows `Microphone track seems silent.` when the mic track has almost no signal.
+4. Open `metadata.json` and confirm the microphone track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
+
+Silent system audio check:
+
+1. Start a short manual recording with no system audio playing.
+2. Stop the recording.
+3. Confirm the Latest strip shows `System audio track seems silent.` when the system track has almost no signal.
+4. Open `metadata.json` and confirm the system track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
+
+Clipping check:
+
+1. Record very loud microphone input.
+2. Confirm `metadata.json` sets microphone `signal.clipping_detected: true`.
+3. Confirm the Latest strip can show `Microphone is clipping.`
 
 ## Post-Call Tagging
 

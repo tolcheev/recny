@@ -25,14 +25,19 @@ struct SettingsView: View {
 
     private var recordingSection: some View {
         SettingsSection(title: "Recording") {
-            Picker("Audio quality", selection: .constant("standard")) {
-                Text("Compact").tag("compact")
-                Text("Standard").tag("standard")
-                Text("High").tag("high")
+            Picker(
+                "Audio quality",
+                selection: Binding(
+                    get: { appState.recordingSettings.audioQualityPreset },
+                    set: { appState.setAudioQualityPreset($0) }
+                )
+            ) {
+                ForEach(AudioQualityPreset.allCases, id: \.self) { preset in
+                    Text(preset.displayName).tag(preset)
+                }
             }
-            .disabled(true)
 
-            Text("Quality presets are coming later. MVP uses Standard AAC 48 kHz.")
+            Text("Standard is recommended for calls. Compact lowers AAC bitrate; High keeps more speech detail.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

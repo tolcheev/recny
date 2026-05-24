@@ -77,6 +77,18 @@ struct RecordingStatusCard: View {
                     .foregroundStyle(.secondary)
                     .accessibilityLabel("All system audio is being recorded")
             }
+
+            VStack(spacing: 8) {
+                LevelMeter(
+                    label: "Mic level",
+                    value: appState.microphoneLevel
+                )
+                LevelMeter(
+                    label: "System audio level",
+                    value: appState.systemAudioLevel
+                )
+            }
+            .frame(maxWidth: 360)
         }
     }
 
@@ -184,6 +196,26 @@ struct RecordingStatusCard: View {
             } catch {
                 AppLogger.recording.error("Stop recording from main window failed: \(String(describing: error), privacy: .public)")
             }
+        }
+    }
+}
+
+private struct LevelMeter: View {
+    let label: String
+    let value: Float
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 112, alignment: .leading)
+
+            ProgressView(value: Double(value), total: 1)
+                .progressViewStyle(.linear)
+                .tint(value > 0.82 ? .orange : .accentColor)
+                .accessibilityLabel(label)
+                .accessibilityValue(value > 0.05 ? "Active" : "Silent")
         }
     }
 }

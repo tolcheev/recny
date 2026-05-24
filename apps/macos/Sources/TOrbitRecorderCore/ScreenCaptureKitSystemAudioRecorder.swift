@@ -15,11 +15,15 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
     public static let bitrate: Int = 128_000
 
     public static var assetWriterAudioSettings: [String: Any] {
+        assetWriterAudioSettings(for: .standard)
+    }
+
+    public static func assetWriterAudioSettings(for preset: AudioQualityPreset) -> [String: Any] {
         [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
             AVSampleRateKey: sampleRate,
             AVNumberOfChannelsKey: channels,
-            AVEncoderBitRateKey: bitrate
+            AVEncoderBitRateKey: preset.systemAudioBitrate
         ]
     }
 
@@ -48,9 +52,13 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
     private var sampleCount = 0
     private var firstSampleTime: CMTime?
     private var lastSampleTime: CMTime?
+    private var lastSampleWallClock: Date?
     private var streamError: Error?
 
-    public func start(outputURL: URL) async throws {
+    public func start(
+        outputURL: URL,
+        qualityPreset: AudioQualityPreset = .standard
+    ) async throws {
         try FileManager.default.removeItemIfExists(at: outputURL)
 
         let content: SCShareableContent
@@ -69,7 +77,10 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
         let configuration = Self.streamConfiguration()
         let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
         let writer = try AVAssetWriter(outputURL: outputURL, fileType: .m4a)
-        let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: Self.assetWriterAudioSettings)
+        let writerInput = AVAssetWriterInput(
+            mediaType: .audio,
+            outputSettings: Self.assetWriterAudioSettings(for: qualityPreset)
+        )
         writerInput.expectsMediaDataInRealTime = true
 
         guard writer.canAdd(writerInput) else {
@@ -86,6 +97,7 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
         self.sampleCount = 0
         self.firstSampleTime = nil
         self.lastSampleTime = nil
+        self.lastSampleWallClock = nil
         self.streamError = nil
 
         do {
@@ -149,6 +161,18 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
         )
     }
 
+    public func currentLevel() -> Float {
+        outputQueue.sync {
+            guard let lastSampleWallClock,
+                  Date().timeIntervalSince(lastSampleWallClock) < 1.25
+            else {
+                return 0
+            }
+
+            return 0.55
+        }
+    }
+
     nonisolated public func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .audio, CMSampleBufferDataIsReady(sampleBuffer) else {
             return
@@ -189,6 +213,7 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
         if writerInput.append(sampleBuffer) {
             sampleCount += 1
             lastSampleTime = presentationTime
+            lastSampleWallClock = Date()
         } else {
             streamError = writer.error
         }
@@ -219,6 +244,7 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
         sampleCount = 0
         firstSampleTime = nil
         lastSampleTime = nil
+        lastSampleWallClock = nil
         streamError = nil
     }
 

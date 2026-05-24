@@ -96,6 +96,19 @@ public struct RecordingControllerUpdate: Equatable, Sendable {
     }
 }
 
+public struct AudioLevelSnapshot: Equatable, Sendable {
+    public let microphoneLevel: Float
+    public let systemAudioLevel: Float
+
+    public init(
+        microphoneLevel: Float = 0,
+        systemAudioLevel: Float = 0
+    ) {
+        self.microphoneLevel = min(1, max(0, microphoneLevel))
+        self.systemAudioLevel = min(1, max(0, systemAudioLevel))
+    }
+}
+
 @MainActor
 public protocol RecordingController {
     func startRecording(
@@ -104,10 +117,15 @@ public protocol RecordingController {
         settings: RecordingRuntimeSettings
     ) async throws -> RecordingControllerUpdate
     func stopRecording() async throws -> RecordingControllerUpdate
+    func currentAudioLevels() -> AudioLevelSnapshot
 }
 
 @MainActor
 public extension RecordingController {
+    func currentAudioLevels() -> AudioLevelSnapshot {
+        AudioLevelSnapshot()
+    }
+
     func startRecording(outputFolder: URL, source: RecordingSource) async throws -> RecordingControllerUpdate {
         try await startRecording(
             outputFolder: outputFolder,

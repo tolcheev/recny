@@ -19,7 +19,8 @@ public final class MixedAudioPreviewGenerator: @unchecked Sendable {
     public func createPreview(
         micURL: URL,
         systemURL: URL,
-        outputURL: URL
+        outputURL: URL,
+        qualityPreset: AudioQualityPreset = .standard
     ) async throws -> MixedAudioPreviewResult {
         let candidates = [
             SourceTrack(kind: "microphone", url: micURL),
@@ -45,7 +46,8 @@ public final class MixedAudioPreviewGenerator: @unchecked Sendable {
             composition: mix.composition,
             audioTracks: mix.audioTracks,
             audioMix: mix.audioMix,
-            outputURL: outputURL
+            outputURL: outputURL,
+            qualityPreset: qualityPreset
         )
 
         let fileSize = try Self.fileSize(at: outputURL)
@@ -62,9 +64,10 @@ public final class MixedAudioPreviewGenerator: @unchecked Sendable {
             durationSec: duration,
             sampleRate: Self.sampleRate,
             channels: Self.channels,
-            bitrate: Self.bitrate,
+            bitrate: qualityPreset.mixedPreviewBitrate,
             fileSizeBytes: fileSize,
-            status: "completed"
+            status: "completed",
+            signal: AudioSignalAnalyzer.analyze(url: outputURL)
         )
 
         AppLogger.recording.info(
@@ -82,7 +85,7 @@ public final class MixedAudioPreviewGenerator: @unchecked Sendable {
     private func makeComposition(from candidates: [SourceTrack]) async throws -> AudioMixComposition {
         let composition = AVMutableComposition()
         let audioMix = AVMutableAudioMix()
-        let sourceVolume: Float = candidates.count > 1 ? 0.75 : 1.0
+        let sourceVolume: Float = candidates.count > 1 ? 0.65 : 0.95
         var audioTracks: [AVAssetTrack] = []
         var inputParameters: [AVAudioMixInputParameters] = []
         var usedSourceKinds: [String] = []
@@ -142,7 +145,8 @@ public final class MixedAudioPreviewGenerator: @unchecked Sendable {
         composition: AVAsset,
         audioTracks: [AVAssetTrack],
         audioMix: AVAudioMix,
-        outputURL: URL
+        outputURL: URL,
+        qualityPreset: AudioQualityPreset
     ) async throws {
         let reader: AVAssetReader
         do {
@@ -169,7 +173,10 @@ public final class MixedAudioPreviewGenerator: @unchecked Sendable {
             throw RecordingControllerError.mixedAudioSetupFailed(String(describing: error))
         }
 
-        let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: Self.writerAudioSettings)
+        let writerInput = AVAssetWriterInput(
+            mediaType: .audio,
+            outputSettings: Self.writerAudioSettings(for: qualityPreset)
+        )
         writerInput.expectsMediaDataInRealTime = false
 
         guard writer.canAdd(writerInput) else {
@@ -235,12 +242,12 @@ public final class MixedAudioPreviewGenerator: @unchecked Sendable {
         ]
     }
 
-    private static var writerAudioSettings: [String: Any] {
+    private static func writerAudioSettings(for preset: AudioQualityPreset) -> [String: Any] {
         [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
             AVSampleRateKey: sampleRate,
             AVNumberOfChannelsKey: channels,
-            AVEncoderBitRateKey: bitrate,
+            AVEncoderBitRateKey: preset.mixedPreviewBitrate,
             AVEncoderBitRateStrategyKey: AVAudioBitRateStrategy_Constant
         ]
     }

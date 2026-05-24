@@ -151,6 +151,11 @@ Deleting a local record removes the session folder and the SQLite index row. It 
       "kind": "microphone",
       "relative_path": "source/mic.m4a",
       "sample_rate": 48000,
+      "signal": {
+        "had_signal": true,
+        "approximate_silence_ratio": 0.18,
+        "clipping_detected": false
+      },
       "status": "completed"
     },
     {
@@ -164,6 +169,11 @@ Deleting a local record removes the session folder and the SQLite index row. It 
       "kind": "system",
       "relative_path": "source/system.m4a",
       "sample_rate": 48000,
+      "signal": {
+        "had_signal": true,
+        "approximate_silence_ratio": 0.24,
+        "clipping_detected": false
+      },
       "status": "completed"
     },
     {
@@ -177,9 +187,15 @@ Deleting a local record removes the session folder and the SQLite index row. It 
       "kind": "mixed",
       "relative_path": "export/mixed.m4a",
       "sample_rate": 48000,
+      "signal": {
+        "had_signal": true,
+        "approximate_silence_ratio": 0.15,
+        "clipping_detected": false
+      },
       "status": "completed"
     }
   ],
+  "quality_warnings": [],
   "participants": [],
   "tags": [],
   "category": "student_call",
@@ -195,6 +211,8 @@ Deleting a local record removes the session folder and the SQLite index row. It 
 - `participants` is an array because future versions may attach leads, students, or interview participants.
 - `tags` stores the MVP post-call tag selection.
 - `file_size_bytes` is written for audio tracks that pass the integrity check.
+- `signal` stores lightweight quality diagnostics for completed audio tracks.
+- `quality_warnings` stores user-facing warnings derived from signal metadata.
 - `ai` exists now but AI is later.
 - `sync` exists now but T-Orbit sync is later.
 

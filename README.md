@@ -124,7 +124,7 @@ Current recording implementation starts from the menu bar UI or Auto-start Engin
 
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
 
-Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Audio quality, hotkey capture, add marker, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
+Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Hotkey capture, add marker, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
 ## Microphone Input Policy
 

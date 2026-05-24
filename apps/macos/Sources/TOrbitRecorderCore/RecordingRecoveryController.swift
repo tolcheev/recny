@@ -169,7 +169,8 @@ public final class RecordingRecoveryController: @unchecked Sendable {
             channels: channels,
             bitrate: bitrate,
             fileSizeBytes: size,
-            status: "completed"
+            status: "completed",
+            signal: AudioSignalAnalyzer.analyze(url: url)
         )
     }
 

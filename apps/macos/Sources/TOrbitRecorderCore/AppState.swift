@@ -7,6 +7,8 @@ public final class AppState: ObservableObject {
     @Published public private(set) var currentRecordingDuration: TimeInterval
     @Published public private(set) var micStatus: CaptureStatus
     @Published public private(set) var systemAudioStatus: CaptureStatus
+    @Published public private(set) var microphoneLevel: Float
+    @Published public private(set) var systemAudioLevel: Float
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var postCallDraft: PostCallDraft?
     @Published public private(set) var mixedPreviewPath: String?
@@ -109,6 +111,8 @@ public final class AppState: ObservableObject {
         self.currentRecordingDuration = 0
         self.micStatus = .idle
         self.systemAudioStatus = .idle
+        self.microphoneLevel = 0
+        self.systemAudioLevel = 0
         self.errorMessage = nil
         self.postCallDraft = nil
         self.mixedPreviewPath = nil
@@ -372,6 +376,11 @@ public final class AppState: ObservableObject {
 
     public func setMixedPreviewEnabled(_ isEnabled: Bool) {
         recordingSettings.mixedPreviewEnabled = isEnabled
+        saveSettings()
+    }
+
+    public func setAudioQualityPreset(_ preset: AudioQualityPreset) {
+        recordingSettings.audioQualityPreset = preset
         saveSettings()
     }
 
@@ -647,6 +656,8 @@ public final class AppState: ObservableObject {
         status = .error
         micStatus = Self.captureStatus(for: error)
         systemAudioStatus = Self.systemAudioStatus(for: error)
+        microphoneLevel = 0
+        systemAudioLevel = 0
         errorMessage = String(describing: error)
         stopDurationClock()
     }
@@ -738,6 +749,7 @@ public final class AppState: ObservableObject {
 
     private func recordingRuntimeSettings() -> RecordingRuntimeSettings {
         RecordingRuntimeSettings(
+            audioQualityPreset: recordingSettings.audioQualityPreset,
             systemAudioEnabled: recordingSettings.systemAudioEnabled,
             mixedPreviewEnabled: recordingSettings.mixedPreviewEnabled,
             shortRecordingThresholdSeconds: autoStartSettings.shortRecordingThresholdSeconds,
@@ -836,9 +848,10 @@ public final class AppState: ObservableObject {
                 }
 
                 self.refreshDuration()
+                self.refreshAudioLevels()
 
                 do {
-                    try await Task.sleep(for: .seconds(1))
+                    try await Task.sleep(for: .milliseconds(250))
                 } catch {
                     return
                 }
@@ -851,6 +864,8 @@ public final class AppState: ObservableObject {
         durationTask = nil
         recordingStartedAt = nil
         currentRecordingDuration = 0
+        microphoneLevel = 0
+        systemAudioLevel = 0
     }
 
     private func refreshDuration() {
@@ -859,6 +874,18 @@ public final class AppState: ObservableObject {
         }
 
         currentRecordingDuration = Date().timeIntervalSince(recordingStartedAt)
+    }
+
+    private func refreshAudioLevels() {
+        guard status == .recording else {
+            microphoneLevel = 0
+            systemAudioLevel = 0
+            return
+        }
+
+        let levels = recordingController.currentAudioLevels()
+        microphoneLevel = levels.microphoneLevel
+        systemAudioLevel = levels.systemAudioLevel
     }
 
     private static func formatDuration(_ duration: TimeInterval) -> String {

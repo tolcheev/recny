@@ -12,6 +12,11 @@
       "kind": "microphone",
       "relative_path": "source/mic.m4a",
       "sample_rate": 48000,
+      "signal": {
+        "approximate_silence_ratio": 0.18,
+        "clipping_detected": false,
+        "had_signal": true
+      },
       "status": "completed"
     },
     {
@@ -25,6 +30,11 @@
       "kind": "system",
       "relative_path": "source/system.m4a",
       "sample_rate": 48000,
+      "signal": {
+        "approximate_silence_ratio": 0.24,
+        "clipping_detected": false,
+        "had_signal": true
+      },
       "status": "completed"
     },
     {
@@ -38,6 +48,11 @@
       "kind": "mixed",
       "relative_path": "export/mixed.m4a",
       "sample_rate": 48000,
+      "signal": {
+        "approximate_silence_ratio": 0.15,
+        "clipping_detected": false,
+        "had_signal": true
+      },
       "status": "completed"
     }
   ],
@@ -50,6 +65,7 @@
   "participants": [
     "Ivan Student"
   ],
+  "quality_warnings": [],
   "recording_mode": "audio_only",
   "schema_version": 1,
   "source": {

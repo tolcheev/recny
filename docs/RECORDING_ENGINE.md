@@ -10,12 +10,12 @@ The engine is a testable core package, not SwiftUI view logic.
 
 - Capture microphone audio.
 - Store microphone audio as `source/mic.m4a`.
-- Record microphone audio as AAC in an m4a container at 48 kHz, mono, 128 kbps.
+- Record microphone audio as AAC in an m4a container at 48 kHz, mono, with the selected speech quality preset.
 - Capture full system audio through ScreenCaptureKit audio output.
 - Store system audio as `source/system.m4a`.
-- Record system audio as AAC in an m4a container at 48 kHz, stereo, 128 kbps.
+- Record system audio as AAC in an m4a container at 48 kHz, stereo, with the selected speech quality preset.
 - Create quick-listen mixed audio preview as `export/mixed.m4a`.
-- Record mixed preview as AAC in an m4a container at 48 kHz, stereo, about 96 kbps.
+- Record mixed preview as AAC in an m4a container at 48 kHz, stereo, with a speech preview bitrate.
 - Do not add or persist a screen video output in the MVP.
 - Save metadata for every session.
 - Write `recovery.json` while a session is active.
@@ -49,6 +49,16 @@ Bluetooth microphone is used. Audio quality may be degraded.
 The selected microphone name is visible in the main recorder UI and can be overridden from Settings > Recording > Preferred microphone. A preferred Bluetooth headset microphone is ignored while a non-Bluetooth microphone is available.
 
 Settings labels each available input as `Recommended`, `Built-in`, `Bluetooth fallback`, or `Available`. Diagnostics shows the selected input, the recommended Auto input, and the reason for the current selection. Device changes are refreshed while the app runs; Auto can pick a newly connected external microphone for the next recording, but the active recording input is not changed mid-session.
+
+## Speech Quality Presets
+
+Settings > Recording exposes three local AAC presets:
+
+- `Compact`: microphone 96 kbps, system audio 96 kbps, mixed preview 80 kbps.
+- `Standard`: microphone 128 kbps, system audio 128 kbps, mixed preview 96 kbps. This is the MVP default.
+- `High`: microphone 192 kbps, system audio 192 kbps, mixed preview 128 kbps.
+
+All presets keep 48 kHz sample rate. Microphone remains mono; system and mixed tracks remain stereo.
 
 ## Session State Model
 
@@ -92,12 +102,13 @@ If any required permission or capture path fails, the engine must write failure 
 5. Validate source files with existence and size checks.
 6. Create `export/mixed.m4a` from the available source tracks.
 7. Compute duration and file sizes where possible.
-8. Classify short sessions when below the configured short-recording threshold.
-9. Write final `metadata.json`.
-10. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
+8. Analyze completed source tracks for basic signal metadata: signal presence, approximate silence ratio, and clipping.
+9. Classify short sessions when below the configured short-recording threshold.
+10. Write final `metadata.json`.
+11. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
 
 Recordings shorter than the configured short-recording threshold are finalized with metadata status `short_recording`, moved under `Inbox/Short/`, and kept indexed for review. The MVP default threshold is 60 seconds and can be changed from Settings. Failed finalization uses `failed` and `Inbox/Failed/` when metadata can be written.
-11. Emit a final lifecycle log event.
+12. Emit a final lifecycle log event.
 
 ## Crash Recovery
 
@@ -154,8 +165,20 @@ Every track in `metadata.json` should include:
 - `channels`
 - `bitrate`
 - `file_size_bytes`
+- `signal`, for completed tracks when analysis succeeds:
+  - `had_signal`
+  - `approximate_silence_ratio`
+  - `clipping_detected`
 - `status`
 - `error`, when applicable
+
+Top-level `quality_warnings` contains user-facing post-stop warnings derived from the signal metadata, such as:
+
+- `Microphone track seems silent.`
+- `System audio track seems silent.`
+- `Microphone is clipping.`
+
+The mixed preview uses conservative gain during two-track mixing so mic + system playback is less likely to overload. If only one source track is available, the preview is created from that track with near-unity gain.
 
 ## Failure Handling
 

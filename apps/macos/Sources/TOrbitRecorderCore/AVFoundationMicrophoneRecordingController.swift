@@ -8,11 +8,15 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
     public static let bitrate: Int = 128_000
 
     public static var audioRecorderSettings: [String: Any] {
+        audioRecorderSettings(for: .standard)
+    }
+
+    public static func audioRecorderSettings(for preset: AudioQualityPreset) -> [String: Any] {
         [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: sampleRate,
+            AVSampleRateKey: preset.sampleRate,
             AVNumberOfChannelsKey: channels,
-            AVEncoderBitRateKey: bitrate
+            AVEncoderBitRateKey: preset.microphoneBitrate
         ]
     }
 
@@ -46,9 +50,12 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             )
 
             let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
-            let recorder = try AVAudioRecorder(url: micSegmentURL, settings: Self.audioRecorderSettings)
+            let recorder = try AVAudioRecorder(
+                url: micSegmentURL,
+                settings: Self.audioRecorderSettings(for: settings.audioQualityPreset)
+            )
             recorder.delegate = self
-            recorder.isMeteringEnabled = false
+            recorder.isMeteringEnabled = true
 
             guard recorder.prepareToRecord(), recorder.record() else {
                 throw RecordingControllerError.recorderSetupFailed("AVAudioRecorder failed to start")
@@ -108,9 +115,10 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             durationSec: duration,
             sampleRate: Self.sampleRate,
             channels: Self.channels,
-            bitrate: Self.bitrate,
+            bitrate: runtimeSettings.audioQualityPreset.microphoneBitrate,
             fileSizeBytes: micFileSize,
-            status: "completed"
+            status: "completed",
+            signal: AudioSignalAnalyzer.analyze(url: micURL)
         )
         let mixedTrack: AudioTrackMetadata
         let sessionStatus: TaggingStatus
@@ -122,7 +130,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
                 container: "m4a",
                 sampleRate: MixedAudioPreviewGenerator.sampleRate,
                 channels: MixedAudioPreviewGenerator.channels,
-                bitrate: MixedAudioPreviewGenerator.bitrate,
+                bitrate: runtimeSettings.audioQualityPreset.mixedPreviewBitrate,
                 status: "disabled",
                 error: "mixed preview disabled in settings"
             )
@@ -134,7 +142,12 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         } else {
             do {
                 mixedTrack = try await MixedAudioPreviewGenerator()
-                    .createPreview(micURL: micURL, systemURL: systemURL, outputURL: mixedURL)
+                    .createPreview(
+                        micURL: micURL,
+                        systemURL: systemURL,
+                        outputURL: mixedURL,
+                        qualityPreset: runtimeSettings.audioQualityPreset
+                    )
                     .track
                 sessionStatus = TaggingStatus.finalizedStatus(
                     forDuration: duration,
@@ -150,7 +163,7 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
                     container: "m4a",
                     sampleRate: MixedAudioPreviewGenerator.sampleRate,
                     channels: MixedAudioPreviewGenerator.channels,
-                    bitrate: MixedAudioPreviewGenerator.bitrate,
+                    bitrate: runtimeSettings.audioQualityPreset.mixedPreviewBitrate,
                     status: "failed",
                     error: String(describing: error)
                 )
@@ -179,6 +192,18 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
             systemAudioStatus: .idle,
             duration: duration,
             postCallDraft: draft
+        )
+    }
+
+    public func currentAudioLevels() -> AudioLevelSnapshot {
+        guard let recorder, recorder.isRecording else {
+            return AudioLevelSnapshot()
+        }
+
+        recorder.updateMeters()
+        return AudioLevelSnapshot(
+            microphoneLevel: Self.normalizedLevel(fromAveragePower: recorder.averagePower(forChannel: 0)),
+            systemAudioLevel: 0
         )
     }
 
@@ -291,6 +316,20 @@ public final class AVFoundationMicrophoneRecordingController: NSObject, Recordin
         if let error {
             AppLogger.recording.error("Microphone recorder encode error: \(String(describing: error), privacy: .public)")
         }
+    }
+}
+
+private extension AVFoundationMicrophoneRecordingController {
+    static func normalizedLevel(fromAveragePower power: Float) -> Float {
+        guard power.isFinite else {
+            return 0
+        }
+
+        if power <= -60 {
+            return 0
+        }
+
+        return min(1, max(0, (power + 60) / 60))
     }
 }
 

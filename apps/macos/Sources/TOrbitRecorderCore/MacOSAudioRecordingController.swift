@@ -42,14 +42,18 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             let systemSegmentURL = session.segmentsURL.appendingPathComponent("system-0001.m4a")
             let micRecorder = try AVAudioRecorder(
                 url: micSegmentURL,
-                settings: AVFoundationMicrophoneRecordingController.audioRecorderSettings
+                settings: AVFoundationMicrophoneRecordingController.audioRecorderSettings(for: settings.audioQualityPreset)
             )
             micRecorder.delegate = self
+            micRecorder.isMeteringEnabled = true
 
             let systemRecorder: ScreenCaptureKitSystemAudioRecorder?
             if settings.systemAudioEnabled {
                 let recorder = ScreenCaptureKitSystemAudioRecorder()
-                try await recorder.start(outputURL: systemSegmentURL)
+                try await recorder.start(
+                    outputURL: systemSegmentURL,
+                    qualityPreset: settings.audioQualityPreset
+                )
                 systemRecorder = recorder
             } else {
                 systemRecorder = nil
@@ -137,7 +141,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 fallbackDuration: duration,
                 sampleRate: AVFoundationMicrophoneRecordingController.sampleRate,
                 channels: AVFoundationMicrophoneRecordingController.channels,
-                bitrate: AVFoundationMicrophoneRecordingController.bitrate
+                bitrate: runtimeSettings.audioQualityPreset.microphoneBitrate
             )
         )
         if runtimeSettings.systemAudioEnabled {
@@ -149,7 +153,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                     fallbackDuration: systemResult?.successValue?.duration ?? duration,
                     sampleRate: ScreenCaptureKitSystemAudioRecorder.sampleRate,
                     channels: ScreenCaptureKitSystemAudioRecorder.channels,
-                    bitrate: ScreenCaptureKitSystemAudioRecorder.bitrate,
+                    bitrate: runtimeSettings.audioQualityPreset.systemAudioBitrate,
                     error: systemResult?.failureDescription
                 )
             )
@@ -162,7 +166,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                     container: "m4a",
                     sampleRate: ScreenCaptureKitSystemAudioRecorder.sampleRate,
                     channels: ScreenCaptureKitSystemAudioRecorder.channels,
-                    bitrate: ScreenCaptureKitSystemAudioRecorder.bitrate,
+                    bitrate: runtimeSettings.audioQualityPreset.systemAudioBitrate,
                     status: "disabled",
                     error: "system audio disabled in settings"
                 )
@@ -180,7 +184,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                     container: "m4a",
                     sampleRate: MixedAudioPreviewGenerator.sampleRate,
                     channels: MixedAudioPreviewGenerator.channels,
-                    bitrate: MixedAudioPreviewGenerator.bitrate,
+                    bitrate: runtimeSettings.audioQualityPreset.mixedPreviewBitrate,
                     status: "disabled",
                     error: "mixed preview disabled in settings"
                 )
@@ -195,7 +199,8 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 let mixedResult = try await mixedAudioPreviewGenerator.createPreview(
                     micURL: micURL,
                     systemURL: systemURL,
-                    outputURL: mixedURL
+                    outputURL: mixedURL,
+                    qualityPreset: runtimeSettings.audioQualityPreset
                 )
                 audioTracks.append(mixedResult.track)
                 sessionStatus = TaggingStatus.finalizedStatus(
@@ -212,7 +217,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                         container: "m4a",
                         sampleRate: MixedAudioPreviewGenerator.sampleRate,
                         channels: MixedAudioPreviewGenerator.channels,
-                        bitrate: MixedAudioPreviewGenerator.bitrate,
+                        bitrate: runtimeSettings.audioQualityPreset.mixedPreviewBitrate,
                         status: "failed",
                         error: RecordingControllerError.mixedAudioNoSourceTracks.description
                     )
@@ -229,7 +234,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                         container: "m4a",
                         sampleRate: MixedAudioPreviewGenerator.sampleRate,
                         channels: MixedAudioPreviewGenerator.channels,
-                        bitrate: MixedAudioPreviewGenerator.bitrate,
+                        bitrate: runtimeSettings.audioQualityPreset.mixedPreviewBitrate,
                         status: "failed",
                         error: String(describing: error)
                     )
@@ -262,6 +267,21 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             systemAudioStatus: .idle,
             duration: duration,
             postCallDraft: draft
+        )
+    }
+
+    public func currentAudioLevels() -> AudioLevelSnapshot {
+        var microphoneLevel: Float = 0
+        if let microphoneRecorder, microphoneRecorder.isRecording {
+            microphoneRecorder.updateMeters()
+            microphoneLevel = Self.normalizedLevel(
+                fromAveragePower: microphoneRecorder.averagePower(forChannel: 0)
+            )
+        }
+
+        return AudioLevelSnapshot(
+            microphoneLevel: microphoneLevel,
+            systemAudioLevel: systemAudioRecorder?.currentLevel() ?? 0
         )
     }
 
@@ -335,6 +355,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 bitrate: bitrate,
                 fileSizeBytes: fileSize,
                 status: error == nil ? "completed" : "failed",
+                signal: error == nil ? AudioSignalAnalyzer.analyze(url: url) : nil,
                 error: error
             )
         } catch {
@@ -441,6 +462,20 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         if let error {
             AppLogger.recording.error("Microphone recorder encode error: \(String(describing: error), privacy: .public)")
         }
+    }
+}
+
+private extension MacOSAudioRecordingController {
+    static func normalizedLevel(fromAveragePower power: Float) -> Float {
+        guard power.isFinite else {
+            return 0
+        }
+
+        if power <= -60 {
+            return 0
+        }
+
+        return min(1, max(0, (power + 60) / 60))
     }
 }
 

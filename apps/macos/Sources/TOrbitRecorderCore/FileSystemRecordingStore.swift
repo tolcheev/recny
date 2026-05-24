@@ -347,7 +347,8 @@ public final class FileSystemRecordingStore {
             systemTrackStatus: systemTrack?.status,
             mixedTrackStatus: mixedTrack?.status,
             startConfidence: metadata.source.confidence,
-            startReason: metadata.source.reason
+            startReason: metadata.source.reason,
+            qualityWarnings: metadata.qualityWarnings
         )
     }
 
@@ -422,7 +423,8 @@ public final class FileSystemRecordingStore {
                     error: "stub controller does not write audio"
                 )
             ],
-            status: status
+            status: status,
+            qualityWarnings: AudioQualityWarningMapper.warnings(for: audioTracks ?? [])
         )
     }
 
