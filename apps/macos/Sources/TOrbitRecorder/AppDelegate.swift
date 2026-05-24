@@ -24,7 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyActivationPolicy()
         configureStatusItem()
         bindState()
-        requestNotificationAuthorization()
+        Self.requestNotificationAuthorization()
         appState.startAutoStartMonitoring()
         appState.startMicrophoneDeviceMonitoring()
         AppLogger.app.info("TOrbitRecorder launched")
@@ -174,23 +174,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appState.$autoStartNotificationMessage
             .compactMap { $0 }
             .receive(on: RunLoop.main)
-            .sink { [weak self] message in
-                self?.deliverNotification(message)
+            .sink { message in
+                Self.deliverNotification(message)
             }
             .store(in: &cancellables)
     }
 
-    private func requestNotificationAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error {
-                AppLogger.app.error("Notification authorization failed: \(String(describing: error), privacy: .public)")
-            } else {
-                AppLogger.app.info("Notification authorization status: \(granted, privacy: .public)")
-            }
+    private nonisolated static func requestNotificationAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(
+            options: [.alert, .sound],
+            completionHandler: handleNotificationAuthorization
+        )
+    }
+
+    private nonisolated static func handleNotificationAuthorization(granted: Bool, error: Error?) {
+        if let error {
+            AppLogger.app.error("Notification authorization failed: \(String(describing: error), privacy: .public)")
+        } else {
+            AppLogger.app.info("Notification authorization status: \(granted, privacy: .public)")
         }
     }
 
-    private func deliverNotification(_ message: String) {
+    private nonisolated static func deliverNotification(_ message: String) {
         let content = UNMutableNotificationContent()
         content.title = "TOrbit Recorder"
         content.body = message
@@ -202,10 +207,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             trigger: nil
         )
 
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error {
-                AppLogger.app.error("Failed to deliver notification: \(String(describing: error), privacy: .public)")
-            }
+        UNUserNotificationCenter.current().add(
+            request,
+            withCompletionHandler: handleNotificationDelivery
+        )
+    }
+
+    private nonisolated static func handleNotificationDelivery(error: Error?) {
+        if let error {
+            AppLogger.app.error("Failed to deliver notification: \(String(describing: error), privacy: .public)")
         }
     }
 
