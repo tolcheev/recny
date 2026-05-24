@@ -74,6 +74,7 @@ tests/              Integration fixtures and test assets
 - `docs/UI_REDESIGN.md`: MVP UI structure and redesign notes.
 - `docs/QA_CHECKLIST.md`: focused manual QA checklist for install, permissions, recording, UI, auto-start, and edge cases.
 - `docs/BUG_REPORT_TEMPLATE.md`: copy/paste bug report format for fast handoff back to Codex.
+- `docs/DEVELOPMENT_WORKFLOW.md`: branch, PR, validation, and release workflow for post-MVP development.
 - `docs/ROADMAP.md`: staged future work.
 - `MANUAL_TESTING.md`: manual macOS MVP validation checklist and troubleshooting.
 
