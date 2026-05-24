@@ -210,34 +210,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshMenuState() {
-        recordingToggleItem?.title = appState.status == .recording ? "Stop Recording" : "Start Recording"
-        recordingToggleItem?.action = appState.status == .recording ? #selector(stopRecording) : #selector(startRecording)
-        recordingToggleItem?.isEnabled = true
-        playLastItem?.isEnabled = hasPlayableLastRecording
-        openLastFolderItem?.isEnabled = appState.lastRecording != nil
-        let symbolName: String
-        let accessibilityDescription: String
-        switch appState.status {
-        case .recording where appState.privacySettings.showRecordingIndicator:
-            symbolName = "record.circle.fill"
-            accessibilityDescription = "TOrbit Recorder is recording"
-        case .error:
-            symbolName = "exclamationmark.circle.fill"
-            accessibilityDescription = "TOrbit Recorder error"
-        default:
-            symbolName = "record.circle"
-            accessibilityDescription = "TOrbit Recorder idle"
-        }
-        statusItem.button?.image = NSImage(
-            systemSymbolName: symbolName,
-            accessibilityDescription: accessibilityDescription
+        let displayState = MenuBarDisplayStatePresenter.state(
+            recordingStatus: appState.status,
+            hasPlayableLastRecording: hasPlayableLastRecording,
+            hasLastRecording: appState.lastRecording != nil,
+            showRecordingIndicator: appState.privacySettings.showRecordingIndicator
         )
-        statusItem.button?.contentTintColor = switch appState.status {
-        case .recording where appState.privacySettings.showRecordingIndicator:
+
+        recordingToggleItem?.title = displayState.recordingToggleTitle
+        recordingToggleItem?.action = displayState.recordingToggleAction == .stop
+            ? #selector(stopRecording)
+            : #selector(startRecording)
+        recordingToggleItem?.isEnabled = true
+        playLastItem?.isEnabled = displayState.canPlayLastRecording
+        openLastFolderItem?.isEnabled = displayState.canOpenLastRecordingFolder
+        statusItem.button?.image = NSImage(
+            systemSymbolName: displayState.symbolName,
+            accessibilityDescription: displayState.accessibilityDescription
+        )
+        statusItem.button?.contentTintColor = switch displayState.tint {
+        case .recording:
             .systemRed
         case .error:
             .systemOrange
-        default:
+        case .none:
             nil
         }
     }
@@ -396,9 +392,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
         let mainWindow = NSApp.windows.first { window in
-            window.title == "TOrbit Recorder"
+            window.identifier == .torbitMainWindow || window.title == "TOrbit Recorder"
         } ?? fallbackMainWindow ?? makeFallbackMainWindow()
 
+        mainWindow.identifier = .torbitMainWindow
+        mainWindow.isReleasedWhenClosed = false
         mainWindow.makeKeyAndOrderFront(nil)
         mainWindow.orderFrontRegardless()
     }
@@ -411,6 +409,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         window.title = "TOrbit Recorder"
+        window.identifier = .torbitMainWindow
         window.contentViewController = NSHostingController(rootView: MainRecorderView(appState: appState))
         window.isReleasedWhenClosed = false
         window.center()
@@ -463,4 +462,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+}
+
+private extension NSUserInterfaceItemIdentifier {
+    static let torbitMainWindow = NSUserInterfaceItemIdentifier("com.torbit.recorder.main-window")
 }

@@ -38,6 +38,17 @@ The main window should stay recorder-first:
 
 ## Menu Bar And Window Behavior
 
+Expected menu items:
+
+- `Show Window`
+- `Start Recording` when idle, `Stop Recording` while recording
+- `Play Last Recording`
+- `Open Last Recording Folder`
+- `Open Library`
+- `Settings`
+- `Diagnostics`
+- `Quit`
+
 1. Open `dist/TOrbitRecorder.app`.
 2. Confirm the menu bar item is visible.
 3. Choose menu bar -> Show Window.
@@ -45,13 +56,14 @@ The main window should stay recorder-first:
 5. Close the main window with the red close button.
 6. Confirm the app does not quit and the menu bar item remains visible.
 7. Choose Show Window again.
-8. Confirm the same main window returns without duplicate main windows.
+8. Confirm the same main window returns without duplicate main windows or extra app instances.
 
 Recording state:
 
 - Idle shows a neutral record icon.
-- Recording shows a filled red record icon when `Show recording indicator` is enabled.
+- Recording shows a filled record icon. It is red when `Show recording indicator` is enabled.
 - Error shows an orange error icon.
+- The recording menu item changes from `Start Recording` to `Stop Recording` while recording.
 
 Quit while recording:
 
