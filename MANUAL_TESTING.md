@@ -93,6 +93,34 @@ Manual check:
 
 Global shortcuts are not implemented in this step. If another app is active, these shortcuts are not expected to control TOrbitRecorder.
 
+## Launch At Login
+
+Launch at Login uses the modern macOS login item API through `SMAppService.mainApp`.
+
+Manual check:
+
+1. Install and open the app from `/Applications`:
+
+```sh
+./scripts/install_macos.sh
+open /Applications/TOrbitRecorder.app
+```
+
+2. Open Settings -> Privacy / Behavior.
+3. Turn on `Launch at Login`.
+4. Confirm the helper text says it is enabled, or says approval is required.
+5. If approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder.
+6. Quit TOrbitRecorder.
+7. Log out and log back in, or restart the Mac.
+8. Confirm TOrbitRecorder launches after login and the menu bar item appears.
+9. Turn `Launch at Login` off and confirm TOrbitRecorder is removed or disabled from Login Items.
+
+Known dev-build caveat:
+
+- Test from one stable app bundle path, preferably `/Applications/TOrbitRecorder.app`.
+- Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat them as different app bundles.
+- If the toggle fails, reinstall to `/Applications`, reopen that exact bundle, and retry.
+
 ## Preflight
 
 1. Quit any old `TOrbitRecorder` instance.

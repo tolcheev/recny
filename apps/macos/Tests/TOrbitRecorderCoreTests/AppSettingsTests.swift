@@ -21,6 +21,7 @@ struct AppSettingsTests {
         #expect(settings.privacy.showRecordingIndicator)
         #expect(settings.privacy.showFocusModeReminder)
         #expect(settings.privacy.showDockIcon)
+        #expect(settings.privacy.launchAtLogin == false)
         #expect(settings.hotkeys.startStopHotkey == "")
         #expect(settings.hotkeys.addMarkerHotkey == "")
     }
@@ -42,6 +43,7 @@ struct AppSettingsTests {
         settings.storage.rootFolderPath = "/tmp/TOrbitRecorderCustom"
         settings.privacy.showRecordingIndicator = false
         settings.privacy.showDockIcon = false
+        settings.privacy.launchAtLogin = true
 
         AppSettingsStore.save(settings, defaults: defaults)
         let loaded = AppSettingsStore.load(defaults: defaults)
@@ -58,6 +60,7 @@ struct AppSettingsTests {
         #expect(loaded.storage.rootFolderPath == "/tmp/TOrbitRecorderCustom")
         #expect(loaded.privacy.showRecordingIndicator == false)
         #expect(loaded.privacy.showDockIcon == false)
+        #expect(loaded.privacy.launchAtLogin)
     }
 
     @Test
@@ -79,6 +82,7 @@ struct AppSettingsTests {
         #expect(settings.showRecordingIndicator == false)
         #expect(settings.showFocusModeReminder)
         #expect(settings.showDockIcon)
+        #expect(settings.launchAtLogin == false)
     }
 
     @Test

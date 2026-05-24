@@ -442,6 +442,11 @@ public final class AppState: ObservableObject {
         saveSettings()
     }
 
+    public func setLaunchAtLoginPreference(_ isEnabled: Bool) {
+        privacySettings.launchAtLogin = isEnabled
+        saveSettings()
+    }
+
     public func setStorageRoot(_ url: URL) {
         outputFolderURL = url
         storageSettings.rootFolderPath = url.path(percentEncoded: false)

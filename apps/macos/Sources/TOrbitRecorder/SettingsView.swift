@@ -4,6 +4,9 @@ import TOrbitRecorderCore
 
 struct SettingsView: View {
     @ObservedObject var appState: AppState
+    @State private var launchAtLoginEnabled = false
+    @State private var launchAtLoginMessage = ""
+    @State private var launchAtLoginError: String?
 
     var body: some View {
         ScrollView {
@@ -21,6 +24,7 @@ struct SettingsView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             appState.refreshMicrophoneDevices()
+            refreshLaunchAtLogin()
         }
     }
 
@@ -289,6 +293,32 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            Toggle(
+                "Launch at Login",
+                isOn: Binding(
+                    get: { launchAtLoginEnabled },
+                    set: { setLaunchAtLogin($0) }
+                )
+            )
+
+            Text("Starts TOrbitRecorder when you log in.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if !launchAtLoginMessage.isEmpty {
+                Text(launchAtLoginMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
+            if let launchAtLoginError {
+                Text(launchAtLoginError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+            }
+
             Toggle("Show Focus Mode reminder", isOn: .constant(appState.privacySettings.showFocusModeReminder))
                 .disabled(true)
         }
@@ -332,6 +362,32 @@ struct SettingsView: View {
         }
 
         appState.setStorageRoot(url)
+    }
+
+    private func refreshLaunchAtLogin() {
+        let snapshot = LaunchAtLoginController.snapshot()
+        launchAtLoginEnabled = snapshot.isOn
+        launchAtLoginMessage = snapshot.message
+        launchAtLoginError = nil
+        appState.setLaunchAtLoginPreference(snapshot.isOn)
+    }
+
+    private func setLaunchAtLogin(_ isEnabled: Bool) {
+        do {
+            let snapshot = try LaunchAtLoginController.setEnabled(isEnabled)
+            launchAtLoginEnabled = snapshot.isOn
+            launchAtLoginMessage = snapshot.message
+            launchAtLoginError = nil
+            appState.setLaunchAtLoginPreference(snapshot.isOn)
+            AppLogger.file(.info, category: "app", "launch at login set enabled=\(snapshot.isOn) message=\(snapshot.message)")
+        } catch {
+            let snapshot = LaunchAtLoginController.snapshot()
+            launchAtLoginEnabled = snapshot.isOn
+            launchAtLoginMessage = snapshot.message
+            launchAtLoginError = LaunchAtLoginController.humanReadableError(error)
+            appState.setLaunchAtLoginPreference(snapshot.isOn)
+            AppLogger.file(.error, category: "app", "launch at login update failed error=\(String(describing: error))")
+        }
     }
 
     private func joined(_ values: [String]) -> String {

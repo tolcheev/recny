@@ -122,17 +122,20 @@ public struct PrivacySettings: Codable, Equatable, Sendable {
     public var showRecordingIndicator: Bool
     public var showFocusModeReminder: Bool
     public var showDockIcon: Bool
+    public var launchAtLogin: Bool
 
     public init(
         localOnlyMode: Bool = true,
         showRecordingIndicator: Bool = true,
         showFocusModeReminder: Bool = true,
-        showDockIcon: Bool = true
+        showDockIcon: Bool = true,
+        launchAtLogin: Bool = false
     ) {
         self.localOnlyMode = localOnlyMode
         self.showRecordingIndicator = showRecordingIndicator
         self.showFocusModeReminder = showFocusModeReminder
         self.showDockIcon = showDockIcon
+        self.launchAtLogin = launchAtLogin
     }
 
     enum CodingKeys: String, CodingKey {
@@ -140,6 +143,7 @@ public struct PrivacySettings: Codable, Equatable, Sendable {
         case showRecordingIndicator
         case showFocusModeReminder
         case showDockIcon
+        case launchAtLogin
     }
 
     public init(from decoder: Decoder) throws {
@@ -148,6 +152,7 @@ public struct PrivacySettings: Codable, Equatable, Sendable {
         self.showRecordingIndicator = try container.decodeIfPresent(Bool.self, forKey: .showRecordingIndicator) ?? true
         self.showFocusModeReminder = try container.decodeIfPresent(Bool.self, forKey: .showFocusModeReminder) ?? true
         self.showDockIcon = try container.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? true
+        self.launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
     }
 }
 

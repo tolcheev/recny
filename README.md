@@ -153,6 +153,23 @@ Active settings are persisted locally with `UserDefaults`. MVP defaults keep mic
 
 Settings also includes an About section with the app version, build date, git commit hash, and local storage path.
 
+## Launch At Login
+
+Enable automatic launch in:
+
+```text
+Settings -> Privacy / Behavior -> Launch at Login
+```
+
+This uses the modern macOS `SMAppService.mainApp` login item API. It is intended for the installed app bundle:
+
+```sh
+./scripts/install_macos.sh
+open /Applications/TOrbitRecorder.app
+```
+
+If macOS reports that approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder. For development builds, avoid switching between `.build/app`, `dist/`, and `/Applications` while testing Launch at Login because macOS tracks login items by app bundle identity and path.
+
 ## Uninstall
 
 Quit the app and remove the installed bundle:
@@ -185,6 +202,8 @@ Grant permissions in:
 - System Settings -> Privacy & Security -> Screen & System Audio Recording
 
 Recordings are stored locally in `~/Recordings/TOrbitRecorder/`.
+
+If Launch at Login fails in a development build, install the app into `/Applications`, reopen that exact bundle, and toggle Launch at Login again.
 
 ## Microphone Input Policy
 
