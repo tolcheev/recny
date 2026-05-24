@@ -23,19 +23,26 @@ The default root can be changed from Settings and is persisted locally. Reset to
       MM/
         YYYY-MM-DD_HH-mm_source_audio/
           source/
-            segments/
-              mic-0001.m4a
-              system-0001.m4a
             mic.m4a
             system.m4a
           export/
             mixed.m4a
           metadata.json
-          recovery.json
   db/
     app.sqlite
   logs/
 ```
+
+During an active or recoverable recording the session can also contain crash-recovery artifacts:
+
+```text
+source/segments/
+  mic-0001.m4a
+  system-0001.m4a
+recovery.json
+```
+
+On a normal Stop, finalized non-failed recordings remove these recovery artifacts after `source/mic.m4a`, `source/system.m4a`, and export files have been created. Failed and interrupted sessions keep them for diagnostics and recovery.
 
 ## Inbox
 
@@ -70,13 +77,11 @@ If two sessions would produce the same folder name, append a short stable id suf
 ```text
 source/mic.m4a
 source/system.m4a
-source/segments/
 export/mixed.m4a
 metadata.json
-recovery.json
 ```
 
-Failed sessions may have missing final audio files, but `metadata.json` should be written whenever possible. Interrupted sessions keep `recovery.json` and any files under `source/segments/`.
+Failed sessions may have missing final audio files, but `metadata.json` should be written whenever possible. Interrupted and failed sessions keep `recovery.json` and any files under `source/segments/`.
 
 ## SQLite Index
 

@@ -91,6 +91,7 @@ public final class FileSystemRecordingStore {
         )
 
         try write(metadata, metadataURL: finalMetadataURL, sessionFolderURL: finalFolderURL)
+        try cleanupRecoveryArtifactsIfFinalized(in: finalFolderURL, status: finalStatus)
         AppLogger.storage.info("Finalized recording metadata: \(finalMetadataURL.path(percentEncoded: false), privacy: .public)")
         AppLogger.file(.info, category: "storage", "finalized recording metadata=\(finalMetadataURL.path(percentEncoded: false)) folder=\(finalFolderURL.path(percentEncoded: false)) status=\(finalStatus.rawValue) duration=\(duration)")
 
@@ -555,6 +556,20 @@ public final class FileSystemRecordingStore {
         }
 
         return size.int64Value > 0
+    }
+
+    private func cleanupRecoveryArtifactsIfFinalized(in folderURL: URL, status: TaggingStatus) throws {
+        guard status != .failed else {
+            return
+        }
+
+        let recoveryURL = folderURL.appendingPathComponent("recovery.json")
+        let segmentsURL = folderURL
+            .appendingPathComponent("source", isDirectory: true)
+            .appendingPathComponent("segments", isDirectory: true)
+
+        try FileManager.default.removeItemIfExists(at: recoveryURL)
+        try FileManager.default.removeItemIfExists(at: segmentsURL)
     }
 
     private func uniqueFinalSessionURL(

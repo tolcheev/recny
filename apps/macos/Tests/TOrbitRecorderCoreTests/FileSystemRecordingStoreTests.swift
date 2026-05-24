@@ -189,6 +189,48 @@ struct FileSystemRecordingStoreTests {
     }
 
     @Test
+    func stopSessionRemovesRecoveryArtifactsForCompletedRecording() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+        let endedAt = startedAt.addingTimeInterval(120)
+        let session = try store.startSession(startedAt: startedAt)
+        try Data([1, 2, 3]).write(to: session.segmentsURL.appendingPathComponent("mic-0001.m4a"))
+        try Data([4, 5, 6]).write(to: session.segmentsURL.appendingPathComponent("system-0001.m4a"))
+
+        let draft = try store.stopSession(
+            session,
+            endedAt: endedAt,
+            duration: 120,
+            status: .needsTagging
+        )
+
+        #expect(FileManager.default.fileExists(atPath: draft.metadataURL.path(percentEncoded: false)))
+        #expect(!FileManager.default.fileExists(atPath: draft.sessionFolderURL.appendingPathComponent("recovery.json").path(percentEncoded: false)))
+        #expect(!FileManager.default.fileExists(atPath: draft.sessionFolderURL.appendingPathComponent("source/segments").path(percentEncoded: false)))
+    }
+
+    @Test
+    func stopSessionKeepsRecoveryArtifactsForFailedRecording() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+        let endedAt = startedAt.addingTimeInterval(10)
+        let session = try store.startSession(startedAt: startedAt)
+        try Data([1, 2, 3]).write(to: session.segmentsURL.appendingPathComponent("mic-0001.m4a"))
+
+        let draft = try store.stopSession(
+            session,
+            endedAt: endedAt,
+            duration: 10,
+            status: .failed
+        )
+
+        #expect(FileManager.default.fileExists(atPath: draft.sessionFolderURL.appendingPathComponent("recovery.json").path(percentEncoded: false)))
+        #expect(FileManager.default.fileExists(atPath: draft.sessionFolderURL.appendingPathComponent("source/segments/mic-0001.m4a").path(percentEncoded: false)))
+    }
+
+    @Test
     func stopSessionCanPersistCompletedMicrophoneTrack() throws {
         let root = Self.testOutputFolder()
         let store = FileSystemRecordingStore(rootURL: root)
