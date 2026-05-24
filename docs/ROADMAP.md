@@ -44,6 +44,21 @@ Candidate work:
 - Advanced tag management.
 - Better handling for `Inbox/Unsorted/`, `Inbox/Short/`, and `Inbox/Failed/`.
 
+## Next: Audio Leveling
+
+Goal: make mixed call previews easier to listen to without modifying raw source tracks.
+
+Candidate work:
+
+- Analyze mic/system loudness, peak, RMS, silence ratio, and clipping after recording.
+- Create `export/mixed_balanced.m4a` as the default playback candidate when available.
+- Keep `source/mic.m4a` and `source/system.m4a` immutable.
+- Save `analysis/audio_analysis.json` and metadata summary fields.
+- Add audio processing presets: Off, Balanced, Voice Boost, and Conservative.
+- Show clear warnings for silent tracks, clipping, or failed balanced export.
+
+See [AUDIO_LEVELING.md](AUDIO_LEVELING.md).
+
 ## Next: Better Autostart
 
 Goal: reduce missed recordings and false positives.
