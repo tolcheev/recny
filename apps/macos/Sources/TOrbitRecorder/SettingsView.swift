@@ -15,7 +15,7 @@ struct SettingsView: View {
                 autoStartSection
                 storageSection
                 hotkeysSection
-                privacySection
+                behaviorSection
                 aboutSection
             }
             .padding(20)
@@ -293,8 +293,8 @@ struct SettingsView: View {
         }
     }
 
-    private var privacySection: some View {
-        SettingsSection(title: "Privacy / Behavior") {
+    private var behaviorSection: some View {
+        SettingsSection(title: "Behavior") {
             Toggle("Local-only mode", isOn: .constant(appState.privacySettings.localOnlyMode))
                 .disabled(true)
 
@@ -411,10 +411,11 @@ struct SettingsView: View {
             AppLogger.file(.info, category: "app", "launch at login set enabled=\(snapshot.isOn) message=\(snapshot.message)")
         } catch {
             let snapshot = LaunchAtLoginController.snapshot()
+            let errorMessage = LaunchAtLoginController.humanReadableError(error)
             launchAtLoginEnabled = snapshot.isOn
             launchAtLoginMessage = snapshot.message
-            launchAtLoginError = LaunchAtLoginController.humanReadableError(error)
-            appState.setLaunchAtLoginPreference(snapshot.isOn)
+            launchAtLoginError = errorMessage
+            appState.setLaunchAtLoginPreference(snapshot.isOn, errorMessage: errorMessage)
             AppLogger.file(.error, category: "app", "launch at login update failed error=\(String(describing: error))")
         }
     }

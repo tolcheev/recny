@@ -171,6 +171,25 @@ struct AppStateTests {
     }
 
     @Test
+    func launchAtLoginPreferenceUpdatesSettingsStateAndDiagnosticsError() {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+
+        appState.setLaunchAtLoginPreference(true, errorMessage: "Could not update Launch at Login.")
+
+        #expect(appState.privacySettings.launchAtLogin)
+        #expect(appState.launchAtLoginLastErrorMessage == "Could not update Launch at Login.")
+
+        appState.setLaunchAtLoginPreference(false)
+
+        #expect(appState.privacySettings.launchAtLogin == false)
+        #expect(appState.launchAtLoginLastErrorMessage == nil)
+    }
+
+    @Test
     func savePostCallTagsToMetadataAndSQLite() async throws {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(

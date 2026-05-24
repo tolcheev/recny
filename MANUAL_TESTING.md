@@ -124,14 +124,19 @@ Manual check:
 open /Applications/TOrbitRecorder.app
 ```
 
-2. Open Settings -> Privacy / Behavior.
+2. Open Settings -> Behavior.
 3. Turn on `Launch at Login`.
 4. Confirm the helper text says it is enabled, or says approval is required.
 5. If approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder.
-6. Quit TOrbitRecorder.
-7. Log out and log back in, or restart the Mac.
-8. Confirm TOrbitRecorder launches after login and the menu bar item appears.
-9. Turn `Launch at Login` off and confirm TOrbitRecorder is removed or disabled from Login Items.
+6. Open Diagnostics and confirm Behavior shows:
+   - Launch at Login preference
+   - macOS login item status
+   - running bundle path
+   - no Launch at Login error, or a human-readable error if registration failed
+7. Quit TOrbitRecorder.
+8. Log out and log back in, or restart the Mac.
+9. Confirm TOrbitRecorder launches after login and the menu bar item appears.
+10. Turn `Launch at Login` off and confirm TOrbitRecorder is removed or disabled from Login Items.
 
 Known dev-build caveat:
 

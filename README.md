@@ -160,7 +160,7 @@ Settings also includes an About section with the app version, build date, git co
 Enable automatic launch in:
 
 ```text
-Settings -> Privacy / Behavior -> Launch at Login
+Settings -> Behavior -> Launch at Login
 ```
 
 This uses the modern macOS `SMAppService.mainApp` login item API. It is intended for the installed app bundle:
@@ -170,7 +170,7 @@ This uses the modern macOS `SMAppService.mainApp` login item API. It is intended
 open /Applications/TOrbitRecorder.app
 ```
 
-If macOS reports that approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder. For development builds, avoid switching between `.build/app`, `dist/`, and `/Applications` while testing Launch at Login because macOS tracks login items by app bundle identity and path.
+If macOS reports that approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder. Diagnostics shows the current login item status, the running bundle path, and the last Launch at Login error if registration fails. For development builds, avoid switching between `.build/app`, `dist/`, and `/Applications` while testing Launch at Login because macOS tracks login items by app bundle identity and path.
 
 ## Uninstall
 

@@ -15,12 +15,14 @@ struct DiagnosticsView: View {
     @State private var isClearLogsConfirmationPresented = false
     @State private var isReprocessingMissingAudio = false
     @State private var reprocessResult: String?
+    @State private var launchAtLoginSnapshot = LaunchAtLoginController.snapshot()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 permissionsSection
+                behaviorSection
                 deviceSection
                 errorSection
                 audioProcessingSection
@@ -34,6 +36,7 @@ struct DiagnosticsView: View {
         .onAppear {
             appState.refreshMicrophoneDevices()
             appState.refreshPermissionSnapshot()
+            refreshLaunchAtLoginDiagnostics()
             try? appState.reloadRecoverableRecordings()
             loadRecentLogs()
         }
@@ -70,6 +73,54 @@ struct DiagnosticsView: View {
                     } label: {
                         Label("Recheck", systemImage: "arrow.clockwise")
                     }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var behaviorSection: some View {
+        GroupBox("Behavior") {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    DiagnosticLine(
+                        label: "Launch at Login preference",
+                        value: appState.privacySettings.launchAtLogin ? "On" : "Off"
+                    )
+
+                    Spacer()
+
+                    Button {
+                        refreshLaunchAtLoginDiagnostics()
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+                }
+
+                DiagnosticLine(
+                    label: "macOS login item",
+                    value: launchAtLoginSnapshot.message
+                )
+
+                DiagnosticLine(
+                    label: "Running bundle",
+                    value: Bundle.main.bundlePath
+                )
+
+                Text("Starts TOrbitRecorder when you log in.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let errorMessage = appState.launchAtLoginLastErrorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("No Launch at Login errors in this session.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -359,6 +410,10 @@ struct DiagnosticsView: View {
             }
             isReprocessingMissingAudio = false
         }
+    }
+
+    private func refreshLaunchAtLoginDiagnostics() {
+        launchAtLoginSnapshot = LaunchAtLoginController.snapshot()
     }
 
     private var logsSection: some View {

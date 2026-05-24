@@ -35,6 +35,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var permissionSnapshot: RecorderPermissionSnapshot
     @Published public private(set) var audioReprocessProgress: AudioReprocessProgress?
     @Published public private(set) var audioReprocessLastSummary: AudioReprocessBatchSummary?
+    @Published public private(set) var launchAtLoginLastErrorMessage: String?
 
     private let recordingController: RecordingController
     private let permissionChecker: RecordingPermissionChecking
@@ -158,6 +159,7 @@ public final class AppState: ObservableObject {
         self.permissionSnapshot = .unknown
         self.audioReprocessProgress = nil
         self.audioReprocessLastSummary = nil
+        self.launchAtLoginLastErrorMessage = nil
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
         AppLogger.configureFileLogging(rootURL: resolvedSettings.storage.rootFolderURL)
@@ -559,8 +561,9 @@ public final class AppState: ObservableObject {
         saveSettings()
     }
 
-    public func setLaunchAtLoginPreference(_ isEnabled: Bool) {
+    public func setLaunchAtLoginPreference(_ isEnabled: Bool, errorMessage: String? = nil) {
         privacySettings.launchAtLogin = isEnabled
+        launchAtLoginLastErrorMessage = errorMessage
         saveSettings()
     }
 
