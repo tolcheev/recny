@@ -11,8 +11,8 @@ enum AppWindows {
     static func openLibrary(appState: AppState) {
         let window = libraryWindow ?? makeWindow(
             title: "TOrbit Recorder Library",
-            width: 860,
-            height: 640,
+            width: 1_040,
+            height: 700,
             rootView: LibraryView(appState: appState)
         )
         libraryWindow = window

@@ -104,12 +104,13 @@ Short recordings use human copy such as `Short recording`; they are not presente
 
 Library is a separate window opened from the main footer or menu bar. It defaults to recent recordings and includes:
 
-- search by title
-- collapsed filters for date, status, source app, and tags
-- recording rows with title, started time, duration, source app, human status badge, and compact tags
+- search by title, participant, tags, and source app
+- collapsed filters for status, date range, source app, and tags
+- recording rows with title, started time, duration, source app, audio summary, human status badge, and compact tags
 - compact row actions: Play, Open, and an icon-only More menu
+- a details panel for the selected recording with files, metadata summary, tags, and actions
 - an `Open Library Folder` action for jumping to local storage
-- More actions: Tag and Delete Local Record
+- More actions: Edit / Tag and Delete Local Recording
 
 Title, participant, and tags are edited through the Tag dialog instead of inline fields.
 
@@ -150,8 +151,8 @@ The design keeps native macOS styling, supports light/dark mode through system c
 ## Known Limitations
 
 - No screenshot automation is currently wired for the native macOS window.
-- Settings still contain disabled placeholders for audio quality presets and hotkeys because the runtime behavior is not implemented in MVP.
-- Library uses simple title search and collapsed filters; advanced saved views are out of scope.
+- Settings still contain disabled placeholders for hotkeys because runtime hotkey capture is not implemented in MVP.
+- Library has local search and collapsed filters; advanced saved views are out of scope.
 - Diagnostics test recording requires local macOS microphone and Screen & System Audio Recording permissions.
 - macOS may require quitting and reopening the exact app bundle after enabling Screen & System Audio Recording permission, especially when switching between `.build`, `dist`, and `/Applications` builds.
 - `Show Dock icon` defaults on for MVP. Turning it off switches the app to menu-bar-only accessory behavior; use the menu bar icon to bring windows back.

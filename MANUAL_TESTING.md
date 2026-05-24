@@ -235,19 +235,27 @@ Clipping check:
 
 ## Library
 
-Check the MVP filters:
+Open Library from the main footer or menu bar. Confirm it opens as a separate window with a recent recordings list and a details panel for the selected recording.
 
-- date
-- status
+Check search:
+
+- title
+- participant
+- tags
 - source app
-- title search
+
+Check collapsed filters:
+
+- status
+- date range
+- source app
 - tags
 
 Check actions:
 
 - Open recording folder
 - Play mixed preview
-- Tag/Edit title
+- Edit title/participant/tags through the Tag dialog
 - Add/remove tags in the tag dialog
 - Delete local record with confirmation
 
