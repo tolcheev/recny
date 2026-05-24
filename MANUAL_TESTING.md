@@ -68,6 +68,31 @@ Dock behavior:
 - Turning it off switches the app to menu-bar-only accessory behavior.
 - If the Dock icon is hidden, use the menu bar item to reopen the main window.
 
+## Keyboard Shortcuts
+
+Shortcuts are app-active only in the MVP. Bring TOrbitRecorder to the foreground first with the menu bar item or Dock icon.
+
+Expected shortcuts:
+
+- `Cmd+Shift+R`: Start Recording when idle, Stop Recording when recording.
+- `Cmd+Shift+O`: Open Latest Recording Folder.
+- `Cmd+Shift+L`: Open Library.
+- `Cmd+Shift+D`: Open Diagnostics.
+
+Manual check:
+
+1. Open TOrbitRecorder from `/Applications` or `dist/`.
+2. Bring the app to the foreground.
+3. Press `Cmd+Shift+L` and confirm Library opens.
+4. Press `Cmd+Shift+D` and confirm Diagnostics opens.
+5. Create or keep a latest recording, then press `Cmd+Shift+O` and confirm Finder opens that recording folder.
+6. Press `Cmd+Shift+R` while idle and confirm recording starts.
+7. Press `Cmd+Shift+R` while recording and confirm recording stops.
+8. Open Settings -> Hotkeys and confirm the same shortcuts are listed.
+9. Open a text field in Settings or Tag dialog and confirm normal typing still works.
+
+Global shortcuts are not implemented in this step. If another app is active, these shortcuts are not expected to control TOrbitRecorder.
+
 ## Preflight
 
 1. Quit any old `TOrbitRecorder` instance.

@@ -45,6 +45,15 @@ The menu bar icon reflects recorder state:
 
 If Quit is selected while recording is active, the app asks for confirmation before stopping the recording and quitting.
 
+App-active keyboard shortcuts mirror the primary menu actions:
+
+- `Cmd+Shift+R`: Start/Stop Recording
+- `Cmd+Shift+O`: Open Latest Recording Folder
+- `Cmd+Shift+L`: Open Library
+- `Cmd+Shift+D`: Open Diagnostics
+
+Global shortcuts are intentionally out of scope for the MVP shortcut pass.
+
 ## Main Window States
 
 UI v3 keeps the main window as a compact recorder surface instead of a library dashboard:

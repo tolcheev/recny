@@ -234,11 +234,27 @@ struct SettingsView: View {
 
     private var hotkeysSection: some View {
         SettingsSection(title: "Hotkeys") {
-            TextField("Start/stop hotkey", text: .constant("Coming later"))
-                .textFieldStyle(.roundedBorder)
-                .disabled(true)
+            ForEach(KeyboardShortcutCatalog.appActiveShortcuts) { shortcut in
+                HStack(alignment: .firstTextBaseline) {
+                    Text(shortcut.title)
+                        .font(.callout)
 
-            TextField("Add marker", text: .constant("Coming later"))
+                    Spacer()
+
+                    Text(shortcut.displayText)
+                        .font(.callout.monospaced().weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+                }
+            }
+
+            Text("Shortcuts work when TOrbitRecorder is the active app. Global shortcuts are not part of this MVP step.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            TextField("Custom shortcuts", text: .constant("Custom shortcuts coming later"))
                 .textFieldStyle(.roundedBorder)
                 .disabled(true)
         }

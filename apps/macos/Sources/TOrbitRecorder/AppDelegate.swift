@@ -70,9 +70,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let recordingToggleItem = NSMenuItem(
             title: "Start Recording",
             action: #selector(startRecording),
-            keyEquivalent: ""
+            keyEquivalent: KeyboardShortcutCatalog.toggleRecording.keyEquivalent
         )
         recordingToggleItem.target = self
+        recordingToggleItem.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(recordingToggleItem)
         self.recordingToggleItem = recordingToggleItem
 
@@ -90,18 +91,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let openLastFolderItem = NSMenuItem(
             title: "Open Last Recording Folder",
             action: #selector(openLastRecordingFolder),
-            keyEquivalent: ""
+            keyEquivalent: KeyboardShortcutCatalog.openLatestRecordingFolder.keyEquivalent
         )
         openLastFolderItem.target = self
+        openLastFolderItem.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(openLastFolderItem)
         self.openLastFolderItem = openLastFolderItem
 
         let openLibraryItem = NSMenuItem(
             title: "Open Library",
             action: #selector(openLibrary),
-            keyEquivalent: ""
+            keyEquivalent: KeyboardShortcutCatalog.openLibrary.keyEquivalent
         )
         openLibraryItem.target = self
+        openLibraryItem.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(openLibraryItem)
 
         let settingsItem = NSMenuItem(
@@ -115,9 +118,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let diagnosticsItem = NSMenuItem(
             title: "Diagnostics",
             action: #selector(showDiagnostics),
-            keyEquivalent: ""
+            keyEquivalent: KeyboardShortcutCatalog.openDiagnostics.keyEquivalent
         )
         diagnosticsItem.target = self
+        diagnosticsItem.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(diagnosticsItem)
 
         menu.addItem(.separator())
@@ -294,6 +298,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showDiagnostics() {
         AppWindows.openDiagnostics(appState: appState)
+    }
+
+    func toggleRecordingFromShortcut() {
+        AppLogger.file(.info, category: "app", "keyboard shortcut \(KeyboardShortcutCatalog.toggleRecording.displayText)")
+        if appState.status == .recording {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    func openLatestRecordingFolderFromShortcut() {
+        AppLogger.file(.info, category: "app", "keyboard shortcut \(KeyboardShortcutCatalog.openLatestRecordingFolder.displayText)")
+        openLastRecordingFolder()
+    }
+
+    func openLibraryFromShortcut() {
+        AppLogger.file(.info, category: "app", "keyboard shortcut \(KeyboardShortcutCatalog.openLibrary.displayText)")
+        openLibrary()
+    }
+
+    func openDiagnosticsFromShortcut() {
+        AppLogger.file(.info, category: "app", "keyboard shortcut \(KeyboardShortcutCatalog.openDiagnostics.displayText)")
+        showDiagnostics()
     }
 
     private func showMainWindow() {

@@ -8,6 +8,9 @@ struct TOrbitRecorderApp: App {
         Window("TOrbit Recorder", id: "main") {
             MainRecorderView(appState: appDelegate.appState)
         }
+        .commands {
+            TOrbitRecorderCommands(appState: appDelegate.appState, appDelegate: appDelegate)
+        }
 
         Settings {
             SettingsView(appState: appDelegate.appState)
