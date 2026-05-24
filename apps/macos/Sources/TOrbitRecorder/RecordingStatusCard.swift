@@ -143,12 +143,17 @@ struct RecordingStatusCard: View {
                 .accessibilityLabel("Open Diagnostics")
 
                 Button {
-                    startRecording()
+                    if appState.isRecordingStartAllowed {
+                        startRecording()
+                    } else {
+                        AppWindows.openDiagnostics(appState: appState)
+                    }
                 } label: {
-                    Label("Try Again", systemImage: "arrow.clockwise")
+                    Label(appState.isRecordingStartAllowed ? "Try Again" : "Fix Permissions", systemImage: appState.isRecordingStartAllowed ? "arrow.clockwise" : "lock.shield")
                 }
                 .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Try Again")
+                .tint(appState.isRecordingStartAllowed ? .accentColor : .orange)
+                .accessibilityLabel(appState.isRecordingStartAllowed ? "Try Again" : "Fix Permissions")
             }
         }
     }

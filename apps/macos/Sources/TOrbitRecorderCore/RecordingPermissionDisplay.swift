@@ -85,17 +85,22 @@ public enum RecordingPermissionDisplay {
         settingsOpened: Bool,
         lastErrorMessage: String?
     ) -> RecorderPermissionState {
+        if let lastErrorMessage,
+           isDeniedScreenCaptureError(lastErrorMessage) {
+            return processGranted || settingsOpened ? .restartRequired : .denied
+        }
+
+        if let lastErrorMessage,
+           isRestartRequiredScreenCaptureError(lastErrorMessage) {
+            return .restartRequired
+        }
+
         guard !processGranted else {
             return .granted
         }
 
         if settingsOpened {
             return .restartRequired
-        }
-
-        if let lastErrorMessage,
-           isDeniedScreenCaptureError(lastErrorMessage) {
-            return .denied
         }
 
         return .missing
@@ -158,6 +163,15 @@ public enum RecordingPermissionDisplay {
             || lowered.contains("denied")
             || lowered.contains("отклонил")
             || lowered.contains("запрет")
+    }
+
+    private static func isRestartRequiredScreenCaptureError(_ message: String) -> Bool {
+        let lowered = message.lowercased()
+        return lowered.contains("screen & system audio recording permission")
+            || lowered.contains("scstreamerrordomain")
+            || lowered.contains("code: -3801")
+            || lowered.contains("перезап")
+            || lowered.contains("restart")
     }
 }
 

@@ -416,6 +416,20 @@ public final class AppState: ObservableObject {
         saveSettings()
     }
 
+    public func setAudioLevelingEnabled(_ isEnabled: Bool) {
+        recordingSettings.audioLevelingEnabled = isEnabled
+        saveSettings()
+    }
+
+    public func setAudioLevelingMode(_ mode: AudioLevelingMode) {
+        guard mode.isImplemented else {
+            return
+        }
+
+        recordingSettings.audioLevelingMode = mode
+        saveSettings()
+    }
+
     public func setAudioQualityPreset(_ preset: AudioQualityPreset) {
         recordingSettings.audioQualityPreset = preset
         saveSettings()
@@ -708,6 +722,7 @@ public final class AppState: ObservableObject {
         microphoneLevel = 0
         systemAudioLevel = 0
         errorMessage = String(describing: error)
+        refreshPermissionSnapshot()
         stopDurationClock()
     }
 
@@ -804,6 +819,8 @@ public final class AppState: ObservableObject {
             audioQualityPreset: recordingSettings.audioQualityPreset,
             systemAudioEnabled: recordingSettings.systemAudioEnabled,
             mixedPreviewEnabled: recordingSettings.mixedPreviewEnabled,
+            audioLevelingEnabled: recordingSettings.audioLevelingEnabled,
+            audioLevelingMode: recordingSettings.audioLevelingMode,
             shortRecordingThresholdSeconds: autoStartSettings.shortRecordingThresholdSeconds,
             preferredMicrophoneDeviceID: recordingSettings.microphoneDeviceID
         )

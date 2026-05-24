@@ -23,6 +23,16 @@ struct LatestRecordingStrip: View {
                 .truncationMode(.tail)
                 .accessibilityLabel("Latest recording summary")
 
+                if recording.audioProcessingStatus == .done {
+                    Text("Balanced")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(.green.opacity(0.12), in: Capsule())
+                        .accessibilityLabel("Audio balanced")
+                }
+
                 Spacer(minLength: 12)
 
                 HStack(spacing: 6) {

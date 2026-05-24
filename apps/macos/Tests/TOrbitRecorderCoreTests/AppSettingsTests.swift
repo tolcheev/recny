@@ -10,6 +10,8 @@ struct AppSettingsTests {
         #expect(settings.recording.audioQualityPreset == .standard)
         #expect(settings.recording.systemAudioEnabled)
         #expect(settings.recording.mixedPreviewEnabled)
+        #expect(settings.recording.audioLevelingEnabled)
+        #expect(settings.recording.audioLevelingMode == .balanced)
         #expect(settings.recording.microphoneDeviceID == nil)
         #expect(settings.autoStart.isEnabled)
         #expect(settings.autoStart.mode == .auto)
@@ -32,6 +34,8 @@ struct AppSettingsTests {
         var settings = AppSettings()
         settings.recording.systemAudioEnabled = false
         settings.recording.mixedPreviewEnabled = false
+        settings.recording.audioLevelingEnabled = false
+        settings.recording.audioLevelingMode = .conservative
         settings.autoStart = AutoStartSettings(
             mode: .askFirst,
             whitelist: ["Zoom"],
@@ -50,6 +54,8 @@ struct AppSettingsTests {
 
         #expect(loaded.recording.systemAudioEnabled == false)
         #expect(loaded.recording.mixedPreviewEnabled == false)
+        #expect(loaded.recording.audioLevelingEnabled == false)
+        #expect(loaded.recording.audioLevelingMode == .conservative)
         #expect(loaded.autoStart.mode == .askFirst)
         #expect(loaded.autoStart.isEnabled)
         #expect(loaded.autoStart.whitelist == ["Zoom"])

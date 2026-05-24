@@ -46,6 +46,17 @@ struct RecordingPermissionDisplayTests {
     }
 
     @Test
+    func screenCaptureKitPermissionErrorOverridesPreflightGrant() {
+        let state = RecordingPermissionDisplay.screenSystemAudioState(
+            processGranted: true,
+            settingsOpened: false,
+            lastErrorMessage: "Screen & System Audio Recording permission is unavailable: Пользователь отклонил положения и условия захвата приложения, окна или дисплея (domain: com.apple.ScreenCaptureKit.SCStreamErrorDomain, code: -3801)"
+        )
+
+        #expect(state == .restartRequired)
+    }
+
+    @Test
     func startRequiresRequiredPermissionsAndStorage() {
         #expect(
             RecordingPermissionDisplay.canStartRecording(

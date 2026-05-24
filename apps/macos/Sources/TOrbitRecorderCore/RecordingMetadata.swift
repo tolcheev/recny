@@ -117,6 +117,50 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
     }
 }
 
+public struct AudioProcessingMetadata: Codable, Equatable, Sendable {
+    public var balancedMixStatus: BalancedMixStatus
+    public var balancedMixPath: String?
+    public var analysisPath: String?
+    public var microphoneGainDB: Double?
+    public var systemGainDB: Double?
+    public var warnings: [String]
+
+    public init(
+        balancedMixStatus: BalancedMixStatus = .skipped,
+        balancedMixPath: String? = nil,
+        analysisPath: String? = nil,
+        microphoneGainDB: Double? = nil,
+        systemGainDB: Double? = nil,
+        warnings: [String] = []
+    ) {
+        self.balancedMixStatus = balancedMixStatus
+        self.balancedMixPath = balancedMixPath
+        self.analysisPath = analysisPath
+        self.microphoneGainDB = microphoneGainDB
+        self.systemGainDB = systemGainDB
+        self.warnings = warnings
+    }
+
+    public static let skipped = AudioProcessingMetadata()
+
+    enum CodingKeys: String, CodingKey {
+        case balancedMixStatus = "balanced_mix_status"
+        case balancedMixPath = "balanced_mix_path"
+        case analysisPath = "analysis_path"
+        case microphoneGainDB = "mic_gain_db"
+        case systemGainDB = "system_gain_db"
+        case warnings
+    }
+}
+
+public struct RecordingAudioMetadata: Codable, Equatable, Sendable {
+    public var processing: AudioProcessingMetadata
+
+    public init(processing: AudioProcessingMetadata = .skipped) {
+        self.processing = processing
+    }
+}
+
 public enum RecordingMarkerKind: String, CaseIterable, Identifiable, Sendable {
     case important
     case objection
@@ -233,6 +277,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
     public var status: TaggingStatus
     public var markers: [RecordingMarker]
     public var qualityWarnings: [String]
+    public var audio: RecordingAudioMetadata
     public var ai: String
     public var sync: String
 
@@ -242,6 +287,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         startedAt: String,
         endedAt: String,
         durationSec: Double,
+        audio: RecordingAudioMetadata = RecordingAudioMetadata(),
         source: RecordingSource = RecordingSource(),
         audioTracks: [AudioTrackMetadata] = [],
         category: String = "unsorted",
@@ -269,6 +315,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         self.status = status
         self.markers = markers
         self.qualityWarnings = qualityWarnings
+        self.audio = audio
         self.ai = "not_started"
         self.sync = "local_only"
     }
@@ -292,6 +339,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         case status
         case markers
         case qualityWarnings = "quality_warnings"
+        case audio
         case ai
         case sync
     }
@@ -316,6 +364,7 @@ public struct RecordingMetadata: Codable, Equatable, Identifiable, Sendable {
         self.status = try container.decodeIfPresent(TaggingStatus.self, forKey: .status) ?? .needsTagging
         self.markers = try container.decodeIfPresent([RecordingMarker].self, forKey: .markers) ?? []
         self.qualityWarnings = try container.decodeIfPresent([String].self, forKey: .qualityWarnings) ?? []
+        self.audio = try container.decodeIfPresent(RecordingAudioMetadata.self, forKey: .audio) ?? RecordingAudioMetadata()
         self.ai = try container.decodeIfPresent(String.self, forKey: .ai) ?? "not_started"
         self.sync = try container.decodeIfPresent(String.self, forKey: .sync) ?? "local_only"
     }
@@ -396,7 +445,14 @@ public struct RecordingSummary: Equatable, Identifiable, Sendable {
     public let sessionFolderURL: URL
 
     public var mixedAudioURL: URL {
-        sessionFolderURL
+        let balancedURL = sessionFolderURL
+            .appendingPathComponent("export", isDirectory: true)
+            .appendingPathComponent("mixed_balanced.m4a")
+        if FileManager.default.fileExists(atPath: balancedURL.path(percentEncoded: false)) {
+            return balancedURL
+        }
+
+        return sessionFolderURL
             .appendingPathComponent("export", isDirectory: true)
             .appendingPathComponent("mixed.m4a")
     }
@@ -413,18 +469,39 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     public let micFileSizeBytes: Int64?
     public let systemFileSizeBytes: Int64?
     public let mixedFileSizeBytes: Int64?
+    public let balancedMixedFileSizeBytes: Int64?
     public let micTrackStatus: String?
     public let systemTrackStatus: String?
     public let mixedTrackStatus: String?
+    public let balancedMixedTrackStatus: String?
+    public let audioProcessingStatus: BalancedMixStatus
+    public let audioProcessingWarnings: [String]
     public let startConfidence: String?
     public let startReason: String?
     public let qualityWarnings: [String]
     public let tags: [String]
 
     public var mixedAudioURL: URL {
+        if audioProcessingStatus == .done || audioProcessingStatus == .partial {
+            let balancedURL = balancedMixedAudioURL
+            if FileManager.default.fileExists(atPath: balancedURL.path(percentEncoded: false)) {
+                return balancedURL
+            }
+        }
+
+        return originalMixedAudioURL
+    }
+
+    public var originalMixedAudioURL: URL {
         sessionFolderURL
             .appendingPathComponent("export", isDirectory: true)
             .appendingPathComponent("mixed.m4a")
+    }
+
+    public var balancedMixedAudioURL: URL {
+        sessionFolderURL
+            .appendingPathComponent("export", isDirectory: true)
+            .appendingPathComponent("mixed_balanced.m4a")
     }
 
     public var displayStatus: String {
@@ -432,7 +509,11 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     }
 
     public var mixedPreviewState: String {
-        if mixedTrackStatus == "failed" {
+        if balancedMixedTrackStatus == "completed" || (balancedMixedFileSizeBytes ?? 0) > 0 {
+            return "Ready"
+        }
+
+        if mixedTrackStatus == "failed" && balancedMixedTrackStatus == "failed" {
             return "Failed"
         }
 

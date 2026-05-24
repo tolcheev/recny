@@ -238,25 +238,33 @@ In the recording folder, confirm these files exist and are non-empty:
 source/mic.m4a
 source/system.m4a
 export/mixed.m4a
+export/mixed_balanced.m4a
+analysis/audio_analysis.json
 metadata.json
 ```
 
 Useful local checks:
 
 ```sh
-stat -f "%z %N" source/mic.m4a source/system.m4a export/mixed.m4a metadata.json
+stat -f "%z %N" source/mic.m4a source/system.m4a export/mixed.m4a export/mixed_balanced.m4a analysis/audio_analysis.json metadata.json
 afinfo source/mic.m4a
 afinfo source/system.m4a
 afinfo export/mixed.m4a
+afinfo export/mixed_balanced.m4a
 plutil -p metadata.json
+plutil -p analysis/audio_analysis.json
 ```
 
 Expected metadata:
 
 - `status` is `needs_tagging`, `saved`, `needs_review`, or `reviewed` after a normal recording.
-- `audio_tracks` includes `microphone`, `system`, and `mixed`.
+- `audio_tracks` includes `microphone`, `system`, `mixed`, and `mixed_balanced` when Audio leveling is enabled.
 - Completed audio tracks have `file_size_bytes` greater than 0.
 - Completed audio tracks include `signal.had_signal`, `signal.approximate_silence_ratio`, and `signal.clipping_detected`.
+- `audio.processing.balanced_mix_status` is `done` when `mixed_balanced.m4a` was created.
+- `audio.processing.balanced_mix_path` is `export/mixed_balanced.m4a`.
+- `audio.processing.analysis_path` is `analysis/audio_analysis.json`.
+- `audio.processing.mic_gain_db` and `audio.processing.system_gain_db` show the applied balancing plan.
 - `quality_warnings` is empty for normal speech recordings.
 - `source.trigger` is `manual` for manual starts.
 - `sync` remains `local_only`.
@@ -276,6 +284,59 @@ Marker metadata example:
   }
 ]
 ```
+
+## Audio Leveling
+
+Audio Leveling v1 creates a balanced playback preview after Stop Recording.
+
+Expected behavior:
+
+- Raw files are not modified:
+  - `source/mic.m4a`
+  - `source/system.m4a`
+- Original simple mix remains:
+  - `export/mixed.m4a`
+- Balanced playback preview is created:
+  - `export/mixed_balanced.m4a`
+- Analysis is saved:
+  - `analysis/audio_analysis.json`
+- Main Latest strip shows a `Balanced` badge when balanced playback is ready.
+- Play uses `mixed_balanced.m4a` by default when it exists.
+- Diagnostics -> Audio Processing can play Current and Original.
+
+Manual balance check: loud YouTube + quiet voice
+
+1. Open Settings -> Recording.
+2. Confirm Audio leveling is on and mode is `Balanced`.
+3. Play YouTube or another loud system audio source.
+4. Speak quietly into the microphone.
+5. Record for 20-30 seconds.
+6. Stop recording.
+7. Open the recording folder.
+8. Compare:
+   - `export/mixed.m4a`
+   - `export/mixed_balanced.m4a`
+9. Confirm the balanced file makes the quiet microphone easier to hear without obvious clipping.
+10. Open `analysis/audio_analysis.json` and confirm mic/system gain values are recorded.
+
+Manual balance check: quiet YouTube + loud voice
+
+1. Play quiet system audio.
+2. Speak loudly into the microphone.
+3. Record for 20-30 seconds.
+4. Stop recording.
+5. Compare Original vs Balanced from Diagnostics:
+   - `Play Original` should use `export/mixed.m4a`.
+   - `Play Current` should use `export/mixed_balanced.m4a` when available.
+6. Confirm the balanced file does not make the microphone painfully loud.
+
+Limits:
+
+- Maximum gain boost: `+12 dB`.
+- Maximum attenuation: `-12 dB`.
+- Limiter/safe peak ceiling: `-1 dBFS`.
+- Mostly silent tracks are not aggressively boosted.
+- If balanced processing fails, `export/mixed.m4a` remains available and metadata records `balanced_mix_status = failed`.
 
 ## Audio Quality Warnings
 

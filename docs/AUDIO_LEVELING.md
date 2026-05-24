@@ -1,5 +1,20 @@
 # Audio Leveling / Post-Recording Loudness Balancing
 
+## V1 Implementation Status
+
+Audio Leveling v1 is implemented in the macOS app as post-recording processing.
+
+Current behavior:
+
+- `source/mic.m4a` and `source/system.m4a` remain immutable.
+- `export/mixed.m4a` remains the original/simple mixed preview.
+- `export/mixed_balanced.m4a` is created after Stop Recording when Audio leveling is enabled.
+- `analysis/audio_analysis.json` stores track analysis, gain plan, and balanced output summary.
+- `metadata.json` stores `audio.processing` summary fields.
+- The Latest strip and Diagnostics prefer balanced playback when it is ready.
+
+V1 uses conservative track-level gain plus safe peak protection. It does not perform real-time AGC, AI enhancement, noise cancellation, or advanced mastering.
+
 ## Purpose
 
 Call recordings often have uneven loudness:

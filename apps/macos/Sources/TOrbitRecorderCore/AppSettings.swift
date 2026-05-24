@@ -59,17 +59,43 @@ public struct RecordingSettings: Codable, Equatable, Sendable {
     public var microphoneDeviceID: String?
     public var systemAudioEnabled: Bool
     public var mixedPreviewEnabled: Bool
+    public var audioLevelingEnabled: Bool
+    public var audioLevelingMode: AudioLevelingMode
 
     public init(
         audioQualityPreset: AudioQualityPreset = .standard,
         microphoneDeviceID: String? = nil,
         systemAudioEnabled: Bool = true,
-        mixedPreviewEnabled: Bool = true
+        mixedPreviewEnabled: Bool = true,
+        audioLevelingEnabled: Bool = true,
+        audioLevelingMode: AudioLevelingMode = .balanced
     ) {
         self.audioQualityPreset = audioQualityPreset
         self.microphoneDeviceID = microphoneDeviceID
         self.systemAudioEnabled = systemAudioEnabled
         self.mixedPreviewEnabled = mixedPreviewEnabled
+        self.audioLevelingEnabled = audioLevelingEnabled
+        self.audioLevelingMode = audioLevelingMode
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case audioQualityPreset
+        case microphoneDeviceID
+        case systemAudioEnabled
+        case mixedPreviewEnabled
+        case audioLevelingEnabled
+        case audioLevelingMode
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.audioQualityPreset = try container.decodeIfPresent(AudioQualityPreset.self, forKey: .audioQualityPreset) ?? .standard
+        self.microphoneDeviceID = try container.decodeIfPresent(String.self, forKey: .microphoneDeviceID)
+        self.systemAudioEnabled = try container.decodeIfPresent(Bool.self, forKey: .systemAudioEnabled) ?? true
+        self.mixedPreviewEnabled = try container.decodeIfPresent(Bool.self, forKey: .mixedPreviewEnabled) ?? true
+        self.audioLevelingEnabled = try container.decodeIfPresent(Bool.self, forKey: .audioLevelingEnabled) ?? true
+        let decodedMode = try container.decodeIfPresent(AudioLevelingMode.self, forKey: .audioLevelingMode) ?? .balanced
+        self.audioLevelingMode = decodedMode.isImplemented ? decodedMode : .balanced
     }
 }
 
@@ -77,6 +103,8 @@ public struct RecordingRuntimeSettings: Equatable, Sendable {
     public var audioQualityPreset: AudioQualityPreset
     public var systemAudioEnabled: Bool
     public var mixedPreviewEnabled: Bool
+    public var audioLevelingEnabled: Bool
+    public var audioLevelingMode: AudioLevelingMode
     public var shortRecordingThresholdSeconds: TimeInterval
     public var preferredMicrophoneDeviceID: String?
 
@@ -84,12 +112,16 @@ public struct RecordingRuntimeSettings: Equatable, Sendable {
         audioQualityPreset: AudioQualityPreset = .standard,
         systemAudioEnabled: Bool = true,
         mixedPreviewEnabled: Bool = true,
+        audioLevelingEnabled: Bool = true,
+        audioLevelingMode: AudioLevelingMode = .balanced,
         shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds,
         preferredMicrophoneDeviceID: String? = nil
     ) {
         self.audioQualityPreset = audioQualityPreset
         self.systemAudioEnabled = systemAudioEnabled
         self.mixedPreviewEnabled = mixedPreviewEnabled
+        self.audioLevelingEnabled = audioLevelingEnabled
+        self.audioLevelingMode = audioLevelingMode.isImplemented ? audioLevelingMode : .balanced
         self.shortRecordingThresholdSeconds = max(0, shortRecordingThresholdSeconds)
         self.preferredMicrophoneDeviceID = preferredMicrophoneDeviceID
     }

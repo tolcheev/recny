@@ -21,6 +21,7 @@ struct DiagnosticsView: View {
                 permissionsSection
                 deviceSection
                 errorSection
+                audioProcessingSection
                 recoverableSection
                 logsSection
                 testRecordingSection
@@ -212,6 +213,51 @@ struct DiagnosticsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var audioProcessingSection: some View {
+        GroupBox("Audio Processing") {
+            VStack(alignment: .leading, spacing: 8) {
+                if let latest = appState.lastRecording {
+                    DiagnosticLine(
+                        label: "Balanced mix",
+                        value: latest.audioProcessingStatus.rawValue
+                    )
+                    DiagnosticLine(
+                        label: "Playback",
+                        value: latest.mixedAudioURL.lastPathComponent
+                    )
+
+                    if !latest.audioProcessingWarnings.isEmpty {
+                        Text(latest.audioProcessingWarnings.joined(separator: " "))
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .textSelection(.enabled)
+                    }
+
+                    HStack(spacing: 8) {
+                        Button {
+                            NSWorkspace.shared.open(latest.mixedAudioURL)
+                        } label: {
+                            Label("Play Current", systemImage: "play.fill")
+                        }
+                        .disabled(latest.mixedPreviewState != "Ready")
+
+                        Button {
+                            NSWorkspace.shared.open(latest.originalMixedAudioURL)
+                        } label: {
+                            Label("Play Original", systemImage: "waveform")
+                        }
+                        .disabled(!FileManager.default.fileExists(atPath: latest.originalMixedAudioURL.path(percentEncoded: false)))
+                    }
+                } else {
+                    Text("No latest recording yet.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

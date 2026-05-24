@@ -17,6 +17,8 @@ Scope:
 - Recordings list filtering by date, status, source app, title, and tag.
 - Local SQLite index with `recordings`, `tags`, and `recording_tags`.
 - Mixed `m4a` export.
+- Post-recording balanced audio preview in `export/mixed_balanced.m4a`.
+- Audio analysis in `analysis/audio_analysis.json`.
 - Logs for lifecycle and failures.
 
 Still outside the MVP:
@@ -44,18 +46,17 @@ Candidate work:
 - Advanced tag management.
 - Better handling for `Inbox/Unsorted/`, `Inbox/Short/`, and `Inbox/Failed/`.
 
-## Next: Audio Leveling
+## Next: Audio Leveling Polish
 
-Goal: make mixed call previews easier to listen to without modifying raw source tracks.
+Goal: improve the v1 balanced preview without modifying raw source tracks.
 
 Candidate work:
 
-- Analyze mic/system loudness, peak, RMS, silence ratio, and clipping after recording.
-- Create `export/mixed_balanced.m4a` as the default playback candidate when available.
-- Keep `source/mic.m4a` and `source/system.m4a` immutable.
-- Save `analysis/audio_analysis.json` and metadata summary fields.
-- Add audio processing presets: Off, Balanced, Voice Boost, and Conservative.
-- Show clear warnings for silent tracks, clipping, or failed balanced export.
+- Tune target loudness and gain limits with real call samples.
+- Add a true compressor/limiter stage if native gain planning is not enough.
+- Decide whether to keep intermediate `mic_leveled.m4a` and `system_leveled.m4a`.
+- Implement Voice Boost mode.
+- Add richer Diagnostics details for before/after loudness.
 
 See [AUDIO_LEVELING.md](AUDIO_LEVELING.md).
 

@@ -63,6 +63,7 @@ public final class FileSystemRecordingStore {
         duration: TimeInterval,
         status: TaggingStatus,
         audioTracks: [AudioTrackMetadata]? = nil,
+        audio: RecordingAudioMetadata = RecordingAudioMetadata(),
         shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds
     ) throws -> PostCallDraft {
         try prepareRoot()
@@ -85,7 +86,8 @@ public final class FileSystemRecordingStore {
             endedAt: endedAt,
             duration: duration,
             status: finalStatus,
-            audioTracks: audioTracks
+            audioTracks: audioTracks,
+            audio: audio
         )
 
         try write(metadata, metadataURL: finalMetadataURL, sessionFolderURL: finalFolderURL)
@@ -354,6 +356,11 @@ public final class FileSystemRecordingStore {
         let micTrack = metadata.audioTracks.first { $0.kind == "microphone" }
         let systemTrack = metadata.audioTracks.first { $0.kind == "system" }
         let mixedTrack = metadata.audioTracks.first { $0.kind == "mixed" }
+        let balancedMixedTrack = metadata.audioTracks.first { $0.kind == "mixed_balanced" }
+        let audioProcessingWarnings = metadata.audio.processing.warnings
+        let allQualityWarnings = Array(
+            NSOrderedSet(array: metadata.qualityWarnings + audioProcessingWarnings)
+        ) as? [String] ?? metadata.qualityWarnings + audioProcessingWarnings
 
         return LastRecordingSummary(
             id: metadata.id,
@@ -366,12 +373,16 @@ public final class FileSystemRecordingStore {
             micFileSizeBytes: fileSize(from: micTrack, fallbackURL: summary.sessionFolderURL.appendingPathComponent("source/mic.m4a")),
             systemFileSizeBytes: fileSize(from: systemTrack, fallbackURL: summary.sessionFolderURL.appendingPathComponent("source/system.m4a")),
             mixedFileSizeBytes: fileSize(from: mixedTrack, fallbackURL: summary.sessionFolderURL.appendingPathComponent("export/mixed.m4a")),
+            balancedMixedFileSizeBytes: fileSize(from: balancedMixedTrack, fallbackURL: summary.sessionFolderURL.appendingPathComponent("export/mixed_balanced.m4a")),
             micTrackStatus: micTrack?.status,
             systemTrackStatus: systemTrack?.status,
             mixedTrackStatus: mixedTrack?.status,
+            balancedMixedTrackStatus: balancedMixedTrack?.status,
+            audioProcessingStatus: metadata.audio.processing.balancedMixStatus,
+            audioProcessingWarnings: audioProcessingWarnings,
             startConfidence: metadata.source.confidence,
             startReason: metadata.source.reason,
-            qualityWarnings: metadata.qualityWarnings,
+            qualityWarnings: allQualityWarnings,
             tags: metadata.tags
         )
     }
@@ -418,7 +429,8 @@ public final class FileSystemRecordingStore {
         endedAt: Date,
         duration: TimeInterval,
         status: TaggingStatus,
-        audioTracks: [AudioTrackMetadata]?
+        audioTracks: [AudioTrackMetadata]?,
+        audio: RecordingAudioMetadata
     ) -> RecordingMetadata {
         RecordingMetadata(
             id: session.id,
@@ -426,6 +438,7 @@ public final class FileSystemRecordingStore {
             startedAt: formatISO8601(session.startedAt),
             endedAt: formatISO8601(endedAt),
             durationSec: max(0, duration),
+            audio: audio,
             source: session.source,
             audioTracks: audioTracks ?? [
                 AudioTrackMetadata(

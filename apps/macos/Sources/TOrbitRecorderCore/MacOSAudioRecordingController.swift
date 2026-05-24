@@ -10,11 +10,17 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
     private var systemAudioRecorder: ScreenCaptureKitSystemAudioRecorder?
     private var microphoneInputOverride: CoreAudioInputDeviceOverride?
     private let mixedAudioPreviewGenerator: MixedAudioPreviewGenerator
+    private let audioLevelAnalyzer: AudioLevelAnalyzer
+    private let audioBalancePlanner: AudioBalancePlanner
+    private let audioBalancedMixer: AudioBalancedMixer
     private var runtimeSettings = RecordingRuntimeSettings()
     private var selectedMicrophoneDevice: MicrophoneDeviceSelection?
 
     public override init() {
         self.mixedAudioPreviewGenerator = MixedAudioPreviewGenerator()
+        self.audioLevelAnalyzer = AudioLevelAnalyzer()
+        self.audioBalancePlanner = AudioBalancePlanner()
+        self.audioBalancedMixer = AudioBalancedMixer()
         super.init()
     }
 
@@ -127,6 +133,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         let micURL = activeSession.sourceURL.appendingPathComponent("mic.m4a")
         let systemURL = activeSession.sourceURL.appendingPathComponent("system.m4a")
         let mixedURL = activeSession.exportURL.appendingPathComponent("mixed.m4a")
+        let balancedMixedURL = activeSession.exportURL.appendingPathComponent("mixed_balanced.m4a")
         let micSegmentURL = activeSession.segmentsURL.appendingPathComponent("mic-0001.m4a")
         let systemSegmentURL = activeSession.segmentsURL.appendingPathComponent("system-0001.m4a")
 
@@ -249,6 +256,14 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             }
         }
 
+        let audioMetadata = await createBalancedAudioProcessing(
+            session: activeSession,
+            micURL: micURL,
+            systemURL: systemURL,
+            balancedMixedURL: balancedMixedURL,
+            audioTracks: &audioTracks
+        )
+
         try updateRecoveryMetadata(
             for: activeSession,
             status: sessionStatus == .failed ? .failed : .completed,
@@ -261,6 +276,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             duration: duration,
             status: sessionStatus,
             audioTracks: audioTracks,
+            audio: audioMetadata,
             shortRecordingThresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
         )
 
@@ -274,6 +290,153 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             duration: duration,
             postCallDraft: draft
         )
+    }
+
+    private func createBalancedAudioProcessing(
+        session: RecordingSession,
+        micURL: URL,
+        systemURL: URL,
+        balancedMixedURL: URL,
+        audioTracks: inout [AudioTrackMetadata]
+    ) async -> RecordingAudioMetadata {
+        let analysisRelativePath = "analysis/audio_analysis.json"
+        let analysisURL = session.folderURL
+            .appendingPathComponent("analysis", isDirectory: true)
+            .appendingPathComponent("audio_analysis.json")
+
+        guard runtimeSettings.audioLevelingEnabled else {
+            return RecordingAudioMetadata(
+                processing: AudioProcessingMetadata(
+                    balancedMixStatus: .skipped,
+                    warnings: []
+                )
+            )
+        }
+
+        let microphoneAnalysis = audioLevelAnalyzer.analyzeIfPresent(
+            url: micURL,
+            kind: .microphone
+        )
+        let systemAnalysis = runtimeSettings.systemAudioEnabled
+            ? audioLevelAnalyzer.analyzeIfPresent(url: systemURL, kind: .system)
+            : .missing(kind: .system)
+        let plan = audioBalancePlanner.plan(
+            microphone: microphoneAnalysis,
+            system: systemAnalysis,
+            mode: runtimeSettings.audioLevelingMode
+        )
+
+        if plan.status == .failed {
+            let document = AudioLevelingAnalysisDocument(
+                recordingID: session.id,
+                mode: runtimeSettings.audioLevelingMode,
+                microphone: microphoneAnalysis,
+                system: systemAnalysis,
+                plan: plan,
+                output: nil
+            )
+            try? AudioLevelingAnalysisCodec.write(document, to: analysisURL)
+            let warnings = plan.warnings.map(\.message)
+            AppLogger.file(.warning, category: "recording", "balanced mix skipped no usable source tracks recording_id=\(session.id)")
+            audioTracks.append(
+                AudioTrackMetadata(
+                    kind: "mixed_balanced",
+                    relativePath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                    codec: "aac",
+                    container: "m4a",
+                    sampleRate: AudioBalancedMixer.sampleRate,
+                    channels: AudioBalancedMixer.channels,
+                    bitrate: runtimeSettings.audioQualityPreset.mixedPreviewBitrate,
+                    status: "failed",
+                    error: "No usable source tracks for balanced mix"
+                )
+            )
+            return RecordingAudioMetadata(
+                processing: AudioProcessingMetadata(
+                    balancedMixStatus: .failed,
+                    balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                    analysisPath: analysisRelativePath,
+                    microphoneGainDB: plan.microphoneGainDB,
+                    systemGainDB: plan.systemGainDB,
+                    warnings: warnings
+                )
+            )
+        }
+
+        do {
+            let result = try await audioBalancedMixer.createBalancedMix(
+                micURL: micURL,
+                systemURL: systemURL,
+                outputURL: balancedMixedURL,
+                plan: plan,
+                qualityPreset: runtimeSettings.audioQualityPreset
+            )
+            audioTracks.append(result.track)
+
+            let document = AudioLevelingAnalysisDocument(
+                recordingID: session.id,
+                mode: runtimeSettings.audioLevelingMode,
+                microphone: microphoneAnalysis,
+                system: systemAnalysis,
+                plan: plan,
+                output: AudioLevelingOutputAnalysis(
+                    relativePath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                    fileSizeBytes: result.fileSizeBytes,
+                    durationSec: result.duration,
+                    integrityOK: result.fileSizeBytes > 0
+                )
+            )
+            try AudioLevelingAnalysisCodec.write(document, to: analysisURL)
+
+            return RecordingAudioMetadata(
+                processing: AudioProcessingMetadata(
+                    balancedMixStatus: .done,
+                    balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                    analysisPath: analysisRelativePath,
+                    microphoneGainDB: plan.microphoneGainDB,
+                    systemGainDB: plan.systemGainDB,
+                    warnings: plan.warnings.map(\.message)
+                )
+            )
+        } catch {
+            var failedWarnings = plan.warnings
+            failedWarnings.append(.balancedMixFailed)
+            let uniqueWarnings = Array(Set(failedWarnings)).map(\.message).sorted()
+            let document = AudioLevelingAnalysisDocument(
+                recordingID: session.id,
+                mode: runtimeSettings.audioLevelingMode,
+                microphone: microphoneAnalysis,
+                system: systemAnalysis,
+                plan: plan,
+                output: nil
+            )
+            try? AudioLevelingAnalysisCodec.write(document, to: analysisURL)
+            audioTracks.append(
+                AudioTrackMetadata(
+                    kind: "mixed_balanced",
+                    relativePath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                    codec: "aac",
+                    container: "m4a",
+                    sampleRate: AudioBalancedMixer.sampleRate,
+                    channels: AudioBalancedMixer.channels,
+                    bitrate: runtimeSettings.audioQualityPreset.mixedPreviewBitrate,
+                    status: "failed",
+                    error: String(describing: error)
+                )
+            )
+            AppLogger.file(.warning, category: "recording", "balanced mix failed recording_id=\(session.id) error=\(String(describing: error))")
+
+            return RecordingAudioMetadata(
+                processing: AudioProcessingMetadata(
+                    balancedMixStatus: .failed,
+                    balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                    analysisPath: analysisRelativePath,
+                    microphoneGainDB: plan.microphoneGainDB,
+                    systemGainDB: plan.systemGainDB,
+                    warnings: uniqueWarnings
+                )
+            )
+        }
     }
 
     public func currentAudioLevels() -> AudioLevelSnapshot {

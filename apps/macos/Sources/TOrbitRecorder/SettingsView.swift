@@ -120,6 +120,35 @@ struct SettingsView: View {
                     set: { appState.setMixedPreviewEnabled($0) }
                 )
             )
+
+            Divider()
+
+            Toggle(
+                "Audio leveling",
+                isOn: Binding(
+                    get: { appState.recordingSettings.audioLevelingEnabled },
+                    set: { appState.setAudioLevelingEnabled($0) }
+                )
+            )
+
+            Text("Creates export/mixed_balanced.m4a after Stop. Raw mic and system files are not changed.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Picker(
+                "Leveling mode",
+                selection: Binding(
+                    get: { appState.recordingSettings.audioLevelingMode },
+                    set: { appState.setAudioLevelingMode($0) }
+                )
+            ) {
+                Text(AudioLevelingMode.balanced.displayName).tag(AudioLevelingMode.balanced)
+                Text(AudioLevelingMode.conservative.displayName).tag(AudioLevelingMode.conservative)
+                Text("\(AudioLevelingMode.voiceBoost.displayName) · Coming later")
+                    .tag(AudioLevelingMode.voiceBoost)
+                    .disabled(true)
+            }
+            .disabled(!appState.recordingSettings.audioLevelingEnabled)
         }
     }
 
