@@ -72,6 +72,8 @@ tests/              Integration fixtures and test assets
 - `docs/STORAGE_FORMAT.md`: folder layout and metadata schema.
 - `docs/SECURITY_PRIVACY.md`: local-first privacy constraints.
 - `docs/UI_REDESIGN.md`: MVP UI structure and redesign notes.
+- `docs/QA_CHECKLIST.md`: focused manual QA checklist for install, permissions, recording, UI, auto-start, and edge cases.
+- `docs/BUG_REPORT_TEMPLATE.md`: copy/paste bug report format for fast handoff back to Codex.
 - `docs/ROADMAP.md`: staged future work.
 - `MANUAL_TESTING.md`: manual macOS MVP validation checklist and troubleshooting.
 
