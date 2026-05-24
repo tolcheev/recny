@@ -232,12 +232,24 @@ struct DiagnosticsView: View {
                         value: latest.mixedAudioURL.lastPathComponent
                     )
                     DiagnosticLine(
+                        label: "Audio health",
+                        value: RecordingDisplayFormatter.audioHealthBadgeText(latest.audioHealthStatus)
+                    )
+                    DiagnosticLine(
                         label: "Analysis",
                         value: latest.audioAnalysisURL.lastPathComponent
                     )
 
-                    if !latest.audioProcessingWarnings.isEmpty {
-                        Text(latest.audioProcessingWarnings.joined(separator: " "))
+                    let healthDetails = RecordingDisplayFormatter.audioHealthDetails(
+                        health: AudioHealthMetadata(
+                            status: latest.audioHealthStatus,
+                            warnings: latest.audioHealthWarnings
+                        ),
+                        processingStatus: latest.audioProcessingStatus
+                    )
+                    let details = healthDetails + latest.audioProcessingWarnings.filter { !healthDetails.contains($0) }
+                    if !details.isEmpty {
+                        Text(details.joined(separator: " "))
                             .font(.caption)
                             .foregroundStyle(.orange)
                             .textSelection(.enabled)

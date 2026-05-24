@@ -25,6 +25,8 @@ struct LatestRecordingStrip: View {
 
                 playbackBadge
 
+                audioHealthBadge
+
                 Spacer(minLength: 12)
 
                 HStack(spacing: 6) {
@@ -84,16 +86,18 @@ struct LatestRecordingStrip: View {
                         Label("More", systemImage: "ellipsis.circle")
                     }
                     .accessibilityLabel("More latest recording actions")
+
+                    if recording.audioHealthStatus != .good {
+                        Button {
+                            openHealthDetails()
+                        } label: {
+                            Text("Details")
+                        }
+                        .buttonStyle(.link)
+                        .accessibilityLabel("Open audio health details")
+                    }
                 }
                 .fixedSize()
-            }
-
-            if !recording.qualityWarnings.isEmpty {
-                Label(recording.qualityWarnings.joined(separator: " "), systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .lineLimit(2)
-                    .accessibilityLabel(recording.qualityWarnings.joined(separator: " "))
             }
 
             if !recording.tags.isEmpty {
@@ -162,6 +166,27 @@ struct LatestRecordingStrip: View {
         }
     }
 
+    private var audioHealthBadge: some View {
+        Text(RecordingDisplayFormatter.audioHealthBadgeText(recording.audioHealthStatus))
+            .font(.caption.weight(.medium))
+            .foregroundStyle(audioHealthBadgeColor)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(audioHealthBadgeColor.opacity(0.12), in: Capsule())
+            .accessibilityLabel(RecordingDisplayFormatter.audioHealthBadgeText(recording.audioHealthStatus))
+    }
+
+    private var audioHealthBadgeColor: Color {
+        switch recording.audioHealthStatus {
+        case .good:
+            return .green
+        case .warning:
+            return .orange
+        case .failed:
+            return .red
+        }
+    }
+
     private func playMixed() {
         guard recording.mixedPreviewState == "Ready" else {
             return
@@ -176,6 +201,15 @@ struct LatestRecordingStrip: View {
         }
 
         NSWorkspace.shared.open(url)
+    }
+
+    private func openHealthDetails() {
+        if isNonEmptyFile(recording.audioAnalysisURL) {
+            NSWorkspace.shared.open(recording.audioAnalysisURL)
+            return
+        }
+
+        NSWorkspace.shared.open(recording.sessionFolderURL)
     }
 
     private func isNonEmptyFile(_ url: URL) -> Bool {

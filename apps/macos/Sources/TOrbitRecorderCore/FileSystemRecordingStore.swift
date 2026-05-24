@@ -380,6 +380,8 @@ public final class FileSystemRecordingStore {
             balancedMixedTrackStatus: balancedMixedTrack?.status,
             audioProcessingStatus: metadata.audio.processing.balancedMixStatus,
             audioProcessingWarnings: audioProcessingWarnings,
+            audioHealthStatus: metadata.audio.health.status,
+            audioHealthWarnings: metadata.audio.health.warnings,
             startConfidence: metadata.source.confidence,
             startReason: metadata.source.reason,
             qualityWarnings: allQualityWarnings,

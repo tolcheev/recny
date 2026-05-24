@@ -193,8 +193,40 @@ Deleting a local record removes the session folder and the SQLite index row. It 
         "clipping_detected": false
       },
       "status": "completed"
+    },
+    {
+      "bitrate": 96000,
+      "channels": 2,
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "error": null,
+      "file_size_bytes": 29877120,
+      "kind": "mixed_balanced",
+      "relative_path": "export/mixed_balanced.m4a",
+      "sample_rate": 48000,
+      "signal": {
+        "had_signal": true,
+        "approximate_silence_ratio": 0.15,
+        "clipping_detected": false
+      },
+      "status": "completed"
     }
   ],
+  "audio": {
+    "health": {
+      "status": "good",
+      "warnings": []
+    },
+    "processing": {
+      "balanced_mix_status": "done",
+      "balanced_mix_path": "export/mixed_balanced.m4a",
+      "analysis_path": "analysis/audio_analysis.json",
+      "mic_gain_db": 3,
+      "system_gain_db": -2,
+      "warnings": []
+    }
+  },
   "markers": [
     {
       "id": "marker_important_001",
@@ -229,7 +261,10 @@ Deleting a local record removes the session folder and the SQLite index row. It 
 - `markers` stores manual in-call markers with elapsed recording seconds, a human-readable label, quick tags, and creation time.
 - `file_size_bytes` is written for audio tracks that pass the integrity check.
 - `signal` stores lightweight quality diagnostics for completed audio tracks.
-- `quality_warnings` stores user-facing warnings derived from signal metadata.
+- `quality_warnings` stores legacy user-facing warnings derived from signal metadata.
+- `audio.health.status` is the current UI-facing audio state: `good`, `warning`, or `failed`.
+- `audio.health.warnings` stores compact warning codes such as `mic_silent`, `system_silent`, `mic_too_quiet`, `system_too_quiet`, `clipping_detected`, `balanced_mix_failed`, and `only_one_track_available`.
+- `audio.processing` stores derived audio export state for `export/mixed_balanced.m4a` and `analysis/audio_analysis.json`.
 - `ai` exists now but AI is later.
 - `sync` exists now but T-Orbit sync is later.
 

@@ -81,4 +81,21 @@ struct RecordingDisplayFormatterTests {
         #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .levelingSkipped) == "Audio leveling skipped")
         #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .balancedFailed) == "Audio leveling failed")
     }
+
+    @Test
+    func formatsAudioHealthForUserFacingUi() {
+        #expect(RecordingDisplayFormatter.audioHealthBadgeText(.good) == "Audio OK")
+        #expect(RecordingDisplayFormatter.audioHealthBadgeText(.warning) == "Audio warning")
+        #expect(RecordingDisplayFormatter.audioHealthBadgeText(.failed) == "Audio failed")
+
+        #expect(
+            RecordingDisplayFormatter.audioHealthWarningText(.micTooQuiet) == "Microphone seems too quiet"
+        )
+        #expect(
+            RecordingDisplayFormatter.audioHealthWarningText(.balancedMixFailed) == "Balanced mix failed, original audio is available"
+        )
+        #expect(
+            RecordingDisplayFormatter.audioHealthSuccessText(processingStatus: .done) == "Balanced mix was created"
+        )
+    }
 }

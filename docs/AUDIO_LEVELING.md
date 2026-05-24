@@ -10,10 +10,11 @@ Current behavior:
 - `export/mixed.m4a` remains the original/simple mixed preview.
 - `export/mixed_balanced.m4a` is created after Stop Recording when Audio leveling is enabled.
 - `analysis/audio_analysis.json` stores track analysis, gain plan, and balanced output summary.
-- `metadata.json` stores `audio.processing` summary fields.
+- `metadata.json` stores `audio.processing` summary fields and `audio.health` warnings.
 - The Latest strip and Diagnostics prefer balanced playback when it is ready.
 - Playback priority is `export/mixed_balanced.m4a`, then `export/mixed.m4a`, then an available source track.
 - Latest and Library expose Original playback through More/Details actions.
+- Latest and Library show compact audio health badges: `Audio OK`, `Audio warning`, or `Audio failed`.
 - Diagnostics exposes the latest `analysis/audio_analysis.json`.
 
 V1 uses conservative track-level gain plus safe peak protection. It does not perform real-time AGC, AI enhancement, noise cancellation, or advanced mastering.
@@ -225,12 +226,21 @@ Suggested additions:
 
 ```json
 {
-  "audio_processing": {
-    "preset": "balanced",
-    "balanced_mix_status": "ready",
-    "preferred_playback": "export/mixed_balanced.m4a",
-    "analysis_path": "analysis/audio_analysis.json",
-    "warnings": []
+  "audio": {
+    "health": {
+      "status": "warning",
+      "warnings": [
+        "mic_too_quiet"
+      ]
+    },
+    "processing": {
+      "balanced_mix_status": "done",
+      "balanced_mix_path": "export/mixed_balanced.m4a",
+      "analysis_path": "analysis/audio_analysis.json",
+      "mic_gain_db": 6,
+      "system_gain_db": -2,
+      "warnings": []
+    }
   }
 }
 ```
@@ -245,11 +255,13 @@ Possible `balanced_mix_status` values:
 
 Warnings should be user-facing but concise:
 
-- `microphone_track_seems_silent`
-- `system_audio_track_seems_silent`
-- `microphone_clipping_detected`
-- `system_audio_clipping_detected`
+- `mic_silent`
+- `system_silent`
+- `mic_too_quiet`
+- `system_too_quiet`
+- `clipping_detected`
 - `balanced_mix_failed`
+- `only_one_track_available`
 
 ## Presets
 

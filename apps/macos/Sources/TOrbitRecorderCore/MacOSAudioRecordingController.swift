@@ -305,11 +305,13 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             .appendingPathComponent("audio_analysis.json")
 
         guard runtimeSettings.audioLevelingEnabled else {
-            return RecordingAudioMetadata(
-                processing: AudioProcessingMetadata(
-                    balancedMixStatus: .skipped,
-                    warnings: []
-                )
+            let processing = AudioProcessingMetadata(
+                balancedMixStatus: .skipped,
+                warnings: []
+            )
+            return makeAudioMetadata(
+                processing: processing,
+                audioTracks: audioTracks
             )
         }
 
@@ -351,15 +353,19 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                     error: "No usable source tracks for balanced mix"
                 )
             )
-            return RecordingAudioMetadata(
-                processing: AudioProcessingMetadata(
-                    balancedMixStatus: .failed,
-                    balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
-                    analysisPath: analysisRelativePath,
-                    microphoneGainDB: plan.microphoneGainDB,
-                    systemGainDB: plan.systemGainDB,
-                    warnings: warnings
-                )
+            let processing = AudioProcessingMetadata(
+                balancedMixStatus: .failed,
+                balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                analysisPath: analysisRelativePath,
+                microphoneGainDB: plan.microphoneGainDB,
+                systemGainDB: plan.systemGainDB,
+                warnings: warnings
+            )
+            return makeAudioMetadata(
+                processing: processing,
+                audioTracks: audioTracks,
+                microphoneAnalysis: microphoneAnalysis,
+                systemAnalysis: systemAnalysis
             )
         }
 
@@ -388,15 +394,19 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             )
             try AudioLevelingAnalysisCodec.write(document, to: analysisURL)
 
-            return RecordingAudioMetadata(
-                processing: AudioProcessingMetadata(
-                    balancedMixStatus: .done,
-                    balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
-                    analysisPath: analysisRelativePath,
-                    microphoneGainDB: plan.microphoneGainDB,
-                    systemGainDB: plan.systemGainDB,
-                    warnings: plan.warnings.map(\.message)
-                )
+            let processing = AudioProcessingMetadata(
+                balancedMixStatus: .done,
+                balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                analysisPath: analysisRelativePath,
+                microphoneGainDB: plan.microphoneGainDB,
+                systemGainDB: plan.systemGainDB,
+                warnings: plan.warnings.map(\.message)
+            )
+            return makeAudioMetadata(
+                processing: processing,
+                audioTracks: audioTracks,
+                microphoneAnalysis: microphoneAnalysis,
+                systemAnalysis: systemAnalysis
             )
         } catch {
             var failedWarnings = plan.warnings
@@ -426,17 +436,39 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             )
             AppLogger.file(.warning, category: "recording", "balanced mix failed recording_id=\(session.id) error=\(String(describing: error))")
 
-            return RecordingAudioMetadata(
-                processing: AudioProcessingMetadata(
-                    balancedMixStatus: .failed,
-                    balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
-                    analysisPath: analysisRelativePath,
-                    microphoneGainDB: plan.microphoneGainDB,
-                    systemGainDB: plan.systemGainDB,
-                    warnings: uniqueWarnings
-                )
+            let processing = AudioProcessingMetadata(
+                balancedMixStatus: .failed,
+                balancedMixPath: AudioLevelTrackKind.mixedBalanced.relativePath,
+                analysisPath: analysisRelativePath,
+                microphoneGainDB: plan.microphoneGainDB,
+                systemGainDB: plan.systemGainDB,
+                warnings: uniqueWarnings
+            )
+            return makeAudioMetadata(
+                processing: processing,
+                audioTracks: audioTracks,
+                microphoneAnalysis: microphoneAnalysis,
+                systemAnalysis: systemAnalysis
             )
         }
+    }
+
+    private func makeAudioMetadata(
+        processing: AudioProcessingMetadata,
+        audioTracks: [AudioTrackMetadata],
+        microphoneAnalysis: AudioLevelAnalysis? = nil,
+        systemAnalysis: AudioLevelAnalysis? = nil
+    ) -> RecordingAudioMetadata {
+        let health = AudioHealthEvaluator.evaluate(
+            audioTracks: audioTracks,
+            processing: processing,
+            microphoneAnalysis: microphoneAnalysis,
+            systemAnalysis: systemAnalysis
+        )
+        return RecordingAudioMetadata(
+            processing: processing,
+            health: health
+        )
     }
 
     public func currentAudioLevels() -> AudioLevelSnapshot {

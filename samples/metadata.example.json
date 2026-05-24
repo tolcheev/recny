@@ -54,8 +54,40 @@
         "had_signal": true
       },
       "status": "completed"
+    },
+    {
+      "error": null,
+      "bitrate": 96000,
+      "channels": 2,
+      "codec": "aac",
+      "container": "m4a",
+      "duration_sec": 2538,
+      "file_size_bytes": 29877120,
+      "kind": "mixed_balanced",
+      "relative_path": "export/mixed_balanced.m4a",
+      "sample_rate": 48000,
+      "signal": {
+        "approximate_silence_ratio": 0.15,
+        "clipping_detected": false,
+        "had_signal": true
+      },
+      "status": "completed"
     }
   ],
+  "audio": {
+    "health": {
+      "status": "good",
+      "warnings": []
+    },
+    "processing": {
+      "analysis_path": "analysis/audio_analysis.json",
+      "balanced_mix_path": "export/mixed_balanced.m4a",
+      "balanced_mix_status": "done",
+      "mic_gain_db": 3,
+      "system_gain_db": -2,
+      "warnings": []
+    }
+  },
   "category": "student_call",
   "duration_sec": 2538,
   "ended_at": "2026-05-23T15:12:18Z",

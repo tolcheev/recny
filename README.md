@@ -145,7 +145,7 @@ open /Applications/TOrbitRecorder.app
 
 Use `dist/` for shareable local artifacts and `/Applications/TOrbitRecorder.app` for a normal macOS launch. Do not use `apps/macos/.build/app/TOrbitRecorder.app` except when debugging the build script output directly.
 
-Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows. While recording, quick markers can be added for Important, Objection, Conflict, Review, and Bad audio moments.
+Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. When Audio leveling is enabled, it also creates `export/mixed_balanced.m4a` plus `analysis/audio_analysis.json`, and stores `audio.health` warnings in `metadata.json`. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows. While recording, quick markers can be added for Important, Objection, Conflict, Review, and Bad audio moments.
 
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
 
@@ -285,8 +285,9 @@ YouTube plus voice check:
 1. Open a YouTube video in a browser and keep the browser audible through the normal Mac output device.
 2. Start recording in TOrbit Recorder.
 3. Speak into the selected microphone while the YouTube audio is playing.
-4. Stop recording and play `export/mixed.m4a`.
-5. Confirm the mixed preview contains both your voice and the YouTube audio.
+4. Stop recording and use Play from the latest strip.
+5. Confirm playback prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.
+6. Confirm the mixed preview contains both your voice and the YouTube audio.
 
 Permission error check:
 

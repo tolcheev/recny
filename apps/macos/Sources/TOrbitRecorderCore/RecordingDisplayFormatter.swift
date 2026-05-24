@@ -101,6 +101,62 @@ public enum RecordingDisplayFormatter {
         }
     }
 
+    public static func audioHealthBadgeText(_ status: AudioHealthStatus) -> String {
+        switch status {
+        case .good:
+            return "Audio OK"
+        case .warning:
+            return "Audio warning"
+        case .failed:
+            return "Audio failed"
+        }
+    }
+
+    public static func audioHealthWarningText(_ warning: AudioHealthWarning) -> String {
+        switch warning {
+        case .micSilent:
+            return "Microphone track is silent"
+        case .systemSilent:
+            return "System audio track is silent"
+        case .micTooQuiet:
+            return "Microphone seems too quiet"
+        case .systemTooQuiet:
+            return "System audio seems too quiet"
+        case .clippingDetected:
+            return "Clipping detected"
+        case .balancedMixFailed:
+            return "Balanced mix failed, original audio is available"
+        case .onlyOneTrackAvailable:
+            return "Only one audio track is available"
+        }
+    }
+
+    public static func audioHealthSuccessText(processingStatus: BalancedMixStatus) -> String {
+        switch processingStatus {
+        case .done:
+            return "Balanced mix was created"
+        case .failed:
+            return "Balanced mix failed, original audio is available"
+        case .skipped:
+            return "Audio leveling skipped"
+        case .partial:
+            return "Balanced mix was created from available audio"
+        }
+    }
+
+    public static func audioHealthDetails(
+        health: AudioHealthMetadata,
+        processingStatus: BalancedMixStatus
+    ) -> [String] {
+        var details = health.warnings.map(audioHealthWarningText)
+        if processingStatus == .done {
+            details.append(audioHealthSuccessText(processingStatus: processingStatus))
+        } else if processingStatus == .failed && !health.warnings.contains(.balancedMixFailed) {
+            details.append(audioHealthSuccessText(processingStatus: processingStatus))
+        }
+        return details
+    }
+
     public static func duration(_ duration: TimeInterval) -> String {
         let totalSeconds = max(0, Int(duration.rounded(.down)))
         let hours = totalSeconds / 3600

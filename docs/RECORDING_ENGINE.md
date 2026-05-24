@@ -172,11 +172,21 @@ Every track in `metadata.json` should include:
 - `status`
 - `error`, when applicable
 
-Top-level `quality_warnings` contains user-facing post-stop warnings derived from the signal metadata, such as:
+Top-level `quality_warnings` contains legacy post-stop warnings derived from signal metadata.
+Current UI-facing audio health is stored in `audio.health`:
 
-- `Microphone track seems silent.`
-- `System audio track seems silent.`
-- `Microphone is clipping.`
+- `status`: `good`, `warning`, or `failed`
+- `warnings`: compact codes for display and filtering
+
+Supported health warning codes:
+
+- `mic_silent`
+- `system_silent`
+- `mic_too_quiet`
+- `system_too_quiet`
+- `clipping_detected`
+- `balanced_mix_failed`
+- `only_one_track_available`
 
 The mixed preview uses conservative gain during two-track mixing so mic + system playback is less likely to overload. If only one source track is available, the preview is created from that track with near-unity gain.
 

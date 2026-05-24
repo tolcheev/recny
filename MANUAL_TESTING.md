@@ -265,6 +265,8 @@ Expected metadata:
 - `audio.processing.balanced_mix_path` is `export/mixed_balanced.m4a`.
 - `audio.processing.analysis_path` is `analysis/audio_analysis.json`.
 - `audio.processing.mic_gain_db` and `audio.processing.system_gain_db` show the applied balancing plan.
+- `audio.health.status` is `good`, `warning`, or `failed`.
+- `audio.health.warnings` contains compact warning codes such as `mic_too_quiet`, `system_silent`, `clipping_detected`, or `balanced_mix_failed`.
 - `quality_warnings` is empty for normal speech recordings.
 - `source.trigger` is `manual` for manual starts.
 - `sync` remains `local_only`.
@@ -300,12 +302,14 @@ Expected behavior:
   - `export/mixed_balanced.m4a`
 - Analysis is saved:
   - `analysis/audio_analysis.json`
-- Main Latest strip shows a `Balanced` badge when balanced playback is ready.
+- Main Latest strip shows `Audio: Balanced` plus `Audio OK`, `Audio warning`, or `Audio failed`.
 - Play uses `mixed_balanced.m4a` by default when it exists.
 - Diagnostics -> Audio Processing can play Current and Original.
 - Latest -> More can play Balanced, play Original, open the folder, open `audio_analysis.json`, or tag the recording.
+- Latest shows a `Details` link when audio health is warning/failed.
 - Library rows show a compact `Balanced` badge when balanced playback is ready, or `Audio warning` when leveling failed.
-- Library details show original mixed size, balanced mixed size, mic gain, system gain, and audio warnings.
+- Library rows also show a compact audio warning badge for problematic recordings.
+- Library details show original mixed size, balanced mixed size, mic gain, system gain, audio health, and audio warnings.
 
 Manual balance check: loud YouTube + quiet voice
 
@@ -342,27 +346,39 @@ Limits:
 - Mostly silent tracks are not aggressively boosted.
 - If balanced processing fails, `export/mixed.m4a` remains available and metadata records `balanced_mix_status = failed`.
 
-## Audio Quality Warnings
+## Audio Health Warnings
 
 Silent microphone check:
 
 1. Start a short manual recording with the microphone muted or without speaking.
 2. Stop the recording.
-3. Confirm the Latest strip shows `Microphone track seems silent.` when the mic track has almost no signal.
-4. Open `metadata.json` and confirm the microphone track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
+3. Confirm the Latest strip shows `Audio warning`.
+4. Click `Details` or open Library details and confirm the copy includes `Microphone track is silent`.
+5. Open `metadata.json` and confirm `audio.health.warnings` contains `mic_silent`.
+6. Confirm the microphone track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
 
 Silent system audio check:
 
 1. Start a short manual recording with no system audio playing.
 2. Stop the recording.
-3. Confirm the Latest strip shows `System audio track seems silent.` when the system track has almost no signal.
-4. Open `metadata.json` and confirm the system track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
+3. Confirm the Latest strip shows `Audio warning`.
+4. Open Library details and confirm the copy includes `System audio track is silent`.
+5. Open `metadata.json` and confirm `audio.health.warnings` contains `system_silent`.
+6. Confirm the system track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
 
 Clipping check:
 
 1. Record very loud microphone input.
 2. Confirm `metadata.json` sets microphone `signal.clipping_detected: true`.
-3. Confirm the Latest strip can show `Microphone is clipping.`
+3. Confirm `metadata.json` includes `audio.health.warnings: ["clipping_detected"]` or contains that code among other warnings.
+4. Confirm Library details show `Clipping detected`.
+
+Balanced mix failure check:
+
+1. Temporarily disable Audio leveling or simulate a missing/failed balanced export during development.
+2. Confirm Play still falls back to `export/mixed.m4a`.
+3. Confirm `metadata.json` records `audio.health.warnings` with `balanced_mix_failed` when leveling fails.
+4. Confirm UI copy says `Balanced mix failed, original audio is available`.
 
 ## Post-Call Tagging
 

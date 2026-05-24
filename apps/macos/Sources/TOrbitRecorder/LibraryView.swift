@@ -250,6 +250,7 @@ struct LibraryView: View {
                                 recording: recording,
                                 audioSummary: audioSummary(for: recording, metadata: metadata),
                                 playbackState: playbackState(for: recording, metadata: metadata),
+                                audioHealth: metadata?.audio.health ?? .good,
                                 isSelected: recording.id == selectedRecordingID,
                                 onSelect: {
                                     selectedRecordingID = recording.id
@@ -505,6 +506,7 @@ private struct LibraryRecordingRow: View {
     let recording: RecordingSummary
     let audioSummary: String
     let playbackState: RecordingPlaybackDisplayState
+    let audioHealth: AudioHealthMetadata
     let isSelected: Bool
     let onSelect: () -> Void
     let onPlay: () -> Void
@@ -532,6 +534,13 @@ private struct LibraryRecordingRow: View {
                         text: playbackBadgeText,
                         tone: playbackBadgeTone
                     )
+
+                    if audioHealth.status != .good {
+                        StatusBadge(
+                            text: RecordingDisplayFormatter.audioHealthBadgeText(audioHealth.status),
+                            tone: audioHealth.status == .failed ? .danger : .warning
+                        )
+                    }
                 }
 
                 Text("\(displayDate(recording.startedAt)) · \(RecordingDisplayFormatter.duration(recording.durationSec)) · \(recording.sourceApp) · \(audioSummary)")
@@ -788,12 +797,13 @@ private struct LibraryRecordingDetailsPanel: View {
                 .foregroundStyle(.secondary)
 
             detailRow("Playback", RecordingDisplayFormatter.audioProcessingCopy(state: playbackState))
+            detailRow("Health", RecordingDisplayFormatter.audioHealthBadgeText(metadata?.audio.health.status ?? .good))
             detailRow("Mic gain", gainText(metadata?.audio.processing.microphoneGainDB))
             detailRow("System gain", gainText(metadata?.audio.processing.systemGainDB))
 
-            let warnings = audioWarnings
-            if !warnings.isEmpty {
-                detailRow("Warnings", warnings.joined(separator: " "))
+            let details = audioHealthDetails
+            if !details.isEmpty {
+                detailRow("Details", details.joined(separator: " "))
             }
         }
     }
@@ -819,6 +829,21 @@ private struct LibraryRecordingDetailsPanel: View {
         let processingWarnings = metadata?.audio.processing.warnings ?? []
         var seen = Set<String>()
         return (qualityWarnings + processingWarnings).filter { seen.insert($0).inserted }
+    }
+
+    private var audioHealthDetails: [String] {
+        guard let metadata else {
+            return []
+        }
+
+        let healthDetails = RecordingDisplayFormatter.audioHealthDetails(
+            health: metadata.audio.health,
+            processingStatus: metadata.audio.processing.balancedMixStatus
+        )
+        let legacyWarnings = audioWarnings.filter { warning in
+            !healthDetails.contains(warning)
+        }
+        return healthDetails + legacyWarnings
     }
 
     private func gainText(_ value: Double?) -> String {

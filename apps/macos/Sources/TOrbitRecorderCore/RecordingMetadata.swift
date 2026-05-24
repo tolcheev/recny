@@ -155,9 +155,25 @@ public struct AudioProcessingMetadata: Codable, Equatable, Sendable {
 
 public struct RecordingAudioMetadata: Codable, Equatable, Sendable {
     public var processing: AudioProcessingMetadata
+    public var health: AudioHealthMetadata
 
-    public init(processing: AudioProcessingMetadata = .skipped) {
+    public init(
+        processing: AudioProcessingMetadata = .skipped,
+        health: AudioHealthMetadata = .good
+    ) {
         self.processing = processing
+        self.health = health
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case processing
+        case health
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.processing = try container.decodeIfPresent(AudioProcessingMetadata.self, forKey: .processing) ?? .skipped
+        self.health = try container.decodeIfPresent(AudioHealthMetadata.self, forKey: .health) ?? .good
     }
 }
 
@@ -481,6 +497,8 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     public let balancedMixedTrackStatus: String?
     public let audioProcessingStatus: BalancedMixStatus
     public let audioProcessingWarnings: [String]
+    public let audioHealthStatus: AudioHealthStatus
+    public let audioHealthWarnings: [AudioHealthWarning]
     public let startConfidence: String?
     public let startReason: String?
     public let qualityWarnings: [String]
