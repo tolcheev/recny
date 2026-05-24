@@ -4,6 +4,22 @@ import Testing
 
 struct TagEditorLogicTests {
     @Test
+    func exposesMVPQuickTagsForTagDialog() {
+        #expect(MVPTags.quick == [
+            "#ученик",
+            "#лид",
+            "#мок",
+            "#собес",
+            "#разбор",
+            "#продажа",
+            "#конфликт",
+            "#важное",
+            "#разобрать",
+            "#плохой_звук"
+        ])
+    }
+
+    @Test
     func togglesQuickTagWithoutDuplicates() {
         #expect(TagEditorLogic.toggled("#лид", in: []) == ["#лид"])
         #expect(TagEditorLogic.toggled("#лид", in: ["#ученик", "#лид"]) == ["#ученик"])

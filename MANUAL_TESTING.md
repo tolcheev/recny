@@ -488,7 +488,7 @@ Check actions:
 
 - Open recording folder
 - Play mixed preview
-- Edit title/participant/tags through the Edit / Tag dialog
+- Edit title/participant/tags through `More -> Tag` or the details `Edit / Tag` action
 - Add/remove tags in the tag dialog
 - Show Audio Analysis from details when `analysis/audio_analysis.json` exists
 - Delete local record with confirmation

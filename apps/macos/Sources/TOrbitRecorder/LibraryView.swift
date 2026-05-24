@@ -708,7 +708,7 @@ private struct LibraryRecordingRow: View {
                     Divider()
 
                     Button(action: onEdit) {
-                        Label("Edit / Tag", systemImage: "tag")
+                        Label("Tag", systemImage: "tag")
                     }
 
                     Divider()
