@@ -364,6 +364,10 @@ struct DiagnosticsView: View {
     private var logsSection: some View {
         GroupBox("Logs") {
             VStack(alignment: .leading, spacing: 10) {
+                Text("Last 100 local log lines")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
                 HStack(spacing: 10) {
                     Text(logFileURL.path(percentEncoded: false))
                         .font(.callout.monospaced())

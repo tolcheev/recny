@@ -210,7 +210,13 @@ public final class AudioLevelAnalyzer: Sendable {
 
     public func analyzeIfPresent(url: URL, kind: AudioLevelTrackKind) -> AudioLevelAnalysis {
         do {
-            return try analyze(url: url, kind: kind)
+            let analysis = try analyze(url: url, kind: kind)
+            AppLogger.file(
+                analysis.exists ? .info : .warning,
+                category: "recording",
+                "audio level analysis kind=\(kind.rawValue) path=\(url.path(percentEncoded: false)) exists=\(analysis.exists) size=\(analysis.fileSizeBytes) duration=\(String(format: "%.2f", analysis.durationSec)) peak_dbfs=\(String(format: "%.1f", analysis.peakDBFS)) rms_dbfs=\(String(format: "%.1f", analysis.rmsDBFS)) silence_ratio=\(String(format: "%.2f", analysis.silenceRatio)) clipping=\(analysis.clippingDetected) usable=\(analysis.hasUsableSignal)"
+            )
+            return analysis
         } catch {
             AppLogger.file(.warning, category: "recording", "audio level analysis skipped kind=\(kind.rawValue) path=\(url.path(percentEncoded: false)) error=\(String(describing: error))")
             return .missing(kind: kind)

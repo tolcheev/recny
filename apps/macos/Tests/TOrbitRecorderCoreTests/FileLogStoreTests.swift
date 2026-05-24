@@ -4,6 +4,16 @@ import Testing
 
 struct FileLogStoreTests {
     @Test
+    func defaultStoreUsesMVPLogPathAndRotationLimit() {
+        let store = FileLogStore()
+
+        #expect(store.logDirectoryURL == RecordingPaths.defaultRoot.appendingPathComponent("logs", isDirectory: true))
+        #expect(store.logFileURL.lastPathComponent == "app.log")
+        #expect(store.archiveLogFileURL.lastPathComponent == "app.1.log")
+        #expect(store.maxFileSizeBytes == 5 * 1024 * 1024)
+    }
+
+    @Test
     func writesAndReadsRecentLogLines() throws {
         let logsURL = try Self.makeTemporaryLogsURL()
         let store = FileLogStore(logsDirectoryURL: logsURL, maxFileSizeBytes: 5 * 1024 * 1024)
@@ -39,6 +49,23 @@ struct FileLogStoreTests {
         #expect(archive.contains(String(repeating: "a", count: 80)))
         #expect(active.contains(String(repeating: "b", count: 80)))
         #expect(!active.contains(String(repeating: "a", count: 80)))
+    }
+
+    @Test
+    func clearRemovesActiveAndRotatedLogs() throws {
+        let logsURL = try Self.makeTemporaryLogsURL()
+        let store = FileLogStore(logsDirectoryURL: logsURL, maxFileSizeBytes: 180)
+
+        try store.write(level: .info, category: "app", message: String(repeating: "a", count: 80))
+        try store.write(level: .info, category: "app", message: String(repeating: "b", count: 80))
+        #expect(FileManager.default.fileExists(atPath: store.logFileURL.path(percentEncoded: false)))
+        #expect(FileManager.default.fileExists(atPath: store.archiveLogFileURL.path(percentEncoded: false)))
+
+        try store.clear()
+
+        #expect(!FileManager.default.fileExists(atPath: store.logFileURL.path(percentEncoded: false)))
+        #expect(!FileManager.default.fileExists(atPath: store.archiveLogFileURL.path(percentEncoded: false)))
+        #expect(try store.recentLines(limit: 100).isEmpty)
     }
 
     private static func makeTemporaryLogsURL() throws -> URL {
