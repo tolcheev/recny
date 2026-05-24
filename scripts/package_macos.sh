@@ -3,22 +3,96 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="TOrbitRecorder"
+PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.0}"
 BUILD_APP="$ROOT_DIR/apps/macos/.build/app/$APP_NAME.app"
 DIST_DIR="$ROOT_DIR/dist"
 DIST_APP="$DIST_DIR/$APP_NAME.app"
-DIST_ZIP="$DIST_DIR/$APP_NAME-macOS-MVP.zip"
+DIST_INSTALL="$DIST_DIR/INSTALL.md"
+DIST_ZIP="$DIST_DIR/$APP_NAME-$PACKAGE_VERSION-macOS.zip"
 
 "$ROOT_DIR/scripts/build_macos.sh"
 
-rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
+rm -rf "$DIST_APP" "$DIST_ZIP" "$DIST_DIR/$APP_NAME-macOS-MVP.zip"
+
+if [[ ! -f "$DIST_INSTALL" ]]; then
+    cat > "$DIST_INSTALL" <<'INSTALL_GUIDE'
+# TOrbitRecorder macOS Install
+
+This folder contains the packaged macOS MVP build.
+
+## Install
+
+From the repository root:
+
+```sh
+./scripts/install_macos.sh
+```
+
+The installer packages the app, replaces `/Applications/TOrbitRecorder.app`, and opens the installed app.
+
+For a dry run without copying to `/Applications`:
+
+```sh
+DRY_RUN=1 ./scripts/install_macos.sh
+```
+
+## Open The App
+
+```sh
+open /Applications/TOrbitRecorder.app
+```
+
+TOrbitRecorder lives in the macOS menu bar. Use the menu bar item to show the window, start or stop recording, open the Library, Settings, or Diagnostics.
+
+## Permissions
+
+Grant permissions to the same app bundle you will keep using:
+
+1. Open System Settings.
+2. Go to Privacy & Security -> Microphone.
+3. Enable TOrbitRecorder.
+4. Go to Privacy & Security -> Screen & System Audio Recording.
+5. Enable TOrbitRecorder.
+6. Quit and reopen TOrbitRecorder after changing Screen & System Audio Recording.
+
+If the toggle is enabled but the app still reports a missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. During development, avoid switching between `.build/app`, `dist/`, and `/Applications` because macOS permissions are tied to the launched app bundle.
+
+## Recordings Location
+
+Default local storage:
+
+```text
+~/Recordings/TOrbitRecorder/
+```
+
+Recordings stay local in the MVP.
+
+## Uninstall
+
+Quit the app, then remove it:
+
+```sh
+osascript -e 'tell application "TOrbitRecorder" to quit' || true
+rm -rf /Applications/TOrbitRecorder.app
+```
+
+This does not delete recordings. To remove local recordings too:
+
+```sh
+rm -rf ~/Recordings/TOrbitRecorder
+```
+INSTALL_GUIDE
+fi
 
 cp -R "$BUILD_APP" "$DIST_APP"
 
 (
     cd "$DIST_DIR"
-    zip -qry "$(basename "$DIST_ZIP")" "$(basename "$DIST_APP")"
+    zip -qry "$(basename "$DIST_ZIP")" "$(basename "$DIST_APP")" "$(basename "$DIST_INSTALL")"
 )
 
+echo "Version: $PACKAGE_VERSION"
 echo "App bundle: $DIST_APP"
+echo "Install guide: $DIST_INSTALL"
 echo "Archive: $DIST_ZIP"

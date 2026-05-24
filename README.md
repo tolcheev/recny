@@ -84,17 +84,23 @@ tests/              Integration fixtures and test assets
 - Update docs for every behavior change.
 - Validate with `swift test` and `xcodebuild` when the relevant project files exist.
 
-## Build macOS MVP Shell
+## Build
 
 ```sh
-scripts/build_macos.sh
+./scripts/build_macos.sh
 ```
 
 The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`. This `.build/app` bundle is a development artifact, not the normal launch location.
 
-## Install Dev Build
+The build script injects app metadata into the bundle:
 
-Package the app into `dist/`:
+- app version: `v0.1.0-mvp`
+- build date
+- git commit hash
+
+## Package
+
+Create a shareable local package in `dist/`:
 
 ```sh
 ./scripts/package_macos.sh
@@ -104,16 +110,31 @@ This creates:
 
 ```text
 dist/TOrbitRecorder.app
-dist/TOrbitRecorder-macOS-MVP.zip
+dist/TOrbitRecorder-v0.1.0-macOS.zip
+dist/INSTALL.md
 ```
 
-Install the packaged app into `/Applications`:
+`dist/INSTALL.md` is included in the zip and explains permissions, restart behavior, recordings location, and uninstall steps.
+
+## Install
+
+Install the packaged app into `/Applications` and open it:
 
 ```sh
 ./scripts/install_macos.sh
 ```
 
-Launch the installed app:
+The installer packages the app, asks a running TOrbitRecorder process to quit before replacement, copies the app bundle to `/Applications/TOrbitRecorder.app`, opens it, and prints next steps.
+
+Dry-run the installer without copying or opening the app:
+
+```sh
+DRY_RUN=1 ./scripts/install_macos.sh
+```
+
+## Run
+
+Use the installed app for normal manual testing:
 
 ```sh
 open /Applications/TOrbitRecorder.app
@@ -126,6 +147,41 @@ Current recording implementation starts from the menu bar UI or Auto-start Engin
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
 
 Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Hotkey capture, add marker, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
+
+Settings also includes an About section with the app version, build date, git commit hash, and local storage path.
+
+## Uninstall
+
+Quit the app and remove the installed bundle:
+
+```sh
+osascript -e 'tell application "TOrbitRecorder" to quit' || true
+rm -rf /Applications/TOrbitRecorder.app
+```
+
+This keeps local recordings. To delete all MVP recording data too:
+
+```sh
+rm -rf ~/Recordings/TOrbitRecorder
+```
+
+## Troubleshooting
+
+Permissions are tied to the app bundle that macOS sees. For manual testing, install and run the same bundle every time:
+
+```sh
+./scripts/install_macos.sh
+open /Applications/TOrbitRecorder.app
+```
+
+If the Screen & System Audio Recording toggle is enabled but the app still reports missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. macOS often requires a process restart after this permission changes.
+
+Grant permissions in:
+
+- System Settings -> Privacy & Security -> Microphone
+- System Settings -> Privacy & Security -> Screen & System Audio Recording
+
+Recordings are stored locally in `~/Recordings/TOrbitRecorder/`.
 
 ## Microphone Input Policy
 
@@ -141,7 +197,7 @@ AirPods or Bluetooth headset microphones are used only when no other input devic
 Only Bluetooth headset microphone is available. Recording quality may be degraded.
 ```
 
-## Run The Dev Artifact
+## Developer Artifact
 
 From the repository root:
 

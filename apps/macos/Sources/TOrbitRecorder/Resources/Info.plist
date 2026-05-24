@@ -16,6 +16,12 @@
 	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>TORbitAppVersion</key>
+	<string>v0.1.0-mvp</string>
+	<key>TORbitBuildDate</key>
+	<string>development</string>
+	<key>TORbitGitCommit</key>
+	<string>unknown</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>15.0</string>
 	<key>LSUIElement</key>

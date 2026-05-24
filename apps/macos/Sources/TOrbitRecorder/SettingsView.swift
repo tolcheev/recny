@@ -13,6 +13,7 @@ struct SettingsView: View {
                 storageSection
                 hotkeysSection
                 privacySection
+                aboutSection
             }
             .padding(20)
         }
@@ -277,6 +278,15 @@ struct SettingsView: View {
         }
     }
 
+    private var aboutSection: some View {
+        SettingsSection(title: "About") {
+            SettingsInfoRow(label: "Version", value: BuildInfo.appVersion)
+            SettingsInfoRow(label: "Build date", value: BuildInfo.buildDate)
+            SettingsInfoRow(label: "Git commit", value: BuildInfo.gitCommit)
+            SettingsInfoRow(label: "Local storage", value: appState.outputFolderPath, monospaced: true)
+        }
+    }
+
     private var isDefaultRoot: Bool {
         appState.outputFolderURL.path(percentEncoded: false) == RecordingPaths.defaultRoot.path(percentEncoded: false)
     }
@@ -314,6 +324,28 @@ struct SettingsView: View {
 
     private func split(_ value: String) -> [String] {
         value.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+}
+
+private struct SettingsInfoRow: View {
+    let label: String
+    let value: String
+    var monospaced = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 96, alignment: .leading)
+
+            Text(value)
+                .font(monospaced ? .caption.monospaced() : .callout)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+        }
     }
 }
 
