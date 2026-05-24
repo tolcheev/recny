@@ -106,7 +106,7 @@ System Settings -> Privacy & Security -> Screen & System Audio Recording
 - [ ] Recording uses selected external microphone.
 - [ ] Connecting/disconnecting another mic during recording does not switch active input mid-recording.
 
-## 4. Files
+## 4. Audio Files
 
 Open the latest recording folder and verify:
 
@@ -116,7 +116,11 @@ Open the latest recording folder and verify:
 - [ ] `source/system.m4a` size is greater than 0.
 - [ ] `export/mixed.m4a` exists.
 - [ ] `export/mixed.m4a` size is greater than 0.
+- [ ] `export/mixed_balanced.m4a` exists when Audio Leveling is enabled.
+- [ ] `export/mixed_balanced.m4a` size is greater than 0 when Audio Leveling is enabled.
+- [ ] `analysis/audio_analysis.json` exists when Audio Leveling is enabled.
 - [ ] `metadata.json` exists.
+- [ ] `metadata.json` includes audio processing status and audio health warnings.
 - [ ] `metadata.json` includes recording id, timestamps, duration, source, audio tracks, status, tags, AI/sync statuses.
 - [ ] SQLite index exists at `~/Recordings/TOrbitRecorder/db/app.sqlite`.
 - [ ] Latest recording appears in Library after app restart.
@@ -124,10 +128,11 @@ Open the latest recording folder and verify:
 Useful commands from inside the recording folder:
 
 ```sh
-stat -f "%z %N" source/mic.m4a source/system.m4a export/mixed.m4a metadata.json
+stat -f "%z %N" source/mic.m4a source/system.m4a export/mixed.m4a export/mixed_balanced.m4a analysis/audio_analysis.json metadata.json
 afinfo source/mic.m4a
 afinfo source/system.m4a
 afinfo export/mixed.m4a
+afinfo export/mixed_balanced.m4a
 plutil -p metadata.json
 ```
 
@@ -149,7 +154,7 @@ plutil -p metadata.json
 - [ ] Library filters are collapsed by default.
 - [ ] Library details show files, metadata, tags, and markers if present.
 - [ ] Settings opens.
-- [ ] Settings shows Recording, Auto-start, Storage, Hotkeys, Privacy/Behavior, and About sections.
+- [ ] Settings shows Recording, Auto-start, Storage, Hotkeys, Behavior, and About sections.
 - [ ] Diagnostics opens.
 - [ ] Diagnostics shows permissions, device diagnostics, last error, recoverables, logs, and test recording action.
 - [ ] Tag dialog saves title, participant, tags, and status.
@@ -243,9 +248,7 @@ plutil -p metadata.json
 - [ ] No T-Orbit sync in v0.1.0.
 - [ ] No Telegram integration in v0.1.0.
 - [ ] No Windows client in v0.1.0.
-- [ ] No DMG installer unless added separately.
-- [ ] No signing unless added separately.
-- [ ] No notarization unless added separately.
+- [ ] No DMG, signing, or notarization unless added separately.
 - [ ] Global hotkeys are not implemented; shortcuts are app-active only.
 - [ ] Auto-start browser heuristic can still have false positives/negatives.
 - [ ] Permission changes may require restarting the same app bundle.
