@@ -45,14 +45,14 @@ struct RecordingDisplayFormatterTests {
     }
 
     @Test
-    func formatsLatestRecordingDetailWithoutDebugFields() {
+    func formatsLatestRecordingStripWithoutDebugFields() {
         #expect(
-            RecordingDisplayFormatter.latestRecordingDetail(
+            RecordingDisplayFormatter.latestStripSummary(
                 status: .shortRecording,
                 duration: 8,
                 micFileSizeBytes: 10,
                 systemFileSizeBytes: 20
-            ) == "00:08 · Mic + system audio · Saved to Inbox/Short"
+            ) == "Last: Short recording · 00:08 · Mic + system"
         )
     }
 

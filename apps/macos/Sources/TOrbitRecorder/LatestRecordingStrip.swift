@@ -8,38 +8,23 @@ struct LatestRecordingStrip: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("Latest")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    StatusBadge(
-                        text: RecordingDisplayFormatter.statusText(recording.status),
-                        tone: tone(for: recording.status)
-                    )
-                }
-
-                Text(recording.title)
-                    .font(.callout.weight(.semibold))
-                    .lineLimit(1)
-
-                Text(
-                    RecordingDisplayFormatter.latestRecordingDetail(
-                        status: recording.status,
-                        duration: recording.durationSec,
-                        micFileSizeBytes: recording.micFileSizeBytes,
-                        systemFileSizeBytes: recording.systemFileSizeBytes
-                    )
+            Text(
+                RecordingDisplayFormatter.latestStripSummary(
+                    status: recording.status,
+                    duration: recording.durationSec,
+                    micFileSizeBytes: recording.micFileSizeBytes,
+                    systemFileSizeBytes: recording.systemFileSizeBytes
                 )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            }
+            )
+            .font(.callout.weight(.medium))
+            .foregroundStyle(.primary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .accessibilityLabel("Latest recording summary")
 
             Spacer(minLength: 12)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Button {
                     playMixed()
                 } label: {
@@ -64,11 +49,12 @@ struct LatestRecordingStrip: View {
             }
             .fixedSize()
         }
-        .padding(12)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.78), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(nsColor: .separatorColor).opacity(0.25), lineWidth: 1)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.18), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
     }

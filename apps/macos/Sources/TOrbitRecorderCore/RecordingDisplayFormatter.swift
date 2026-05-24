@@ -52,6 +52,19 @@ public enum RecordingDisplayFormatter {
         return parts.joined(separator: " · ")
     }
 
+    public static func latestStripSummary(
+        status: TaggingStatus,
+        duration: TimeInterval,
+        micFileSizeBytes: Int64?,
+        systemFileSizeBytes: Int64?
+    ) -> String {
+        let audio = compactAudioSummary(
+            micFileSizeBytes: micFileSizeBytes,
+            systemFileSizeBytes: systemFileSizeBytes
+        )
+        return "Last: \(statusText(status)) · \(Self.duration(duration)) · \(audio)"
+    }
+
     public static func duration(_ duration: TimeInterval) -> String {
         let totalSeconds = max(0, Int(duration.rounded(.down)))
         let hours = totalSeconds / 3600
@@ -85,12 +98,23 @@ public enum RecordingDisplayFormatter {
         micFileSizeBytes: Int64?,
         systemFileSizeBytes: Int64?
     ) -> String {
+        let compact = compactAudioSummary(
+            micFileSizeBytes: micFileSizeBytes,
+            systemFileSizeBytes: systemFileSizeBytes
+        )
+        return compact == "Mic + system" ? "Mic + system audio" : compact
+    }
+
+    public static func compactAudioSummary(
+        micFileSizeBytes: Int64?,
+        systemFileSizeBytes: Int64?
+    ) -> String {
         let hasMic = (micFileSizeBytes ?? 0) > 0
         let hasSystem = (systemFileSizeBytes ?? 0) > 0
 
         switch (hasMic, hasSystem) {
         case (true, true):
-            return "Mic + system audio"
+            return "Mic + system"
         case (true, false):
             return "Mic only"
         case (false, true):

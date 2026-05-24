@@ -19,8 +19,13 @@ struct MainRecorderView: View {
             }
             footerActions
         }
-        .padding(20)
-        .frame(minWidth: 560, idealWidth: 620, maxWidth: 720, minHeight: 520)
+        .padding(18)
+        .frame(
+            minWidth: 520,
+            idealWidth: 560,
+            maxWidth: 620,
+            minHeight: appState.shouldShowPermissionsOnboarding ? 540 : 360
+        )
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             appState.refreshPermissionSnapshot()
@@ -38,19 +43,10 @@ struct MainRecorderView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image(systemName: "record.circle.fill")
-                .font(.title2)
-                .foregroundStyle(appState.status == .recording ? .red : .secondary)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("TOrbit Recorder")
-                    .font(.title2.weight(.semibold))
-                Text("Local audio recorder")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+        HStack(alignment: .center, spacing: 10) {
+            Text("TOrbit Recorder")
+                .font(.title2.weight(.semibold))
+                .lineLimit(1)
 
             Spacer()
 
@@ -58,6 +54,45 @@ struct MainRecorderView: View {
                 text: appState.autoStartSettings.isEnabled ? "Auto-start On" : "Auto-start Off",
                 tone: appState.autoStartSettings.isEnabled ? .ready : .neutral
             )
+
+            headerStatusIndicator
+        }
+    }
+
+    private var headerStatusIndicator: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(headerStatusTone.color)
+                .frame(width: 7, height: 7)
+                .accessibilityHidden(true)
+
+            Text(headerStatusText)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(headerStatusTone.color)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Recorder status \(headerStatusText)")
+    }
+
+    private var headerStatusText: String {
+        switch appState.status {
+        case .recording:
+            return "Recording"
+        case .error:
+            return "Error"
+        case .idle:
+            return appState.isRecordingStartAllowed ? "Ready" : "Error"
+        }
+    }
+
+    private var headerStatusTone: StatusTone {
+        switch appState.status {
+        case .recording:
+            return .recording
+        case .error:
+            return .danger
+        case .idle:
+            return appState.isRecordingStartAllowed ? .ready : .danger
         }
     }
 

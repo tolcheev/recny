@@ -24,6 +24,17 @@ The app runs as a menu bar app. Use the menu bar icon or the main panel for Show
 
 Settings, Library, and Diagnostics open as separate app windows. If a window is behind other apps, use the menu bar item again; the app should activate and bring that window forward.
 
+## Main Window Smoke Check
+
+The main window should stay recorder-first:
+
+- Header shows `TOrbit Recorder`, auto-start state, and a small Ready/Recording/Error status dot.
+- Idle shows one large `Start Recording` button, then Mic, System audio, and Auto-start summaries.
+- Recording shows a large timer, one large `Stop Recording` button, and recording copy.
+- Error shows `Recording failed`, a short reason, `Open Diagnostics`, and `Try Again`.
+- If a latest recording exists, it appears as one compact row: `Last: ...` with Play, Open, and Tag.
+- The main window should not show file sizes, folder names, library filters, recoverable sessions, or a full recordings list.
+
 ## Menu Bar And Window Behavior
 
 1. Open `dist/TOrbitRecorder.app`.

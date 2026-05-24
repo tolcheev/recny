@@ -47,26 +47,33 @@ If Quit is selected while recording is active, the app asks for confirmation bef
 
 ## Main Window States
 
+UI v3 keeps the main window as a compact recorder surface instead of a library dashboard:
+
+- Header: `TOrbit Recorder`, compact auto-start badge, and a small Ready/Recording/Error status dot
+- Center recording area: the only primary daily action, either `Start Recording` or `Stop Recording`
+- Latest strip: one compact row for the last recording only, with Play/Open/Tag
+- Footer: Library, Settings, and Diagnostics entry points
+
+The main screen no longer shows file sizes, folder names, raw metadata, recoverable sessions, filters, or a recording list. Those details remain in Library and Diagnostics.
+
 ### Idle
 
-The current recording card shows:
+The center recording area shows:
 
-- `Ready`
 - one primary `Start Recording` button
 - selected microphone input
 - system audio readiness
 - auto-start state
 
-The header shows the app name and `Auto-start On` or `Auto-start Off`.
+If required permissions are missing, Start is replaced with `Fix Permissions`.
 
 ### Recording
 
-The recording card switches to:
+The center recording area switches to:
 
-- `Recording`
 - large timer
 - one primary `Stop Recording` button
-- active microphone/system audio details
+- `Recording mic + system audio`
 - subtle copy that all system audio is being recorded
 
 ### Error
@@ -79,6 +86,17 @@ The error state avoids stack traces on the main screen. It shows:
 - `Try Again`
 
 Detailed error text remains in Diagnostics.
+
+### Latest Strip
+
+The latest recording is intentionally compressed into one row:
+
+- `Last: Saved · 01:12 · Mic + system`
+- Play
+- Open
+- Tag
+
+Short recordings use human copy such as `Short recording`; they are not presented as failures.
 
 ## Library Behavior
 
@@ -119,8 +137,8 @@ The SwiftUI UI now uses small reusable components:
 
 - `RecorderCard` for subtle macOS cards
 - `StatusBadge` for human-readable state
-- `InfoRow` for compact metadata
 - `PrimaryRecordingButton` for the single Start/Stop action
+- `LatestRecordingStrip` for the compact last-recording row
 - `RecordingDisplayFormatter` for shared UI copy and formatting
 
 The design keeps native macOS styling, supports light/dark mode through system colors, and avoids heavy visual dependencies.
