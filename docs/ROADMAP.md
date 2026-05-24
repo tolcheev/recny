@@ -8,7 +8,7 @@ Scope:
 
 - macOS Sequoia.
 - Audio-only recording.
-- Auto-start Engine v1.
+- Auto-start Engine v2 with browser false-positive reduction.
 - Microphone capture.
 - Full system audio capture.
 - Local storage.

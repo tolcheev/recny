@@ -87,6 +87,7 @@ Browser heuristic v2:
 - Browser detection requires microphone activity for the configured detection duration.
 - If an active browser window title is available, the title must look call-like.
 - Call-like title tokens include `Meet`, `Zoom`, `Teams`, `KTalk`, `МТС Линк`, `SberJazz`, `Встреча`, `Собеседование`, `Interview`, and `Call`.
+- Single-word title tokens match on word boundaries, so unrelated words like `Callback` do not count as `Call`.
 - If the active window title is unavailable, the MVP falls back to browser + microphone activity + system audio activity with `medium` confidence.
 - Browser URL detection and browser extensions are not part of MVP.
 

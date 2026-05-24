@@ -132,6 +132,45 @@ struct AppStateTests {
     }
 
     @Test
+    func autoStartPublishesStartedNotificationForBrowserCall() async {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Google Chrome"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Google Chrome",
+            bundleID: "com.google.Chrome",
+            windowTitle: "QA mentorship - Google Meet"
+        )
+        let audio = AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: activeApp,
+            audioActivity: audio,
+            now: startedAt
+        )
+
+        await appState.evaluateAutoStart(
+            activeApplication: activeApp,
+            audioActivity: audio,
+            now: startedAt.addingTimeInterval(15)
+        )
+
+        #expect(appState.status == .recording)
+        #expect(appState.autoStartNotificationMessage == "Recording started: browser call detected")
+    }
+
+    @Test
     func savePostCallTagsToMetadataAndSQLite() async throws {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(

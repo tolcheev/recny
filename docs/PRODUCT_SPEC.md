@@ -39,7 +39,7 @@ The MVP is intentionally not a media studio, meeting bot, cloud recorder, or T-O
 ## MVP Capabilities
 
 - Automatic recording start based on local rules.
-- Auto-start Engine v1 using active app, bundle id, microphone activity, system audio activity, whitelist/blacklist, cooldown, and minimum detection duration.
+- Auto-start Engine v2 using active app, bundle id, microphone activity, browser call-title heuristics, whitelist/blacklist, cooldown, and minimum detection duration.
 - Microphone audio recording.
 - Full system audio recording.
 - Separate source tracks for microphone and system audio.

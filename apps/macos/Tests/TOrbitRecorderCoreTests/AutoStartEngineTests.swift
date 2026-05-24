@@ -234,6 +234,80 @@ struct AutoStartEngineTests {
     }
 
     @Test
+    func browserTitleDoesNotStartFromCallSubstringInsideAnotherWord() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Google Chrome"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Google Chrome",
+            bundleID: "com.google.Chrome",
+            windowTitle: "Callback hell explained - YouTube"
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .browserTitleNotCall)
+    }
+
+    @Test
+    func browserTitleTokensStartWhenMatchedAsCallWords() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Google Chrome"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Google Chrome",
+            bundleID: "com.google.Chrome",
+            windowTitle: "МТС Линк - Собеседование"
+        )
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        _ = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt
+            ),
+            settings: settings
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt.addingTimeInterval(15)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.browser_title")
+    }
+
+    @Test
     func askFirstModeReturnsAskInsteadOfStart() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(

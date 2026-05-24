@@ -381,7 +381,39 @@ public struct AutoStartEngine: Sendable {
     private func titleLooksLikeCall(_ title: String) -> Bool {
         let normalizedTitle = normalize(title)
         return KnownApps.browserCallTitleTokens.contains { token in
-            normalizedTitle.contains(normalize(token))
+            titleContainsCallToken(normalizedTitle, token: normalize(token))
+        }
+    }
+
+    private func titleContainsCallToken(_ title: String, token: String) -> Bool {
+        guard !token.isEmpty else {
+            return false
+        }
+
+        if token.contains(" ") {
+            return title.contains(token)
+        }
+
+        var searchRange = title.startIndex..<title.endIndex
+        while let range = title.range(of: token, range: searchRange) {
+            let startsAtBoundary = range.lowerBound == title.startIndex
+                || !isWordCharacter(title[title.index(before: range.lowerBound)])
+            let endsAtBoundary = range.upperBound == title.endIndex
+                || !isWordCharacter(title[range.upperBound])
+
+            if startsAtBoundary && endsAtBoundary {
+                return true
+            }
+
+            searchRange = range.upperBound..<title.endIndex
+        }
+
+        return false
+    }
+
+    private func isWordCharacter(_ character: Character) -> Bool {
+        character.unicodeScalars.allSatisfy { scalar in
+            CharacterSet.alphanumerics.contains(scalar) || scalar == "_"
         }
     }
 

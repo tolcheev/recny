@@ -11,7 +11,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 - Target OS: macOS Sequoia.
 - Audio-only recording.
 - Automatic recording start.
-- Auto-start v1 rule engine using active app, microphone activity, system audio activity, allowlist/blocklist, cooldown, and minimum detection duration.
+- Auto-start v2 rule engine using active app, microphone activity, browser call-title heuristics, allowlist/blocklist, cooldown, and minimum detection duration.
 - Microphone recording.
 - Deterministic microphone input selection that avoids AirPods/Bluetooth headset mics when a built-in or external microphone is available.
 - Full system audio recording.

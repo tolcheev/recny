@@ -8,7 +8,7 @@
 - Apple Silicon support, with MacBook M4 Pro as the primary validation machine.
 - Audio-only recording.
 - Automatic recording start.
-- Auto-start Engine v1 with active app detection, bundle id detection, whitelist/blacklist settings, cooldown, and minimum detection duration.
+- Auto-start Engine v2 with active app detection, bundle id detection, browser call-title heuristics, whitelist/blacklist settings, cooldown, and minimum detection duration.
 - Microphone capture.
 - Full system audio capture.
 - Separate microphone and system source files.
