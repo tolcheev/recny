@@ -1,0 +1,781 @@
+openapi: 3.1.0
+info:
+  title: T-Orbit Recordings API
+  version: 0.1.0-draft
+  description: |
+    Draft API contract for future T-Orbit recording metadata sync.
+    Heavy audio/video files are not uploaded to or stored in T-Orbit.
+    Clients may attach metadata and external storage links only.
+servers:
+  - url: https://api.t-orbit.example
+    description: Placeholder production API
+  - url: https://staging-api.t-orbit.example
+    description: Placeholder staging API
+tags:
+  - name: Recordings
+  - name: Recording Tags
+  - name: Storage Links
+  - name: Transcripts
+  - name: Notes
+  - name: Students
+security:
+  - bearerAuth: []
+    deviceToken: []
+paths:
+  /recordings:
+    post:
+      tags:
+        - Recordings
+      summary: Create recording metadata card
+      description: |
+        Creates a T-Orbit recording card from local recorder metadata.
+        This endpoint accepts metadata only. Heavy media files must be stored
+        externally and later attached with storage links.
+      operationId: createRecording
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordingCreateRequest"
+      responses:
+        "201":
+          description: Recording created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    get:
+      tags:
+        - Recordings
+      summary: List recording metadata cards
+      operationId: listRecordings
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - name: mentor_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: student_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/RecordingStatus"
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: source_app
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: started_from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: started_to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Recording list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordingListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /recordings/{id}:
+    get:
+      tags:
+        - Recordings
+      summary: Get recording metadata card
+      operationId: getRecording
+      parameters:
+        - $ref: "#/components/parameters/RecordingId"
+      responses:
+        "200":
+          description: Recording found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags:
+        - Recordings
+      summary: Patch recording metadata card
+      operationId: patchRecording
+      parameters:
+        - $ref: "#/components/parameters/RecordingId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordingPatchRequest"
+      responses:
+        "200":
+          description: Recording updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /recordings/{id}/tags:
+    post:
+      tags:
+        - Recording Tags
+      summary: Add tags to recording
+      operationId: addRecordingTags
+      parameters:
+        - $ref: "#/components/parameters/RecordingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordingTagsRequest"
+      responses:
+        "200":
+          description: Tags added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /recordings/{id}/storage-links:
+    post:
+      tags:
+        - Storage Links
+      summary: Attach external storage link
+      description: |
+        Attaches a link to media stored outside T-Orbit. T-Orbit stores link
+        metadata only and must not receive heavy audio/video blobs here.
+      operationId: addRecordingStorageLink
+      parameters:
+        - $ref: "#/components/parameters/RecordingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorageLinkCreateRequest"
+      responses:
+        "201":
+          description: Storage link attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageLink"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /recordings/{id}/transcripts:
+    post:
+      tags:
+        - Transcripts
+      summary: Attach transcript metadata or text
+      operationId: addRecordingTranscript
+      parameters:
+        - $ref: "#/components/parameters/RecordingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptCreateRequest"
+      responses:
+        "201":
+          description: Transcript attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transcript"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /recordings/{id}/notes:
+    post:
+      tags:
+        - Notes
+      summary: Attach Markdown note
+      operationId: addRecordingNote
+      parameters:
+        - $ref: "#/components/parameters/RecordingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteCreateRequest"
+      responses:
+        "201":
+          description: Note attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /students/{id}/recordings:
+    get:
+      tags:
+        - Students
+        - Recordings
+      summary: List recordings for a student
+      operationId: listStudentRecordings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Student id.
+          schema:
+            type: string
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Student recording list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordingListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: User or workspace scoped T-Orbit auth token.
+    deviceToken:
+      type: apiKey
+      in: header
+      name: X-TOrbit-Device-Token
+      description: Device token for recorder client audit and revocation.
+  parameters:
+    RecordingId:
+      name: id
+      in: path
+      required: true
+      description: Recording id.
+      schema:
+        type: string
+    WorkspaceId:
+      name: workspace_id
+      in: query
+      required: false
+      description: Workspace scope.
+      schema:
+        type: string
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: Remote version or ETag for optimistic concurrency.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Missing or invalid auth token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Authenticated client is not allowed to access the resource
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Version conflict or duplicate client id
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    RecordingCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - owner_id
+        - workspace_id
+        - mentor_id
+        - title
+        - started_at
+        - duration
+        - source_app
+        - trigger
+        - status
+      properties:
+        id:
+          type: string
+          description: Client-generated local recording id or T-Orbit id.
+        owner_id:
+          type: string
+        workspace_id:
+          type: string
+        mentor_id:
+          type: string
+        student_id:
+          type:
+            - string
+            - "null"
+        title:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        duration:
+          type: number
+          minimum: 0
+          description: Duration in seconds.
+        source_app:
+          type: string
+        trigger:
+          $ref: "#/components/schemas/RecordingTrigger"
+        tags:
+          type: array
+          items:
+            type: string
+          default: []
+        status:
+          $ref: "#/components/schemas/RecordingStatus"
+        storage_links:
+          type: array
+          items:
+            $ref: "#/components/schemas/StorageLinkCreateRequest"
+          default: []
+        transcript_status:
+          $ref: "#/components/schemas/TranscriptStatus"
+        note_status:
+          $ref: "#/components/schemas/NoteStatus"
+        client_metadata:
+          $ref: "#/components/schemas/ClientMetadata"
+    RecordingPatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        student_id:
+          type:
+            - string
+            - "null"
+        status:
+          $ref: "#/components/schemas/RecordingStatus"
+        tags:
+          type: array
+          items:
+            type: string
+        transcript_status:
+          $ref: "#/components/schemas/TranscriptStatus"
+        note_status:
+          $ref: "#/components/schemas/NoteStatus"
+        client_metadata:
+          $ref: "#/components/schemas/ClientMetadata"
+    Recording:
+      allOf:
+        - $ref: "#/components/schemas/RecordingCreateRequest"
+        - type: object
+          required:
+            - remote_version
+            - storage_links
+            - created_at
+            - updated_at
+          properties:
+            remote_version:
+              type: integer
+              minimum: 1
+            storage_links:
+              type: array
+              items:
+                $ref: "#/components/schemas/StorageLink"
+            transcripts:
+              type: array
+              items:
+                $ref: "#/components/schemas/Transcript"
+            notes:
+              type: array
+              items:
+                $ref: "#/components/schemas/Note"
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    RecordingListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Recording"
+        next_cursor:
+          type:
+            - string
+            - "null"
+    RecordingTagsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - tags
+      properties:
+        tags:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        mode:
+          type: string
+          enum:
+            - append
+            - replace
+          default: append
+    StorageLinkCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - provider
+        - kind
+        - url
+      properties:
+        provider:
+          type: string
+          examples:
+            - s3
+            - torbit-storage
+        kind:
+          $ref: "#/components/schemas/StorageLinkKind"
+        url:
+          type: string
+          format: uri
+        mime_type:
+          type:
+            - string
+            - "null"
+        size_bytes:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        duration_sec:
+          type:
+            - number
+            - "null"
+          minimum: 0
+        checksum_sha256:
+          type:
+            - string
+            - "null"
+        created_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        expires_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+    StorageLink:
+      allOf:
+        - $ref: "#/components/schemas/StorageLinkCreateRequest"
+        - type: object
+          required:
+            - id
+            - recording_id
+            - created_at
+          properties:
+            id:
+              type: string
+            recording_id:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+    TranscriptCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/TranscriptStatus"
+        language:
+          type:
+            - string
+            - "null"
+        provider:
+          type:
+            - string
+            - "null"
+        text:
+          type:
+            - string
+            - "null"
+          description: Optional transcript text. Can be omitted if stored externally.
+        external_url:
+          type:
+            - string
+            - "null"
+          format: uri
+        error:
+          type:
+            - string
+            - "null"
+    Transcript:
+      allOf:
+        - $ref: "#/components/schemas/TranscriptCreateRequest"
+        - type: object
+          required:
+            - id
+            - recording_id
+            - created_at
+            - updated_at
+          properties:
+            id:
+              type: string
+            recording_id:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    NoteCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - markdown
+      properties:
+        markdown:
+          type: string
+        status:
+          $ref: "#/components/schemas/NoteStatus"
+        source:
+          type: string
+          enum:
+            - manual
+            - import
+            - ai
+          default: manual
+    Note:
+      allOf:
+        - $ref: "#/components/schemas/NoteCreateRequest"
+        - type: object
+          required:
+            - id
+            - recording_id
+            - author_id
+            - created_at
+            - updated_at
+          properties:
+            id:
+              type: string
+            recording_id:
+              type: string
+            author_id:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    ClientMetadata:
+      type: object
+      additionalProperties: true
+      properties:
+        local_recording_id:
+          type: string
+        device_id:
+          type: string
+        app_version:
+          type: string
+        local_sync_state:
+          $ref: "#/components/schemas/SyncState"
+    RecordingStatus:
+      type: string
+      enum:
+        - needs_tagging
+        - saved
+        - needs_review
+        - reviewed
+        - failed
+        - short_recording
+    RecordingTrigger:
+      type: string
+      enum:
+        - manual
+        - autostart
+        - import
+    StorageLinkKind:
+      type: string
+      enum:
+        - microphone_audio
+        - system_audio
+        - mixed_audio
+        - screen_video
+        - transcript_text
+        - note_markdown
+    TranscriptStatus:
+      type: string
+      enum:
+        - not_started
+        - queued
+        - processing
+        - completed
+        - failed
+      default: not_started
+    NoteStatus:
+      type: string
+      enum:
+        - none
+        - draft
+        - published
+      default: none
+    SyncState:
+      type: string
+      enum:
+        - local_only
+        - pending_sync
+        - synced
+        - sync_failed
+        - conflict
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type:
+                - object
+                - "null"
+              additionalProperties: true
