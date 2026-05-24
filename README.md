@@ -196,7 +196,22 @@ Permissions are tied to the app bundle that macOS sees. For manual testing, inst
 open /Applications/TOrbitRecorder.app
 ```
 
-If the Screen & System Audio Recording toggle is enabled but the app still reports missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. macOS often requires a process restart after this permission changes.
+Do not keep multiple copies running from `.build`, `dist`, and `/Applications`. Screen & System Audio Recording permission is applied to the app bundle and current process, so a second copy can trigger the macOS permission prompt even when another `TOrbitRecorder` entry is already enabled.
+
+Check for duplicate running copies:
+
+```sh
+pgrep -fl TOrbitRecorder
+```
+
+If the Screen & System Audio Recording toggle is enabled but the app still reports missing permission or shows the macOS prompt again, quit every TOrbitRecorder copy and reopen only the installed app:
+
+```sh
+osascript -e 'tell application id "com.torbit.recorder" to quit' || true
+open /Applications/TOrbitRecorder.app
+```
+
+macOS often requires a process restart after this permission changes. The app now blocks duplicate launches and points you back to the already-running copy.
 
 Grant permissions in:
 

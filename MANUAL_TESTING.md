@@ -199,13 +199,27 @@ If Microphone is `Not determined`, use the onboarding button to trigger the macO
 If the app shows `Restart required`, quit `TOrbitRecorder` completely and reopen the same app bundle:
 
 ```sh
-pkill -x TOrbitRecorder 2>/dev/null || true
-open -n dist/TOrbitRecorder.app
+osascript -e 'tell application id "com.torbit.recorder" to quit' || true
+open /Applications/TOrbitRecorder.app
 ```
 
 When testing Screen & System Audio Recording, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted.
 
-For normal manual testing, prefer `dist/TOrbitRecorder.app` or `/Applications/TOrbitRecorder.app` over `.build/app/TOrbitRecorder.app`.
+For normal manual testing, prefer `/Applications/TOrbitRecorder.app` over `.build/app/TOrbitRecorder.app`.
+
+If the macOS Screen Recording prompt appears even though `TOrbitRecorder` is enabled in System Settings, check for duplicate app copies:
+
+```sh
+pgrep -fl TOrbitRecorder
+```
+
+There should be one process. If `.build`, `dist`, and `/Applications` copies are all running, quit them all, then reopen only:
+
+```sh
+open /Applications/TOrbitRecorder.app
+```
+
+The app blocks new duplicate launches, but already-running older copies must still be quit manually before reliable permission testing.
 
 ## Full Recording Checklist
 

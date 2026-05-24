@@ -17,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isTerminatingAfterRecordingStop = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard enforceSingleRunningInstance() else {
+            return
+        }
+
         applyActivationPolicy()
         configureStatusItem()
         bindState()
@@ -240,6 +244,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func applyActivationPolicy() {
         NSApp.setActivationPolicy(appState.privacySettings.showDockIcon ? .regular : .accessory)
+    }
+
+    private func enforceSingleRunningInstance() -> Bool {
+        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.torbit.recorder"
+        let currentProcessID = ProcessInfo.processInfo.processIdentifier
+        let runningInstances = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+            .map {
+                RunningAppInstance(
+                    processID: $0.processIdentifier,
+                    bundlePath: $0.bundleURL?.path(percentEncoded: false)
+                )
+            }
+
+        switch AppInstancePolicy.decision(
+            currentProcessID: currentProcessID,
+            runningInstances: runningInstances
+        ) {
+        case .continueCurrent:
+            return true
+        case .terminateCurrentAndActivateExisting(let existingInstance):
+            if let existingApp = NSRunningApplication(processIdentifier: existingInstance.processID) {
+                existingApp.activate(options: [.activateAllWindows])
+            }
+
+            let duplicatePaths = AppInstancePolicy.userFacingBundlePathList(
+                currentProcessID: currentProcessID,
+                runningInstances: runningInstances
+            )
+            AppLogger.file(
+                .warning,
+                category: "app",
+                "duplicate instance blocked current=\(Bundle.main.bundleURL.path(percentEncoded: false)) existing=\(existingInstance.bundlePath ?? "unknown") all_existing=\(duplicatePaths.joined(separator: " | "))"
+            )
+            showDuplicateInstanceAlert(existingPaths: duplicatePaths)
+            NSApp.terminate(nil)
+            return false
+        }
+    }
+
+    private func showDuplicateInstanceAlert(existingPaths: [String]) {
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Another TOrbitRecorder copy is already running"
+        let pathText = existingPaths.isEmpty
+            ? "A previous TOrbitRecorder process is still active."
+            : "Running copy:\n\(existingPaths.joined(separator: "\n"))"
+        alert.informativeText = """
+        \(pathText)
+
+        Quit all TOrbitRecorder copies, then open /Applications/TOrbitRecorder.app. Running .build, dist, and /Applications copies at the same time can make macOS ask for Screen & System Audio Recording permission again.
+        """
+        alert.addButton(withTitle: "Quit This Copy")
+        alert.runModal()
     }
 
     @objc private func showWindow() {

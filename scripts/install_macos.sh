@@ -10,15 +10,30 @@ AUTO_QUIT="${AUTO_QUIT:-1}"
 
 "$ROOT_DIR/scripts/package_macos.sh"
 
+running_pids() {
+    pgrep -x "$APP_NAME" || true
+}
+
 is_running() {
-    pgrep -x "$APP_NAME" >/dev/null 2>&1
+    [[ -n "$(running_pids)" ]]
+}
+
+print_running_instances() {
+    local pids
+    pids="$(running_pids)"
+    if [[ -n "$pids" ]]; then
+        echo "Running $APP_NAME instances:"
+        ps -p "$(echo "$pids" | paste -sd, -)" -o pid=,command=
+    fi
 }
 
 if is_running; then
+    print_running_instances
     if [[ "$DRY_RUN" == "1" ]]; then
-        echo "$APP_NAME is running. Dry run would ask it to quit before replacing $INSTALL_APP."
+        echo "$APP_NAME is running. Dry run would ask every running copy to quit before replacing $INSTALL_APP."
     elif [[ "$AUTO_QUIT" == "1" ]]; then
-        echo "$APP_NAME is running. Asking it to quit before install..."
+        echo "$APP_NAME is running. Asking the app to quit before install..."
+        osascript -e "tell application id \"com.torbit.recorder\" to quit" >/dev/null 2>&1 || true
         osascript -e "tell application \"$APP_NAME\" to quit" >/dev/null 2>&1 || true
 
         for _ in {1..10}; do
@@ -29,11 +44,13 @@ if is_running; then
         done
 
         if is_running; then
-            echo "$APP_NAME is still running. Quit it from the menu bar, then rerun this script." >&2
+            print_running_instances
+            echo "$APP_NAME is still running. Quit every listed copy from the menu bar, then rerun this script." >&2
+            echo "For debugging only, inspect running copies with: pgrep -fl TOrbitRecorder" >&2
             exit 1
         fi
     else
-        echo "$APP_NAME is running. Quit it from the menu bar, then rerun this script." >&2
+        echo "$APP_NAME is running. Quit every running copy from the menu bar, then rerun this script." >&2
         exit 1
     fi
 fi
