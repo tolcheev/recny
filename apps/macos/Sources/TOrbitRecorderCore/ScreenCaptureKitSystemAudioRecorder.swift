@@ -14,6 +14,10 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
     public static let channels: Int = 2
     public static let bitrate: Int = 128_000
 
+    public static var isSystemAudioCaptureAvailable: Bool {
+        true
+    }
+
     public static var assetWriterAudioSettings: [String: Any] {
         assetWriterAudioSettings(for: .standard)
     }

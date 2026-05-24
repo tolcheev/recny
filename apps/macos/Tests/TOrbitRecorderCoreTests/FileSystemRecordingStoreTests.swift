@@ -128,6 +128,26 @@ struct FileSystemRecordingStoreTests {
     }
 
     @Test
+    func discardEmptyInterruptedSessionRemovesOnlyWhenNoUsableFilesExist() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let empty = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let usable = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_030),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        try Data([1, 2, 3]).write(to: usable.segmentsURL.appendingPathComponent("mic-0001.m4a"))
+
+        #expect(try store.discardSessionIfEmpty(empty))
+        #expect(!FileManager.default.fileExists(atPath: empty.folderURL.path(percentEncoded: false)))
+        #expect(!((try store.discardSessionIfEmpty(usable))))
+        #expect(FileManager.default.fileExists(atPath: usable.folderURL.path(percentEncoded: false)))
+    }
+
+    @Test
     func stopSessionWritesMetadataAndMovesToLibrary() throws {
         let root = Self.testOutputFolder()
         let store = FileSystemRecordingStore(rootURL: root)

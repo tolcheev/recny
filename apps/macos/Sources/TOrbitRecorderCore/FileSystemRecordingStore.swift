@@ -329,6 +329,17 @@ public final class FileSystemRecordingStore {
         return removed
     }
 
+    @discardableResult
+    public func discardSessionIfEmpty(_ session: RecordingSession) throws -> Bool {
+        guard try usableRecoverableFileURLs(in: session.folderURL).isEmpty else {
+            return false
+        }
+
+        try FileManager.default.removeItemIfExists(at: session.folderURL)
+        AppLogger.file(.info, category: "storage", "discarded empty interrupted session id=\(session.id) folder=\(session.folderURL.path(percentEncoded: false))")
+        return true
+    }
+
     private func write(
         _ metadata: RecordingMetadata,
         metadataURL: URL,

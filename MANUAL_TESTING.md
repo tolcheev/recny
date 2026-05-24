@@ -143,6 +143,13 @@ Known dev-build caveat:
 ```
 
 6. Confirm there is enough free disk space for local audio files.
+7. Confirm Start does not create a recording folder when required preflight checks fail:
+   - missing microphone permission
+   - missing Screen & System Audio Recording permission while system audio is enabled
+   - no available microphone input
+   - output folder not writable
+   - free disk space below 2 GB
+8. After a preflight failure, confirm `Inbox/Unsorted` does not contain a new empty recoverable session.
 
 ## Microphone Selection Policy
 
@@ -662,9 +669,10 @@ Symptom:
 
 Expected behavior:
 
-- MVP mixed preview is created from available source tracks.
-- If one source track is missing, mixed should still be created from the available track.
-- If both source tracks are missing or empty, status should be `failed`.
+- MVP mixed preview may be created from available source tracks for diagnostics.
+- A recording should not be shown as Saved unless required source tracks and `mixed.m4a` exist and are non-empty.
+- If a required source track or `mixed.m4a` is missing, failed, or empty, status should be `failed`.
+- Empty files should produce a human-readable reason: `Empty audio file`.
 
 Fix:
 

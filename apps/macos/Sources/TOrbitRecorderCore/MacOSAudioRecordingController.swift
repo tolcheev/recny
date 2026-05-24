@@ -35,14 +35,18 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
 
         try await ensureMicrophonePermission()
         let microphoneSelection = try selectMicrophoneInput(settings: settings)
+        var pendingStore: FileSystemRecordingStore?
+        var pendingSession: RecordingSession?
 
         do {
             let startDate = Date()
             let store = FileSystemRecordingStore(rootURL: outputFolder)
+            pendingStore = store
             let session = try store.startSession(
                 startedAt: startDate,
                 source: source
             )
+            pendingSession = session
 
             let micSegmentURL = session.segmentsURL.appendingPathComponent("mic-0001.m4a")
             let systemSegmentURL = session.segmentsURL.appendingPathComponent("system-0001.m4a")
@@ -94,6 +98,10 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 session: session
             )
         } catch {
+            if let pendingStore,
+               let pendingSession {
+                _ = try? pendingStore.discardSessionIfEmpty(pendingSession)
+            }
             microphoneInputOverride?.restore()
             microphoneInputOverride = nil
             selectedMicrophoneDevice = nil
@@ -137,9 +145,9 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         let micSegmentURL = activeSession.segmentsURL.appendingPathComponent("mic-0001.m4a")
         let systemSegmentURL = activeSession.segmentsURL.appendingPathComponent("system-0001.m4a")
 
-        try finalizeSegmentIfUsable(from: micSegmentURL, to: micURL)
+        try finalizeSegmentIfPresent(from: micSegmentURL, to: micURL)
         if runtimeSettings.systemAudioEnabled {
-            try finalizeSegmentIfUsable(from: systemSegmentURL, to: systemURL)
+            try finalizeSegmentIfPresent(from: systemSegmentURL, to: systemURL)
         }
 
         var audioTracks: [AudioTrackMetadata] = []
@@ -183,7 +191,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             )
         }
 
-        let sessionStatus: TaggingStatus
+        var sessionStatus: TaggingStatus
         var recoveryError: String?
         if !runtimeSettings.mixedPreviewEnabled {
             audioTracks.append(
@@ -263,6 +271,22 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             balancedMixedURL: balancedMixedURL,
             audioTracks: &audioTracks
         )
+        let finalization = RecordingFinalizationPolicy.finalize(
+            duration: duration,
+            preferredStatus: sessionStatus,
+            shortRecordingThresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds,
+            requiredTrackKinds: requiredTrackKindsForFinalization(),
+            audioTracks: audioTracks
+        )
+        if finalization.status == .failed {
+            recoveryError = recoveryError ?? finalization.failureReason
+            AppLogger.file(
+                .error,
+                category: "recording",
+                "recording finalized as failed reason=\(finalization.failureReason ?? "unknown") id=\(activeSession.id)"
+            )
+        }
+        sessionStatus = finalization.status
 
         try updateRecoveryMetadata(
             for: activeSession,
@@ -565,6 +589,9 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 error: error
             )
         } catch {
+            let errorMessage = RecordingFinalizationPolicy.isEmptyAudioFailureMessage(String(describing: error))
+                ? RecordingFinalizationPolicy.emptyAudioFileReason
+                : String(describing: error)
             AppLogger.file(.error, category: "recording", "\(kind) audio file failed integrity check path=\(path) error=\(String(describing: error))")
             return AudioTrackMetadata(
                 kind: kind,
@@ -576,7 +603,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 channels: channels,
                 bitrate: bitrate,
                 status: "failed",
-                error: String(describing: error)
+                error: errorMessage
             )
         }
     }
@@ -605,20 +632,25 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         return size.int64Value
     }
 
-    private func finalizeSegmentIfUsable(from segmentURL: URL, to finalURL: URL) throws {
+    private func finalizeSegmentIfPresent(from segmentURL: URL, to finalURL: URL) throws {
         let segmentPath = segmentURL.path(percentEncoded: false)
         guard FileManager.default.fileExists(atPath: segmentPath) else {
             return
         }
 
-        let attributes = try FileManager.default.attributesOfItem(atPath: segmentPath)
-        let size = attributes[.size] as? NSNumber
-        guard let size, size.int64Value > 0 else {
-            return
-        }
-
         try FileManager.default.removeItemIfExists(at: finalURL)
         try FileManager.default.copyItem(at: segmentURL, to: finalURL)
+    }
+
+    private func requiredTrackKindsForFinalization() -> [String] {
+        var requiredTrackKinds = ["microphone"]
+        if runtimeSettings.systemAudioEnabled {
+            requiredTrackKinds.append("system")
+        }
+        if runtimeSettings.mixedPreviewEnabled {
+            requiredTrackKinds.append("mixed")
+        }
+        return requiredTrackKinds
     }
 
     private func updateRecoveryMetadata(

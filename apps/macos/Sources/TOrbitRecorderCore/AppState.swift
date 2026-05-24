@@ -38,6 +38,7 @@ public final class AppState: ObservableObject {
 
     private let recordingController: RecordingController
     private let permissionChecker: RecordingPermissionChecking
+    private let preflightChecker: RecordingPreflightChecking
     private let microphoneDeviceProvider: () -> [MicrophoneInputDevice]
     private var recordingStore: FileSystemRecordingStore
     private let activeApplicationDetector: ActiveApplicationDetecting
@@ -94,6 +95,7 @@ public final class AppState: ObservableObject {
         audioActivityDetector: AudioActivityDetecting? = nil,
         permissionChecker: RecordingPermissionChecking? = nil,
         microphoneDeviceProvider: @escaping () -> [MicrophoneInputDevice] = MicrophoneDeviceProvider.availableInputDevices,
+        preflightChecker: RecordingPreflightChecking? = nil,
         autoStartSettings: AutoStartSettings? = nil,
         appSettings: AppSettings = AppSettingsStore.load()
     ) {
@@ -107,6 +109,7 @@ public final class AppState: ObservableObject {
 
         self.recordingController = recordingController ?? MacOSAudioRecordingController()
         self.permissionChecker = permissionChecker ?? SystemRecordingPermissionChecker()
+        self.preflightChecker = preflightChecker ?? DefaultRecordingPreflightChecker()
         self.outputFolderURL = resolvedSettings.storage.rootFolderURL
         self.activeApplicationDetector = activeApplicationDetector ?? WorkspaceActiveApplicationDetector()
         self.audioActivityDetector = audioActivityDetector ?? CoreAudioActivityDetector()
@@ -191,19 +194,7 @@ public final class AppState: ObservableObject {
             refreshMicrophoneDevices()
             refreshPermissionSnapshot()
 
-            guard isRecordingStartAllowed else {
-                let message = recordingStartBlockingReason ?? "Required recording permissions are not ready."
-                let error = RecordingControllerError.preflightFailed(message)
-                applyError(error)
-                AppLogger.recording.error("Recording preflight failed before session creation: \(message, privacy: .public)")
-                AppLogger.file(.error, category: "permissions", "recording preflight failed: \(message)")
-                throw error
-            }
-
-            try FileManager.default.createDirectory(
-                at: outputFolderURL,
-                withIntermediateDirectories: true
-            )
+            try preflightChecker.validate(recordingPreflightContext())
 
             let update = try await recordingController.startRecording(
                 outputFolder: outputFolderURL,
@@ -219,6 +210,16 @@ public final class AppState: ObservableObject {
             startDurationClock()
             AppLogger.recording.info("Recording state changed to recording. trigger=\(source.trigger, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), rule_id=\(source.ruleID, privacy: .public)")
             AppLogger.file(.info, category: "recording", "recording start trigger=\(source.trigger) app=\(source.appName) bundle_id=\(source.bundleID) rule_id=\(source.ruleID) output_root=\(outputFolderPath) selected_mic=\(selectedMicrophoneName)")
+        } catch let error as RecordingControllerError {
+            applyError(error)
+            if case .preflightFailed(let message) = error {
+                AppLogger.recording.error("Recording preflight failed before session creation: \(message, privacy: .public)")
+                AppLogger.file(.error, category: "preflight", "recording preflight failed message=\(message)")
+            } else {
+                AppLogger.recording.error("Failed to start recording: \(String(describing: error), privacy: .public)")
+                AppLogger.file(.error, category: "recording", "recording failure during start error=\(String(describing: error))")
+            }
+            throw error
         } catch {
             applyError(error)
             AppLogger.recording.error("Failed to start recording: \(String(describing: error), privacy: .public)")
@@ -897,6 +898,18 @@ public final class AppState: ObservableObject {
             audioLevelingMode: recordingSettings.audioLevelingMode,
             shortRecordingThresholdSeconds: autoStartSettings.shortRecordingThresholdSeconds,
             preferredMicrophoneDeviceID: recordingSettings.microphoneDeviceID
+        )
+    }
+
+    private func recordingPreflightContext() -> RecordingPreflightContext {
+        RecordingPreflightContext(
+            permissionSnapshot: permissionSnapshot,
+            systemAudioEnabled: recordingSettings.systemAudioEnabled,
+            outputFolderURL: outputFolderURL,
+            availableMicrophoneDevices: availableMicrophoneDevices,
+            preferredMicrophoneDeviceID: recordingSettings.microphoneDeviceID,
+            systemAudioCaptureAvailable: ScreenCaptureKitSystemAudioRecorder.isSystemAudioCaptureAvailable,
+            isRecordingActive: status == .recording
         )
     }
 

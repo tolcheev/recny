@@ -80,35 +80,44 @@ State transitions must be logged with timestamps and session id.
 ## Start Flow
 
 1. Receive a start request from the autostart controller or UI.
-2. Create a stable session id.
-3. Resolve the session staging path.
-4. Create `source/`, `source/segments/`, `export/`, and `recovery.json`.
-5. Check microphone permission.
+2. Run preflight before creating any recording session folder:
+   - microphone permission granted
+   - Screen & System Audio Recording permission granted when system audio is enabled
+   - deterministic microphone selection resolves to an available input device
+   - output root exists and is writable
+   - free disk space is at least 2 GB
+   - no active recording session is already running
+3. Create a stable session id.
+4. Resolve the session staging path.
+5. Create `source/`, `source/segments/`, `export/`, and `recovery.json`.
 6. Resolve the microphone input device using the deterministic input policy and temporarily select only that input device for the microphone writer.
 7. Start ScreenCaptureKit system audio writer at `source/segments/system-0001.m4a`.
 8. Start microphone writer at `source/segments/mic-0001.m4a`.
-9. Emit a lifecycle log event.
+9. Emit a lifecycle log event and switch UI state to `recording`.
 
-If any required permission or capture path fails, the engine must write failure metadata when possible and classify the session under `Inbox/Failed/`.
+If preflight fails, the app must not create a recording folder or recoverable session. If writer startup fails after staging has begun, empty staged folders are discarded; only staged sessions with usable audio files or segments are left for recovery.
 
 ## Stop Flow
 
 1. Stop accepting new audio buffers.
 2. Close segment writers.
-3. Copy usable segment files into final source files:
+3. Copy present segment files into final source files:
    `source/segments/mic-0001.m4a` -> `source/mic.m4a`;
    `source/segments/system-0001.m4a` -> `source/system.m4a`.
 4. Mark `recovery.json` as `completed`.
 5. Validate source files with existence and size checks.
 6. Create `export/mixed.m4a` from the available source tracks.
-7. Compute duration and file sizes where possible.
-8. Analyze completed source tracks for basic signal metadata: signal presence, approximate silence ratio, and clipping.
-9. Classify short sessions when below the configured short-recording threshold.
-10. Write final `metadata.json`.
-11. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
+7. Create `export/mixed_balanced.m4a` when Audio Leveling is enabled.
+8. Compute duration and file sizes where possible.
+9. Analyze completed source tracks for basic signal metadata: signal presence, approximate silence ratio, and clipping.
+10. Validate required outputs. A required source or mixed file that is missing, failed, or 0 bytes makes the recording status `failed` with reason `Empty audio file` or `Missing audio file`.
+11. Classify short sessions when below the configured short-recording threshold.
+12. Write final `metadata.json`.
+13. Update the SQLite index.
+14. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
 
 Recordings shorter than the configured short-recording threshold are finalized with metadata status `short_recording`, moved under `Inbox/Short/`, and kept indexed for review. The MVP default threshold is 60 seconds and can be changed from Settings. Failed finalization uses `failed` and `Inbox/Failed/` when metadata can be written.
-12. Emit a final lifecycle log event.
+15. Emit a final lifecycle log event.
 
 ## Crash Recovery
 
@@ -150,7 +159,7 @@ metadata.json
 recovery.json
 ```
 
-If one source track is missing, the mixed preview must be created from the available track. If both source tracks are missing or unusable, the session status must be `failed`.
+The mixed preview can still be created from whichever readable source tracks are available, but the recording is not shown as saved unless all required MVP outputs pass integrity checks. If a required source track or `mixed.m4a` is missing, failed, or empty, the session status is `failed`.
 
 ## Audio Track Metadata
 

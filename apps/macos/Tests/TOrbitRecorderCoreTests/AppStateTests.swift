@@ -245,6 +245,36 @@ struct AppStateTests {
     }
 
     @Test
+    func preflightBlocksStartWhenFreeDiskSpaceIsBelowMinimum() async {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            microphoneDeviceProvider: {
+                [MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone")]
+            },
+            preflightChecker: DefaultRecordingPreflightChecker(minimumFreeDiskSpaceBytes: .max)
+        )
+
+        await #expect(throws: RecordingControllerError.preflightFailed("At least 2 GB of free disk space is required before recording.")) {
+            try await appState.startRecording()
+        }
+
+        #expect(appState.status == .error)
+        #expect(appState.errorMessage?.contains("At least 2 GB") == true)
+        let unsortedURL = outputFolder.appendingPathComponent("Inbox/Unsorted", isDirectory: true)
+        let sessionFolders = (try? FileManager.default.contentsOfDirectory(
+            at: unsortedURL,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        #expect(sessionFolders.isEmpty)
+        #expect(
+            (try? FileSystemRecordingStore(rootURL: outputFolder).recoverableSessions().isEmpty) == true
+        )
+    }
+
+    @Test
     func autoMicrophoneRefreshUpdatesNextRecordingButNotActiveRecording() async throws {
         var devices = [
             MicrophoneInputDevice(id: "airpods", name: "AirPods Pro"),
