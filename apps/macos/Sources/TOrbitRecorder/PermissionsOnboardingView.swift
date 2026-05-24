@@ -21,7 +21,6 @@ struct PermissionsOnboardingView: View {
 
 struct PermissionChecklistContent: View {
     @ObservedObject var appState: AppState
-    @State private var showsReopenInstruction = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -90,18 +89,16 @@ struct PermissionChecklistContent: View {
                         NSApp.terminate(nil)
                     }
 
-                    Button("Open App Again") {
-                        showsReopenInstruction.toggle()
+                    Button("Restart App") {
+                        PermissionActionHandler.restartApp()
                     }
                 }
 
-                if showsReopenInstruction {
-                    Text(PermissionOnboardingFormatter.reopenInstruction(bundlePath: Bundle.main.bundleURL.path(percentEncoded: false)))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
-                }
+                Text(PermissionOnboardingFormatter.reopenInstruction(bundlePath: Bundle.main.bundleURL.path(percentEncoded: false)))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
             }
         }
         .accessibilityElement(children: .contain)

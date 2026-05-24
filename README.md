@@ -189,7 +189,7 @@ rm -rf ~/Recordings/TOrbitRecorder
 
 ## Troubleshooting
 
-Permissions are tied to the app bundle that macOS sees. For manual testing, install and run the same bundle every time:
+Permissions are tied to the app bundle and code-signing identity that macOS sees. Dev packages are ad-hoc signed with the stable identifier `com.torbit.recorder`; install and run the same bundle every time:
 
 ```sh
 ./scripts/install_macos.sh
@@ -212,6 +212,8 @@ open /Applications/TOrbitRecorder.app
 ```
 
 macOS often requires a process restart after this permission changes. The app now blocks duplicate launches and points you back to the already-running copy.
+
+If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`.
 
 Grant permissions in:
 

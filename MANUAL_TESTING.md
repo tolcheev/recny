@@ -225,7 +225,7 @@ If Screen & System Audio Recording is missing:
 1. Click `Open Screen & System Audio Recording Settings`.
 2. Enable `TOrbitRecorder`.
 3. Return to the app.
-4. If the app shows `Permission is enabled. Restart TOrbitRecorder to apply it.`, quit the app from the onboarding button or menu bar.
+4. If the app shows `Permission is enabled. Restart TOrbitRecorder to apply it.`, click `Restart App` in onboarding or quit from the menu bar.
 5. Reopen the same app bundle shown by onboarding. Normal manual test path:
 
 ```sh
@@ -240,6 +240,8 @@ open /Applications/TOrbitRecorder.app
 ```
 
 When testing Screen & System Audio Recording, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted. This is why permission can look enabled in System Settings while the currently running process still reports missing access.
+
+Dev packages are ad-hoc signed with the stable identifier `com.torbit.recorder`. If you previously approved an older unsigned/hash-signed build and the prompt still appears, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`.
 
 For normal manual testing, prefer `/Applications/TOrbitRecorder.app` over `.build/app/TOrbitRecorder.app`.
 

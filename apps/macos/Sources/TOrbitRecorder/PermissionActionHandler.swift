@@ -65,11 +65,36 @@ enum PermissionActionHandler {
         }
     }
 
+    static func restartApp() {
+        let bundlePath = Bundle.main.bundleURL.path(percentEncoded: false)
+        let reopenedBundlePath = FileManager.default.fileExists(atPath: "/Applications/TOrbitRecorder.app")
+            ? "/Applications/TOrbitRecorder.app"
+            : bundlePath
+        let shellCommand = "sleep 0.8; open \(shellQuoted(reopenedBundlePath))"
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", shellCommand]
+
+        do {
+            try process.run()
+            AppLogger.file(.info, category: "permissions", "restart requested bundle=\(reopenedBundlePath)")
+        } catch {
+            AppLogger.file(.error, category: "permissions", "restart launch failed bundle=\(reopenedBundlePath) error=\(String(describing: error))")
+        }
+
+        NSApp.terminate(nil)
+    }
+
     private static func openSystemSettings(_ rawURL: String) {
         guard let url = URL(string: rawURL) else {
             return
         }
 
         NSWorkspace.shared.open(url)
+    }
+
+    private static func shellQuoted(_ value: String) -> String {
+        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 }

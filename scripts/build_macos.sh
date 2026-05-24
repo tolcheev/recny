@@ -39,7 +39,10 @@ set_plist_value "TORbitAppVersion" "string" "$APP_DISPLAY_VERSION"
 set_plist_value "TORbitBuildDate" "string" "$BUILD_DATE"
 set_plist_value "TORbitGitCommit" "string" "$GIT_COMMIT"
 
+codesign --force --sign - --timestamp=none --identifier "com.torbit.recorder" "$APP_DIR"
+
 echo "Built $APP_DIR"
 echo "Version: $APP_DISPLAY_VERSION"
 echo "Build date: $BUILD_DATE"
 echo "Git commit: $GIT_COMMIT"
+echo "Code sign identifier: com.torbit.recorder"

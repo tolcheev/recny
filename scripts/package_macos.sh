@@ -55,7 +55,9 @@ Grant permissions to the same app bundle you will keep using:
 5. Enable TOrbitRecorder.
 6. Quit and reopen TOrbitRecorder after changing Screen & System Audio Recording.
 
-If the toggle is enabled but the app still reports a missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. During development, avoid switching between `.build/app`, `dist/`, and `/Applications` because macOS permissions are tied to the launched app bundle.
+If the toggle is enabled but the app still reports a missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. During development, avoid switching between `.build/app`, `dist/`, and `/Applications` because macOS permissions are tied to the launched app bundle and code-signing identity.
+
+Dev packages are ad-hoc signed with the stable identifier `com.torbit.recorder`. If you approved an older unsigned/hash-signed build, toggle `TOrbitRecorder` off and on again once, then restart `/Applications/TOrbitRecorder.app`.
 
 ## Restart After Permissions
 
