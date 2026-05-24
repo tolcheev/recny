@@ -9,6 +9,7 @@ struct LibraryView: View {
     @State private var filtersExpanded = false
     @State private var dateFromText = ""
     @State private var dateToText = ""
+    @State private var selectedAudioHealthFilter: AudioHealthStatus?
     @State private var selectedRecordingID: String?
     @State private var tagDraft: PostCallDraft?
     @State private var deleteCandidate: RecordingSummary?
@@ -60,6 +61,9 @@ struct LibraryView: View {
         .onChange(of: dateToText) { _, _ in
             ensureSelectionVisible()
         }
+        .onChange(of: selectedAudioHealthFilter) { _, _ in
+            ensureSelectionVisible()
+        }
         .onChange(of: appState.recordings) { _, _ in
             ensureSelectionVisible()
         }
@@ -87,7 +91,7 @@ struct LibraryView: View {
                 deleteCandidate = nil
             }
         } message: {
-            Text("This removes metadata, SQLite index entry, and local audio files for this recording.")
+            Text("This removes audio files and metadata.")
         }
         .confirmationDialog(
             "Balanced audio already exists",
@@ -255,8 +259,21 @@ struct LibraryView: View {
                         }
                     }
 
-                    Color.clear
-                    Color.clear
+                    Text("Audio")
+                        .foregroundStyle(.secondary)
+                    Picker(
+                        "Audio health",
+                        selection: Binding(
+                            get: { selectedAudioHealthFilter?.rawValue ?? "" },
+                            set: { selectedAudioHealthFilter = AudioHealthStatus(rawValue: $0) }
+                        )
+                    ) {
+                        Text("Any").tag("")
+                        Text(RecordingDisplayFormatter.audioHealthBadgeText(.good)).tag(AudioHealthStatus.good.rawValue)
+                        Text(RecordingDisplayFormatter.audioHealthBadgeText(.warning)).tag(AudioHealthStatus.warning.rawValue)
+                        Text(RecordingDisplayFormatter.audioHealthBadgeText(.failed)).tag(AudioHealthStatus.failed.rawValue)
+                    }
+                    .labelsHidden()
                 }
             }
 
@@ -340,6 +357,9 @@ struct LibraryView: View {
                     onEdit: {
                         openTagEditor(for: selectedRecording)
                     },
+                    onShowAnalysis: {
+                        openIfExists(selectedRecording.audioAnalysisURL)
+                    },
                     onDelete: {
                         deleteCandidate = selectedRecording
                     }
@@ -388,12 +408,17 @@ struct LibraryView: View {
     }
 
     private var displayedRecordings: [RecordingSummary] {
-        let filtered = appState.recordings.filter {
-            LibraryRecordingFilter.matches(
-                $0,
+        let filtered = appState.recordings.filter { recording in
+            let metadata = metadata(for: recording)
+            return LibraryRecordingFilter.matches(
+                recording,
                 query: searchText,
                 dateFromText: dateFromText,
                 dateToText: dateToText
+            )
+            && LibraryRecordingFilter.matchesAudioHealth(
+                metadata?.audio.health.status ?? .good,
+                selectedStatus: selectedAudioHealthFilter
             )
         }
 
@@ -405,6 +430,7 @@ struct LibraryView: View {
             || appState.recordingFilters.status != nil
             || !appState.recordingFilters.sourceAppText.isEmpty
             || !appState.recordingFilters.tags.isEmpty
+            || selectedAudioHealthFilter != nil
             || !dateFromText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || !dateToText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -421,6 +447,7 @@ struct LibraryView: View {
         searchText = ""
         dateFromText = ""
         dateToText = ""
+        selectedAudioHealthFilter = nil
         appState.clearRecordingFilters()
         ensureSelectionVisible()
     }
@@ -681,7 +708,7 @@ private struct LibraryRecordingRow: View {
                     Divider()
 
                     Button(action: onEdit) {
-                        Label("Tag", systemImage: "tag")
+                        Label("Edit / Tag", systemImage: "tag")
                     }
 
                     Divider()
@@ -752,6 +779,7 @@ private struct LibraryRecordingDetailsPanel: View {
     let onPlay: () -> Void
     let onOpen: () -> Void
     let onEdit: () -> Void
+    let onShowAnalysis: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -801,9 +829,14 @@ private struct LibraryRecordingDetailsPanel: View {
                     }
 
                     Button(action: onEdit) {
-                        Label("Tag", systemImage: "tag")
+                        Label("Edit / Tag", systemImage: "tag")
                     }
                 }
+
+                Button(action: onShowAnalysis) {
+                    Label("Show Audio Analysis", systemImage: "doc.text.magnifyingglass")
+                }
+                .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
 
                 Button(role: .destructive, action: onDelete) {
                     Label("Delete", systemImage: "trash")
@@ -891,6 +924,7 @@ private struct LibraryRecordingDetailsPanel: View {
 
             detailRow("Playback", RecordingDisplayFormatter.audioProcessingCopy(state: playbackState))
             detailRow("Health", RecordingDisplayFormatter.audioHealthBadgeText(metadata?.audio.health.status ?? .good))
+            detailRow("Analysis", analysisSummary)
             detailRow("Mic gain", gainText(metadata?.audio.processing.microphoneGainDB))
             detailRow("System gain", gainText(metadata?.audio.processing.systemGainDB))
 
@@ -922,6 +956,12 @@ private struct LibraryRecordingDetailsPanel: View {
         let processingWarnings = metadata?.audio.processing.warnings ?? []
         var seen = Set<String>()
         return (qualityWarnings + processingWarnings).filter { seen.insert($0).inserted }
+    }
+
+    private var analysisSummary: String {
+        RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil
+            ? "Missing"
+            : "Available"
     }
 
     private var audioHealthDetails: [String] {

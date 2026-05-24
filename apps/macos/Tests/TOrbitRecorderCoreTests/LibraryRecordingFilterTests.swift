@@ -49,4 +49,12 @@ struct LibraryRecordingFilterTests {
         #expect(!LibraryRecordingFilter.matches(recording, dateFromText: "2026-05-23", dateToText: ""))
         #expect(!LibraryRecordingFilter.matches(recording, dateFromText: "", dateToText: "2026-05-21"))
     }
+
+    @Test
+    func audioHealthFilterMatchesSelectedStatusOnly() {
+        #expect(LibraryRecordingFilter.matchesAudioHealth(.good, selectedStatus: nil))
+        #expect(LibraryRecordingFilter.matchesAudioHealth(.warning, selectedStatus: .warning))
+        #expect(!LibraryRecordingFilter.matchesAudioHealth(.good, selectedStatus: .warning))
+        #expect(!LibraryRecordingFilter.matchesAudioHealth(.failed, selectedStatus: .warning))
+    }
 }

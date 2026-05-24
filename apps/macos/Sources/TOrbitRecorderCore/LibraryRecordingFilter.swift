@@ -11,6 +11,17 @@ public enum LibraryRecordingFilter {
             && matchesDateRange(recording, fromText: dateFromText, toText: dateToText)
     }
 
+    public static func matchesAudioHealth(
+        _ status: AudioHealthStatus,
+        selectedStatus: AudioHealthStatus?
+    ) -> Bool {
+        guard let selectedStatus else {
+            return true
+        }
+
+        return status == selectedStatus
+    }
+
     private static func matchesQuery(_ recording: RecordingSummary, query: String) -> Bool {
         let tokens = query
             .split(whereSeparator: { $0.isWhitespace })

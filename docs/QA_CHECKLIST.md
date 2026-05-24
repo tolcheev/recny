@@ -158,6 +158,7 @@ plutil -p metadata.json
 - [ ] Library shows recent recordings.
 - [ ] Library search works for title, participant, tags, and source app.
 - [ ] Library filters are collapsed by default.
+- [ ] Library filters include status, date range, source app, tags, and audio health.
 - [ ] Settings opens.
 - [ ] Settings -> About shows version, build date, commit hash, and local storage path.
 - [ ] Diagnostics opens.
@@ -171,6 +172,8 @@ plutil -p metadata.json
 - [ ] Tags save to `metadata.json`.
 - [ ] Tags save to SQLite and appear in Library.
 - [ ] Library details show marker timestamps and labels for recordings with markers.
+- [ ] Library details show audio health, gain values, and audio analysis availability.
+- [ ] Library details can open `analysis/audio_analysis.json` when it exists.
 
 ## 6. Auto-Start
 

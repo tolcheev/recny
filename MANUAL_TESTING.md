@@ -482,16 +482,18 @@ Check collapsed filters:
 - date range
 - source app
 - tags
+- audio health
 
 Check actions:
 
 - Open recording folder
 - Play mixed preview
-- Edit title/participant/tags through the Tag dialog
+- Edit title/participant/tags through the Edit / Tag dialog
 - Add/remove tags in the tag dialog
+- Show Audio Analysis from details when `analysis/audio_analysis.json` exists
 - Delete local record with confirmation
 
-Delete should remove the local session folder and the SQLite index row.
+Delete confirmation should say `This removes audio files and metadata.` Delete should remove the local session folder and the SQLite index row.
 
 ## Short Recording
 
