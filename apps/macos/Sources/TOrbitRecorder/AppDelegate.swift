@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureStatusItem()
         bindState()
         appState.startAutoStartMonitoring()
+        appState.startMicrophoneDeviceMonitoring()
         AppLogger.app.info("TOrbitRecorder launched")
     }
 

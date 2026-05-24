@@ -26,6 +26,7 @@ struct DiagnosticsView: View {
         }
         .frame(minWidth: 700, minHeight: 560)
         .onAppear {
+            appState.refreshMicrophoneDevices()
             appState.refreshPermissionSnapshot()
             try? appState.reloadRecoverableRecordings()
         }
@@ -78,6 +79,16 @@ struct DiagnosticsView: View {
                     }
                 }
 
+                DiagnosticLine(
+                    label: "Recommended input",
+                    value: RecordingDisplayFormatter.microphoneName(appState.recommendedMicrophoneName)
+                )
+
+                DiagnosticLine(
+                    label: "Reason",
+                    value: appState.microphoneSelectionReason
+                )
+
                 if let warning = appState.microphoneInputWarning {
                     Text(warning)
                         .font(.caption)
@@ -95,9 +106,17 @@ struct DiagnosticsView: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(appState.availableMicrophoneDevices) { device in
-                            Text(device.name)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            HStack(spacing: 8) {
+                                Text(device.name)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+
+                                Spacer()
+
+                                DeviceRoleBadge(text: appState.microphoneDeviceLabel(for: device))
+                            }
                         }
                     }
                 }

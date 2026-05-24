@@ -217,6 +217,42 @@ struct AppStateTests {
         #expect(appState.recordingStartBlockingReason == "The recordings folder must be writable before recording.")
     }
 
+    @Test
+    func autoMicrophoneRefreshUpdatesNextRecordingButNotActiveRecording() async throws {
+        var devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods Pro"),
+            MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone")
+        ]
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted,
+            microphoneDeviceProvider: { devices }
+        )
+
+        #expect(appState.selectedMicrophoneName == "MacBook Pro Microphone")
+        #expect(appState.recommendedMicrophoneName == "MacBook Pro Microphone")
+        #expect(appState.microphoneSelectionReason == "AirPods microphone avoided because built-in microphone is available.")
+
+        try await appState.startRecording()
+
+        devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods Pro"),
+            MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone"),
+            MicrophoneInputDevice(id: "shure", name: "Shure MV7")
+        ]
+        appState.refreshMicrophoneDevices()
+
+        #expect(appState.selectedMicrophoneName == "MacBook Pro Microphone")
+        #expect(appState.recommendedMicrophoneName == "Shure MV7")
+
+        try await appState.stopRecording()
+        appState.refreshMicrophoneDevices()
+
+        #expect(appState.selectedMicrophoneName == "Shure MV7")
+        #expect(appState.microphoneSelectionReason == "AirPods microphone avoided because external microphone is available.")
+    }
+
     private static func testOutputFolder() -> URL {
         let packageRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

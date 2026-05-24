@@ -31,6 +31,33 @@ struct DevicePriorityResolverTests {
     }
 
     @Test
+    func airPodsAndMacBookSelectsMacBookWithAvoidanceReason() throws {
+        let devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods Pro 2"),
+            MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone")
+        ]
+
+        let selection = try #require(DevicePriorityResolver.resolve(devices: devices, preferredDeviceID: nil))
+
+        #expect(selection.device.id == "builtin")
+        #expect(selection.warning == nil)
+        #expect(DevicePriorityResolver.selectionReason(devices: devices, selection: selection, preferredDeviceID: nil) == "AirPods microphone avoided because built-in microphone is available.")
+    }
+
+    @Test
+    func airPodsAndShureSelectsShure() throws {
+        let devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods"),
+            MicrophoneInputDevice(id: "shure", name: "Shure MV7")
+        ]
+
+        let selection = try #require(DevicePriorityResolver.resolve(devices: devices, preferredDeviceID: nil))
+
+        #expect(selection.device.id == "shure")
+        #expect(DevicePriorityResolver.selectionReason(devices: devices, selection: selection, preferredDeviceID: nil) == "AirPods microphone avoided because external microphone is available.")
+    }
+
+    @Test
     func bluetoothHeadsetIsOnlyFallbackWhenNoOtherInputExists() throws {
         let devices = [
             MicrophoneInputDevice(id: "airpods", name: "AirPods Pro")
@@ -41,6 +68,8 @@ struct DevicePriorityResolverTests {
         #expect(selection.device.id == "airpods")
         #expect(selection.isBluetoothFallback)
         #expect(selection.warning == DevicePriorityResolver.bluetoothFallbackWarning)
+        #expect(selection.warning == "Bluetooth microphone is used. Audio quality may be degraded.")
+        #expect(DevicePriorityResolver.displayLabel(for: selection.device, recommendedDeviceID: selection.device.id) == "Bluetooth fallback")
     }
 
     @Test
@@ -57,6 +86,19 @@ struct DevicePriorityResolverTests {
     }
 
     @Test
+    func hollylandWinsOverMacBook() throws {
+        let devices = [
+            MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone"),
+            MicrophoneInputDevice(id: "hollyland", name: "Hollyland Lark M2")
+        ]
+
+        let selection = try #require(DevicePriorityResolver.resolve(devices: devices, preferredDeviceID: nil))
+
+        #expect(selection.device.id == "hollyland")
+        #expect(DevicePriorityResolver.displayLabel(for: selection.device, recommendedDeviceID: selection.device.id) == "Recommended")
+    }
+
+    @Test
     func preferredExternalDeviceIsHonored() throws {
         let devices = [
             MicrophoneInputDevice(id: "usb", name: "USB Microphone"),
@@ -66,6 +108,7 @@ struct DevicePriorityResolverTests {
         let selection = try #require(DevicePriorityResolver.resolve(devices: devices, preferredDeviceID: "hollyland"))
 
         #expect(selection.device.id == "hollyland")
+        #expect(DevicePriorityResolver.selectionReason(devices: devices, selection: selection, preferredDeviceID: "hollyland") == "Manual microphone selection is available.")
     }
 
     @Test
@@ -75,5 +118,12 @@ struct DevicePriorityResolverTests {
         )
 
         #expect(category == .bluetoothHeadset)
+    }
+
+    @Test
+    func labelsBuiltInDeviceForSettingsList() {
+        let device = MicrophoneInputDevice(id: "builtin", name: "Built-in Microphone")
+
+        #expect(DevicePriorityResolver.displayLabel(for: device, recommendedDeviceID: "shure") == "Built-in")
     }
 }

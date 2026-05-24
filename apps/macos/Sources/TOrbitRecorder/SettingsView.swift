@@ -18,6 +18,9 @@ struct SettingsView: View {
         }
         .frame(width: 660, height: 680)
         .background(Color(nsColor: .windowBackgroundColor))
+        .onAppear {
+            appState.refreshMicrophoneDevices()
+        }
     }
 
     private var recordingSection: some View {
@@ -42,9 +45,13 @@ struct SettingsView: View {
             ) {
                 Text("Auto, recommended").tag(DevicePriorityResolver.autoRecommendedID)
                 ForEach(appState.availableMicrophoneDevices) { device in
-                    Text(device.name).tag(device.id)
+                    Text("\(device.name) · \(appState.microphoneDeviceLabel(for: device))").tag(device.id)
                 }
             }
+
+            Text("Auto prefers external or built-in mic. Avoids AirPods mic.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             HStack(spacing: 8) {
                 Text("Selected: \(appState.selectedMicrophoneName)")
@@ -65,6 +72,27 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.orange)
                     .textSelection(.enabled)
+            }
+
+            if !appState.availableMicrophoneDevices.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Available inputs")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+
+                    ForEach(appState.availableMicrophoneDevices) { device in
+                        HStack(spacing: 8) {
+                            Text(device.name)
+                                .font(.caption)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+
+                            Spacer()
+
+                            DeviceRoleBadge(text: appState.microphoneDeviceLabel(for: device))
+                        }
+                    }
+                }
             }
 
             Toggle(
@@ -285,6 +313,33 @@ private struct SettingsSection<Content: View>: View {
         } label: {
             Text(title)
                 .font(.headline)
+        }
+    }
+}
+
+struct DeviceRoleBadge: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.12), in: Capsule())
+            .lineLimit(1)
+    }
+
+    private var color: Color {
+        switch text {
+        case "Recommended":
+            return .green
+        case "Built-in":
+            return .blue
+        case "Bluetooth fallback":
+            return .orange
+        default:
+            return .secondary
         }
     }
 }

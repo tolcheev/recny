@@ -39,7 +39,7 @@ public enum DevicePriorityCategory: Int, Sendable {
 
 public enum DevicePriorityResolver {
     public static let autoRecommendedID = ""
-    public static let bluetoothFallbackWarning = "Only Bluetooth headset microphone is available. Recording quality may be degraded."
+    public static let bluetoothFallbackWarning = "Bluetooth microphone is used. Audio quality may be degraded."
 
     public static func resolve(
         devices: [MicrophoneInputDevice],
@@ -85,6 +85,69 @@ public enum DevicePriorityResolver {
         }
 
         return .otherInput
+    }
+
+    public static func displayLabel(
+        for device: MicrophoneInputDevice,
+        recommendedDeviceID: String?
+    ) -> String {
+        if device.id == recommendedDeviceID {
+            return category(for: device) == .bluetoothHeadset ? "Bluetooth fallback" : "Recommended"
+        }
+
+        switch category(for: device) {
+        case .preferredExternal:
+            return "Available"
+        case .builtIn:
+            return "Built-in"
+        case .bluetoothHeadset:
+            return "Bluetooth fallback"
+        case .otherInput:
+            return "Available"
+        }
+    }
+
+    public static func selectionReason(
+        devices: [MicrophoneInputDevice],
+        selection: MicrophoneDeviceSelection?,
+        preferredDeviceID: String?
+    ) -> String {
+        guard let selection else {
+            return "No microphone input devices are available."
+        }
+
+        let available = devices.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let hasBluetooth = available.contains(where: isBluetoothHeadset)
+        let selectedCategory = category(for: selection.device)
+
+        if selection.isBluetoothFallback {
+            return "Only Bluetooth microphone is available."
+        }
+
+        if let preferredDeviceID,
+           !preferredDeviceID.isEmpty,
+           selection.device.id == preferredDeviceID {
+            return "Manual microphone selection is available."
+        }
+
+        if hasBluetooth, selectedCategory == .preferredExternal {
+            return "AirPods microphone avoided because external microphone is available."
+        }
+
+        if hasBluetooth, selectedCategory == .builtIn {
+            return "AirPods microphone avoided because built-in microphone is available."
+        }
+
+        switch selectedCategory {
+        case .preferredExternal:
+            return "Auto selected the best external microphone."
+        case .builtIn:
+            return "Auto selected the built-in microphone."
+        case .otherInput:
+            return "Auto selected the best available input."
+        case .bluetoothHeadset:
+            return "Only Bluetooth microphone is available."
+        }
     }
 
     public static func isBluetoothHeadset(_ device: MicrophoneInputDevice) -> Bool {

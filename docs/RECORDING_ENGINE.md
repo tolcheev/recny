@@ -43,10 +43,12 @@ Default selection is `Auto, recommended`:
 If the selected input is the Bluetooth fallback, the app must show:
 
 ```text
-Only Bluetooth headset microphone is available. Recording quality may be degraded.
+Bluetooth microphone is used. Audio quality may be degraded.
 ```
 
 The selected microphone name is visible in the main recorder UI and can be overridden from Settings > Recording > Preferred microphone. A preferred Bluetooth headset microphone is ignored while a non-Bluetooth microphone is available.
+
+Settings labels each available input as `Recommended`, `Built-in`, `Bluetooth fallback`, or `Available`. Diagnostics shows the selected input, the recommended Auto input, and the reason for the current selection. Device changes are refreshed while the app runs; Auto can pick a newly connected external microphone for the next recording, but the active recording input is not changed mid-session.
 
 ## Session State Model
 

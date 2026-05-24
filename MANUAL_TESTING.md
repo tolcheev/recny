@@ -84,6 +84,34 @@ Dock behavior:
 
 6. Confirm there is enough free disk space for local audio files.
 
+## Microphone Selection Policy
+
+1. Open Settings -> Recording.
+2. Confirm Preferred microphone defaults to `Auto, recommended`.
+3. Confirm the helper copy says Auto prefers external or built-in mics and avoids AirPods mic.
+4. Confirm available inputs are labeled as `Recommended`, `Built-in`, `Bluetooth fallback`, or `Available`.
+5. Open Diagnostics and confirm it shows:
+   - Selected input
+   - Recommended input
+   - Reason
+
+AirPods check:
+
+1. Connect AirPods.
+2. Keep the MacBook microphone available.
+3. Click Refresh in Settings or Diagnostics.
+4. Confirm Main shows `Mic: MacBook Pro Microphone`, not AirPods.
+5. Confirm Diagnostics reason says AirPods microphone was avoided because a built-in microphone is available.
+
+External mic check:
+
+1. Connect Shure MV7, Hollyland, USB microphone, or an audio interface.
+2. Keep Preferred microphone on `Auto, recommended`.
+3. Click Refresh or wait a few seconds for device refresh.
+4. Confirm Main shows the external microphone name.
+5. Start a recording, then connect another microphone.
+6. Confirm the active recording input does not change mid-recording; the new best input can be selected for the next recording.
+
 ## Permissions
 
 On first launch, the app shows a permissions onboarding panel if anything needed for recording is missing. The panel checks:
@@ -368,8 +396,10 @@ Fix:
 
 1. Open Settings -> Recording -> Preferred microphone.
 2. Keep `Auto, recommended` unless you need a specific external microphone.
-3. Click Refresh.
-4. Confirm the main window shows `Mic: MacBook Pro Microphone` or the external mic name while AirPods remain connected for output.
+3. Confirm AirPods is labeled `Bluetooth fallback`.
+4. Click Refresh.
+5. Confirm the main window shows `Mic: MacBook Pro Microphone` or the external mic name while AirPods remain connected for output.
+6. If AirPods is the only available input, confirm the main window shows `Bluetooth microphone is used. Audio quality may be degraded.`
 
 ### Mixed File Missing One Side
 

@@ -132,7 +132,7 @@ struct RecordingStatusCard: View {
 
             if let warning = appState.microphoneInputWarning {
                 Label(
-                    "Bluetooth headset microphone is available, but built-in or external microphone is preferred for better quality.",
+                    warning,
                     systemImage: "exclamationmark.triangle"
                 )
                 .font(.caption)

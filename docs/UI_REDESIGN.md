@@ -56,6 +56,8 @@ UI v3 keeps the main window as a compact recorder surface instead of a library d
 
 The main screen no longer shows file sizes, folder names, raw metadata, recoverable sessions, filters, or a recording list. Those details remain in Library and Diagnostics.
 
+Microphone selection stays visible without exposing device internals: the main screen shows the selected input name and only shows a warning when Bluetooth fallback is actually used.
+
 ### Idle
 
 The center recording area shows:
@@ -119,6 +121,8 @@ Diagnostics is separate from daily use. It includes:
 - Screen & System Audio Recording permission
 - output folder writable status
 - selected input device
+- recommended input device
+- microphone selection reason
 - available input devices
 - Bluetooth headset microphone warning when relevant
 - last recorder error

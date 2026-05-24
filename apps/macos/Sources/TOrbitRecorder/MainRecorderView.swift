@@ -28,6 +28,7 @@ struct MainRecorderView: View {
         )
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
+            appState.refreshMicrophoneDevices()
             appState.refreshPermissionSnapshot()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in

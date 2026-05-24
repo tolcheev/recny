@@ -25,17 +25,21 @@ public final class AppState: ObservableObject {
     @Published public private(set) var outputFolderURL: URL
     @Published public private(set) var availableMicrophoneDevices: [MicrophoneInputDevice]
     @Published public private(set) var selectedMicrophoneName: String
+    @Published public private(set) var recommendedMicrophoneName: String
     @Published public private(set) var microphoneInputWarning: String?
+    @Published public private(set) var microphoneSelectionReason: String
     @Published public private(set) var permissionSnapshot: RecorderPermissionSnapshot
 
     private let recordingController: RecordingController
     private let permissionChecker: RecordingPermissionChecking
+    private let microphoneDeviceProvider: () -> [MicrophoneInputDevice]
     private var recordingStore: FileSystemRecordingStore
     private let activeApplicationDetector: ActiveApplicationDetecting
     private let audioActivityDetector: AudioActivityDetecting
     private var recordingStartedAt: Date?
     private var durationTask: Task<Void, Never>?
     private var autoStartTask: Task<Void, Never>?
+    private var microphoneDeviceTask: Task<Void, Never>?
     private var autoStartEngine: AutoStartEngine
     private var lastRecordingStoppedAt: Date?
     private var lastAutoStartDecisionLogKey: String?
@@ -82,6 +86,7 @@ public final class AppState: ObservableObject {
         activeApplicationDetector: ActiveApplicationDetecting? = nil,
         audioActivityDetector: AudioActivityDetecting? = nil,
         permissionChecker: RecordingPermissionChecking? = nil,
+        microphoneDeviceProvider: @escaping () -> [MicrophoneInputDevice] = MicrophoneDeviceProvider.availableInputDevices,
         autoStartSettings: AutoStartSettings? = nil,
         appSettings: AppSettings = AppSettingsStore.load()
     ) {
@@ -98,6 +103,7 @@ public final class AppState: ObservableObject {
         self.outputFolderURL = resolvedSettings.storage.rootFolderURL
         self.activeApplicationDetector = activeApplicationDetector ?? WorkspaceActiveApplicationDetector()
         self.audioActivityDetector = audioActivityDetector ?? CoreAudioActivityDetector()
+        self.microphoneDeviceProvider = microphoneDeviceProvider
         self.status = .idle
         self.currentRecordingDuration = 0
         self.micStatus = .idle
@@ -117,14 +123,24 @@ public final class AppState: ObservableObject {
         self.hotkeySettings = resolvedSettings.hotkeys
         self.privacySettings = resolvedSettings.privacy
         self.autoStartLastDecision = "not_checked"
-        let availableMicrophoneDevices = MicrophoneDeviceProvider.availableInputDevices()
+        let availableMicrophoneDevices = microphoneDeviceProvider()
         self.availableMicrophoneDevices = availableMicrophoneDevices
+        let recommendedMicrophoneSelection = Self.resolveMicrophoneSelection(
+            devices: availableMicrophoneDevices,
+            preferredDeviceID: nil
+        )
         let microphoneSelection = Self.resolveMicrophoneSelection(
             devices: availableMicrophoneDevices,
             preferredDeviceID: resolvedSettings.recording.microphoneDeviceID
         )
+        self.recommendedMicrophoneName = recommendedMicrophoneSelection?.device.name ?? "No input device"
         self.selectedMicrophoneName = microphoneSelection?.device.name ?? "No input device"
         self.microphoneInputWarning = microphoneSelection?.warning
+        self.microphoneSelectionReason = DevicePriorityResolver.selectionReason(
+            devices: availableMicrophoneDevices,
+            selection: microphoneSelection,
+            preferredDeviceID: resolvedSettings.recording.microphoneDeviceID
+        )
         self.permissionSnapshot = .unknown
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
@@ -137,6 +153,7 @@ public final class AppState: ObservableObject {
     deinit {
         durationTask?.cancel()
         autoStartTask?.cancel()
+        microphoneDeviceTask?.cancel()
     }
 
     public func startRecording() async throws {
@@ -351,8 +368,8 @@ public final class AppState: ObservableObject {
     }
 
     public func refreshMicrophoneDevices() {
-        availableMicrophoneDevices = MicrophoneDeviceProvider.availableInputDevices()
-        refreshSelectedMicrophone()
+        availableMicrophoneDevices = microphoneDeviceProvider()
+        refreshSelectedMicrophone(allowSelectionChange: status != .recording)
     }
 
     public func refreshPermissionSnapshot() {
@@ -370,8 +387,19 @@ public final class AppState: ObservableObject {
 
     public func setPreferredMicrophoneDeviceID(_ deviceID: String?) {
         recordingSettings.microphoneDeviceID = deviceID?.isEmpty == true ? nil : deviceID
-        refreshSelectedMicrophone()
+        refreshSelectedMicrophone(allowSelectionChange: status != .recording)
         saveSettings()
+    }
+
+    public func microphoneDeviceLabel(for device: MicrophoneInputDevice) -> String {
+        let recommendedDeviceID = Self.resolveMicrophoneSelection(
+            devices: availableMicrophoneDevices,
+            preferredDeviceID: nil
+        )?.device.id
+        return DevicePriorityResolver.displayLabel(
+            for: device,
+            recommendedDeviceID: recommendedDeviceID
+        )
     }
 
     public func resetStorageRootToDefault() {
@@ -425,6 +453,34 @@ public final class AppState: ObservableObject {
     public func stopAutoStartMonitoring() {
         autoStartTask?.cancel()
         autoStartTask = nil
+    }
+
+    public func startMicrophoneDeviceMonitoring(pollIntervalSeconds: TimeInterval = 5) {
+        guard microphoneDeviceTask == nil else {
+            return
+        }
+
+        let interval = UInt64(max(1, pollIntervalSeconds) * 1_000_000_000)
+        microphoneDeviceTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else {
+                    return
+                }
+
+                self.refreshMicrophoneDevices()
+
+                do {
+                    try await Task.sleep(nanoseconds: interval)
+                } catch {
+                    return
+                }
+            }
+        }
+    }
+
+    public func stopMicrophoneDeviceMonitoring() {
+        microphoneDeviceTask?.cancel()
+        microphoneDeviceTask = nil
     }
 
     public func evaluateAutoStartNow(now: Date = Date()) async {
@@ -649,13 +705,28 @@ public final class AppState: ObservableObject {
         )
     }
 
-    private func refreshSelectedMicrophone() {
+    private func refreshSelectedMicrophone(allowSelectionChange: Bool = true) {
+        let recommendedSelection = Self.resolveMicrophoneSelection(
+            devices: availableMicrophoneDevices,
+            preferredDeviceID: nil
+        )
+        recommendedMicrophoneName = recommendedSelection?.device.name ?? "No input device"
+
+        guard allowSelectionChange else {
+            return
+        }
+
         let selection = Self.resolveMicrophoneSelection(
             devices: availableMicrophoneDevices,
             preferredDeviceID: recordingSettings.microphoneDeviceID
         )
         selectedMicrophoneName = selection?.device.name ?? "No input device"
         microphoneInputWarning = selection?.warning
+        microphoneSelectionReason = DevicePriorityResolver.selectionReason(
+            devices: availableMicrophoneDevices,
+            selection: selection,
+            preferredDeviceID: recordingSettings.microphoneDeviceID
+        )
     }
 
     private static func resolveMicrophoneSelection(
