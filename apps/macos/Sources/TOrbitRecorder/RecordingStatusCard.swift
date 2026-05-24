@@ -128,7 +128,7 @@ struct RecordingStatusCard: View {
                     recordingStatus: appState.status
                 )
             )
-            summaryText(label: "Auto-start", value: appState.autoStartSettings.isEnabled ? "On" : "Off")
+            summaryText(label: "Auto-start", value: autoStartSummary)
 
             if let warning = appState.microphoneInputWarning {
                 Label(
@@ -154,6 +154,17 @@ struct RecordingStatusCard: View {
         .truncationMode(.middle)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label), \(value)")
+    }
+
+    private var autoStartSummary: String {
+        switch appState.autoStartSettings.mode {
+        case .off:
+            return "Off"
+        case .askFirst:
+            return "Ask first"
+        case .auto:
+            return "On"
+        }
     }
 
     private func startRecording() {

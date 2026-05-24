@@ -45,7 +45,14 @@ struct FileSystemRecordingStoreTests {
         let store = FileSystemRecordingStore(rootURL: root)
         let session = try store.startSession(
             startedAt: Date(timeIntervalSince1970: 1_716_468_000),
-            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+            source: RecordingSource(
+                appName: "Zoom",
+                bundleID: "us.zoom.xos",
+                trigger: "autostart",
+                ruleID: "autostart.v2.zoom",
+                confidence: "high",
+                reason: "Zoom active with microphone activity."
+            )
         )
         try Data([1, 2, 3]).write(to: session.segmentsURL.appendingPathComponent("mic-0001.m4a"))
 
@@ -79,7 +86,14 @@ struct FileSystemRecordingStoreTests {
         let store = FileSystemRecordingStore(rootURL: root)
         let session = try store.startSession(
             startedAt: Date(timeIntervalSince1970: 1_716_468_000),
-            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+            source: RecordingSource(
+                appName: "Zoom",
+                bundleID: "us.zoom.xos",
+                trigger: "autostart",
+                ruleID: "autostart.v2.zoom",
+                confidence: "high",
+                reason: "Zoom active with microphone activity."
+            )
         )
         try Data([1, 2, 3]).write(to: session.sourceURL.appendingPathComponent("mic.m4a"))
 
@@ -379,7 +393,14 @@ struct FileSystemRecordingStoreTests {
         let store = FileSystemRecordingStore(rootURL: root)
         let session = try store.startSession(
             startedAt: Date(timeIntervalSince1970: 1_716_468_000),
-            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+            source: RecordingSource(
+                appName: "Zoom",
+                bundleID: "us.zoom.xos",
+                trigger: "autostart",
+                ruleID: "autostart.v2.zoom",
+                confidence: "high",
+                reason: "Zoom active with microphone activity."
+            )
         )
         let endedAt = Date(timeIntervalSince1970: 1_716_468_120)
 
@@ -405,6 +426,8 @@ struct FileSystemRecordingStoreTests {
         #expect(latest.systemFileSizeBytes == 22)
         #expect(latest.mixedFileSizeBytes == 33)
         #expect(latest.mixedPreviewState == "Ready")
+        #expect(latest.startConfidence == "high")
+        #expect(latest.startReason == "Zoom active with microphone activity.")
     }
 
     private static func testOutputFolder() -> URL {

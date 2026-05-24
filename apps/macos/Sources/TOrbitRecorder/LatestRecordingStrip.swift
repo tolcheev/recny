@@ -56,7 +56,19 @@ struct LatestRecordingStrip: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color(nsColor: .separatorColor).opacity(0.18), lineWidth: 1)
         )
+        .help(latestHelpText)
         .accessibilityElement(children: .contain)
+    }
+
+    private var latestHelpText: String {
+        var parts = [recording.folderName]
+        if let startConfidence = recording.startConfidence {
+            parts.append("Confidence: \(startConfidence)")
+        }
+        if let startReason = recording.startReason {
+            parts.append("Reason: \(startReason)")
+        }
+        return parts.joined(separator: "\n")
     }
 
     private func playMixed() {

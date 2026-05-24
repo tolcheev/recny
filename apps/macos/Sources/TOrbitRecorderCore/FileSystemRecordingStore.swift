@@ -345,7 +345,9 @@ public final class FileSystemRecordingStore {
             mixedFileSizeBytes: fileSize(from: mixedTrack, fallbackURL: summary.sessionFolderURL.appendingPathComponent("export/mixed.m4a")),
             micTrackStatus: micTrack?.status,
             systemTrackStatus: systemTrack?.status,
-            mixedTrackStatus: mixedTrack?.status
+            mixedTrackStatus: mixedTrack?.status,
+            startConfidence: metadata.source.confidence,
+            startReason: metadata.source.reason
         )
     }
 

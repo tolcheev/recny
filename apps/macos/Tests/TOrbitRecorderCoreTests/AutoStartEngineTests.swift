@@ -46,11 +46,59 @@ struct AutoStartEngineTests {
         #expect(second.recordingSource?.appName == "Zoom")
         #expect(second.recordingSource?.bundleID == "us.zoom.xos")
         #expect(second.recordingSource?.trigger == "autostart")
-        #expect(second.recordingSource?.ruleID == "autostart.v1")
+        #expect(second.recordingSource?.ruleID == "autostart.v2.zoom")
+        #expect(second.recordingSource?.confidence == "high")
+        #expect(second.recordingSource?.reason == "Zoom active with microphone activity.")
     }
 
     @Test
-    func browserRequiresSystemAudioActivity() {
+    func browserCallTitleStartsAfterMinimumDetectionDuration() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Google Chrome"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Google Chrome",
+            bundleID: "com.google.Chrome",
+            windowTitle: "QA mentorship - Google Meet"
+        )
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        let first = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt
+            ),
+            settings: settings
+        )
+        #expect(first.action == .wait)
+
+        let second = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt.addingTimeInterval(15)
+            ),
+            settings: settings
+        )
+
+        #expect(second.action == .start)
+        #expect(second.recordingSource?.ruleID == "autostart.v2.browser_title")
+        #expect(second.recordingSource?.confidence == "high")
+        #expect(second.recordingSource?.reason == "Browser call detected from active window title.")
+    }
+
+    @Test
+    func browserWithoutTitleFallsBackToMediumConfidenceHeuristic() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(
             isEnabled: true,
@@ -60,11 +108,56 @@ struct AutoStartEngineTests {
             minDetectionDurationSeconds: 15
         )
         let activeApp = ActiveApplicationSnapshot(name: "Google Chrome", bundleID: "com.google.Chrome")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        _ = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt
+            ),
+            settings: settings
+        )
 
         let decision = engine.evaluate(
             AutoStartEvaluationContext(
                 activeApplication: activeApp,
-                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt.addingTimeInterval(15)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.browser_fallback")
+        #expect(decision.recordingSource?.confidence == "medium")
+        #expect(decision.recordingSource?.reason == "Browser call inferred from microphone and system audio activity.")
+    }
+
+    @Test
+    func browserSystemAudioOnlyDoesNotStart() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Google Chrome"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Google Chrome",
+            bundleID: "com.google.Chrome",
+            windowTitle: "YouTube - Music"
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
                 isAlreadyRecording: false,
                 lastStoppedAt: nil,
                 now: Date(timeIntervalSince1970: 1_716_468_000)
@@ -73,7 +166,110 @@ struct AutoStartEngineTests {
         )
 
         #expect(decision.action == .ignore)
-        #expect(decision.reason == .systemAudioInactive)
+        #expect(decision.reason == .microphoneInactive)
+        #expect(decision.confidence == "low")
+    }
+
+    @Test
+    func browserYouTubeTitleWithNoMicDoesNotStart() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Google Chrome"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Google Chrome",
+            bundleID: "com.google.Chrome",
+            windowTitle: "YouTube - SwiftUI tutorial"
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .microphoneInactive)
+        #expect(decision.message.contains("YouTube"))
+    }
+
+    @Test
+    func browserYouTubeTitleWithMicAndSystemDoesNotStartWhenTitleIsAvailable() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Google Chrome"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Google Chrome",
+            bundleID: "com.google.Chrome",
+            windowTitle: "YouTube - Live stream"
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .browserTitleNotCall)
+    }
+
+    @Test
+    func askFirstModeReturnsAskInsteadOfStart() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            mode: .askFirst,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(name: "Zoom", bundleID: "us.zoom.xos")
+        let now = Date(timeIntervalSince1970: 1_716_468_000)
+
+        _ = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: now
+            ),
+            settings: settings
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: now.addingTimeInterval(15)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ask)
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom")
     }
 
     @Test

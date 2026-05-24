@@ -249,7 +249,7 @@ With default settings, the short recording threshold is 60 seconds.
 ## Auto-Start: Zoom
 
 1. Open Settings -> Auto-start.
-2. Confirm Auto-start is enabled.
+2. Set Mode to `Auto`.
 3. Confirm Zoom or `us.zoom.xos` is in the whitelist.
 4. Confirm Zoom is not in the blacklist.
 5. Open Zoom and join or start a call.
@@ -263,25 +263,45 @@ With default settings, the short recording threshold is 60 seconds.
 source.app_name = Zoom
 source.bundle_id = us.zoom.xos
 source.trigger = autostart
-source.rule_id = autostart.v1
+source.rule_id = autostart.v2.zoom
+source.confidence = high
+source.reason = Zoom active with microphone activity.
 ```
 
-Known caveat: V1 treats Zoom as a known call app, so system audio activity is not required for the direct-call-app shortcut.
+Known caveat: V2 treats Zoom as a known call app, so system audio activity is not required for the direct-call-app shortcut.
 
 ## Auto-Start: Browser Heuristic
 
 1. Open Settings -> Auto-start.
-2. Confirm the browser is in the whitelist: Google Chrome, Safari, Firefox, Yandex Browser, or Microsoft Edge.
-3. Confirm the browser is not in the blacklist.
-4. Open a browser-based call or any page that uses microphone input.
-5. Ensure system audio is active in the browser or another app.
-6. Keep the browser active in the foreground.
-7. Wait for the configured detection duration.
-8. Confirm recording starts automatically.
-9. Stop recording.
-10. Confirm metadata has `source.trigger = autostart`.
+2. Set Mode to `Auto`.
+3. Confirm the browser is in the whitelist: Google Chrome, Safari, Firefox, Yandex Browser, or Microsoft Edge.
+4. Confirm the browser is not in the blacklist.
+5. Open a browser-based call whose window title includes a call-like word, such as Meet, Zoom, Teams, Interview, Call, or Встреча.
+6. Speak into the microphone.
+7. Ensure system audio is active in the browser or another app.
+8. Keep the browser active in the foreground.
+9. Wait for the configured detection duration.
+10. Confirm recording starts automatically.
+11. Stop recording.
+12. Confirm metadata has `source.trigger = autostart` and `source.rule_id = autostart.v2.browser_title`.
 
-Known caveat: V1 does not inspect URLs or meeting rooms. Browser auto-start requires active browser, microphone activity, and system audio activity.
+False positive check:
+
+1. Open a YouTube/video page in a whitelisted browser.
+2. Play system audio without microphone activity.
+3. Confirm recording does not start.
+4. If microphone activity is present and the title is available but does not look call-like, confirm recording still does not start.
+
+Known caveat: V2 does not inspect URLs or meeting rooms. If the active browser window title is unavailable, browser fallback can still start from microphone + system audio activity with medium confidence.
+
+## Auto-Start: Ask First
+
+1. Open Settings -> Auto-start.
+2. Set Mode to `Ask first`.
+3. Trigger a Zoom or browser-call signal.
+4. Wait for the configured detection duration.
+5. Confirm the app notifies that a call was detected but does not start recording automatically.
+6. Start recording manually from the main window or menu bar if the call should be recorded.
 
 ## Permission Error Check
 

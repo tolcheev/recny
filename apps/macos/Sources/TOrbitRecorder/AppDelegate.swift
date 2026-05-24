@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import SwiftUI
 import TOrbitRecorderCore
+import UserNotifications
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -19,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyActivationPolicy()
         configureStatusItem()
         bindState()
+        requestNotificationAuthorization()
         appState.startAutoStartMonitoring()
         appState.startMicrophoneDeviceMonitoring()
         AppLogger.app.info("TOrbitRecorder launched")
@@ -155,6 +157,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .store(in: &cancellables)
+
+        appState.$autoStartNotificationMessage
+            .compactMap { $0 }
+            .receive(on: RunLoop.main)
+            .sink { [weak self] message in
+                self?.deliverNotification(message)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func requestNotificationAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error {
+                AppLogger.app.error("Notification authorization failed: \(String(describing: error), privacy: .public)")
+            } else {
+                AppLogger.app.info("Notification authorization status: \(granted, privacy: .public)")
+            }
+        }
+    }
+
+    private func deliverNotification(_ message: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "TOrbit Recorder"
+        content.body = message
+        content.sound = nil
+
+        let request = UNNotificationRequest(
+            identifier: "torbit-recorder-autostart-\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                AppLogger.app.error("Failed to deliver notification: \(String(describing: error), privacy: .public)")
+            }
+        }
     }
 
     private func refreshMenuState() {

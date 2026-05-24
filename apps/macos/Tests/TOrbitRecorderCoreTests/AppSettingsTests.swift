@@ -12,6 +12,7 @@ struct AppSettingsTests {
         #expect(settings.recording.mixedPreviewEnabled)
         #expect(settings.recording.microphoneDeviceID == nil)
         #expect(settings.autoStart.isEnabled)
+        #expect(settings.autoStart.mode == .auto)
         #expect(settings.autoStart.cooldownSeconds == 180)
         #expect(settings.autoStart.minDetectionDurationSeconds == 20)
         #expect(settings.autoStart.shortRecordingThresholdSeconds == 60)
@@ -31,7 +32,7 @@ struct AppSettingsTests {
         settings.recording.systemAudioEnabled = false
         settings.recording.mixedPreviewEnabled = false
         settings.autoStart = AutoStartSettings(
-            isEnabled: false,
+            mode: .askFirst,
             whitelist: ["Zoom"],
             blacklist: ["Discord"],
             cooldownSeconds: 240,
@@ -47,7 +48,8 @@ struct AppSettingsTests {
 
         #expect(loaded.recording.systemAudioEnabled == false)
         #expect(loaded.recording.mixedPreviewEnabled == false)
-        #expect(loaded.autoStart.isEnabled == false)
+        #expect(loaded.autoStart.mode == .askFirst)
+        #expect(loaded.autoStart.isEnabled)
         #expect(loaded.autoStart.whitelist == ["Zoom"])
         #expect(loaded.autoStart.blacklist == ["Discord"])
         #expect(loaded.autoStart.cooldownSeconds == 240)
@@ -77,6 +79,28 @@ struct AppSettingsTests {
         #expect(settings.showRecordingIndicator == false)
         #expect(settings.showFocusModeReminder)
         #expect(settings.showDockIcon)
+    }
+
+    @Test
+    func autoStartSettingsDecodeLegacyEnabledPayload() throws {
+        let json = """
+        {
+          "isEnabled": false,
+          "whitelist": ["Zoom"],
+          "blacklist": [],
+          "cooldownSeconds": 180,
+          "minDetectionDurationSeconds": 20,
+          "shortRecordingThresholdSeconds": 60
+        }
+        """
+
+        let settings = try JSONDecoder().decode(
+            AutoStartSettings.self,
+            from: try #require(json.data(using: .utf8))
+        )
+
+        #expect(settings.mode == .off)
+        #expect(!settings.isEnabled)
     }
 
     private static func makeDefaults() throws -> UserDefaults {

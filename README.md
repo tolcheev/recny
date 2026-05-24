@@ -120,7 +120,7 @@ open /Applications/TOrbitRecorder.app
 
 Use `dist/` for shareable local artifacts and `/Applications/TOrbitRecorder.app` for a normal macOS launch. Do not use `apps/macos/.build/app/TOrbitRecorder.app` except when debugging the build script output directly.
 
-Current recording implementation starts from the menu bar UI or Auto-start Engine v1 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows.
+Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows.
 
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
 

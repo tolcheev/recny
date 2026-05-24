@@ -52,11 +52,22 @@ struct MainRecorderView: View {
             Spacer()
 
             StatusBadge(
-                text: appState.autoStartSettings.isEnabled ? "Auto-start On" : "Auto-start Off",
+                text: autoStartBadgeText,
                 tone: appState.autoStartSettings.isEnabled ? .ready : .neutral
             )
 
             headerStatusIndicator
+        }
+    }
+
+    private var autoStartBadgeText: String {
+        switch appState.autoStartSettings.mode {
+        case .off:
+            return "Auto-start Off"
+        case .askFirst:
+            return "Auto-start Ask"
+        case .auto:
+            return "Auto-start On"
         }
     }
 

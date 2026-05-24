@@ -134,8 +134,10 @@ Deleting a local record removes the session folder and the SQLite index row. It 
   "source": {
     "app_name": "Zoom",
     "bundle_id": "us.zoom.xos",
-    "trigger": "app_active",
-    "rule_id": "local.enabled_app.zoom"
+    "trigger": "autostart",
+    "rule_id": "autostart.v2.zoom",
+    "confidence": "high",
+    "reason": "Zoom active with microphone activity."
   },
   "audio_tracks": [
     {

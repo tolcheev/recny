@@ -55,8 +55,10 @@
   "source": {
     "app_name": "Zoom",
     "bundle_id": "us.zoom.xos",
-    "rule_id": "local.enabled_app.zoom",
-    "trigger": "manual"
+    "confidence": "high",
+    "reason": "Zoom active with microphone activity.",
+    "rule_id": "autostart.v2.zoom",
+    "trigger": "autostart"
   },
   "started_at": "2026-05-23T14:30:00Z",
   "status": "needs_tagging",

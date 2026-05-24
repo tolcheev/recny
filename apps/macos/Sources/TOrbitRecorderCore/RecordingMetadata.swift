@@ -30,17 +30,23 @@ public struct RecordingSource: Codable, Equatable, Sendable {
     public var bundleID: String
     public var trigger: String
     public var ruleID: String
+    public var confidence: String?
+    public var reason: String?
 
     public init(
         appName: String = "Manual",
         bundleID: String = "com.torbit.recorder",
         trigger: String = "manual",
-        ruleID: String = "manual.stub"
+        ruleID: String = "manual.stub",
+        confidence: String? = nil,
+        reason: String? = nil
     ) {
         self.appName = appName
         self.bundleID = bundleID
         self.trigger = trigger
         self.ruleID = ruleID
+        self.confidence = confidence
+        self.reason = reason
     }
 
     enum CodingKeys: String, CodingKey {
@@ -48,6 +54,8 @@ public struct RecordingSource: Codable, Equatable, Sendable {
         case bundleID = "bundle_id"
         case trigger
         case ruleID = "rule_id"
+        case confidence
+        case reason
     }
 }
 
@@ -275,6 +283,8 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     public let micTrackStatus: String?
     public let systemTrackStatus: String?
     public let mixedTrackStatus: String?
+    public let startConfidence: String?
+    public let startReason: String?
 
     public var mixedAudioURL: URL {
         sessionFolderURL

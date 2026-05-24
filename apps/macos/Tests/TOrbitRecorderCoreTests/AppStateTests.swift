@@ -126,7 +126,9 @@ struct AppStateTests {
         #expect(metadata.source.appName == "Zoom")
         #expect(metadata.source.bundleID == "us.zoom.xos")
         #expect(metadata.source.trigger == "autostart")
-        #expect(metadata.source.ruleID == "autostart.v1")
+        #expect(metadata.source.ruleID == "autostart.v2.zoom")
+        #expect(metadata.source.confidence == "high")
+        #expect(metadata.source.reason == "Zoom active with microphone activity.")
     }
 
     @Test

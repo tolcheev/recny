@@ -80,7 +80,7 @@ MVP metadata must include:
 - `ended_at`
 - `duration_sec`
 - `recording_mode`
-- source app name, bundle id, trigger, and rule id
+- source app name, bundle id, trigger, rule id, confidence, and reason
 - audio tracks
 - participants
 - tags

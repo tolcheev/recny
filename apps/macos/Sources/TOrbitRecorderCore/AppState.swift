@@ -22,6 +22,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var hotkeySettings: HotkeySettings
     @Published public private(set) var privacySettings: PrivacySettings
     @Published public private(set) var autoStartLastDecision: String
+    @Published public private(set) var autoStartNotificationMessage: String?
     @Published public private(set) var outputFolderURL: URL
     @Published public private(set) var availableMicrophoneDevices: [MicrophoneInputDevice]
     @Published public private(set) var selectedMicrophoneName: String
@@ -123,6 +124,7 @@ public final class AppState: ObservableObject {
         self.hotkeySettings = resolvedSettings.hotkeys
         self.privacySettings = resolvedSettings.privacy
         self.autoStartLastDecision = "not_checked"
+        self.autoStartNotificationMessage = nil
         let availableMicrophoneDevices = microphoneDeviceProvider()
         self.availableMicrophoneDevices = availableMicrophoneDevices
         let recommendedMicrophoneSelection = Self.resolveMicrophoneSelection(
@@ -305,6 +307,12 @@ public final class AppState: ObservableObject {
         }
     }
 
+    public func setAutoStartMode(_ mode: AutoStartMode) {
+        updateAutoStartSettings { settings in
+            settings.mode = mode
+        }
+    }
+
     public func setAutoStartWhitelist(_ whitelist: [String]) {
         updateAutoStartSettings { settings in
             settings.whitelist = normalizedAppList(whitelist)
@@ -320,7 +328,7 @@ public final class AppState: ObservableObject {
     public func setAutoStartCooldownSeconds(_ seconds: TimeInterval) {
         updateAutoStartSettings { settings in
             settings = AutoStartSettings(
-                isEnabled: settings.isEnabled,
+                mode: settings.mode,
                 whitelist: settings.whitelist,
                 blacklist: settings.blacklist,
                 cooldownSeconds: seconds,
@@ -333,7 +341,7 @@ public final class AppState: ObservableObject {
     public func setAutoStartMinDetectionDurationSeconds(_ seconds: TimeInterval) {
         updateAutoStartSettings { settings in
             settings = AutoStartSettings(
-                isEnabled: settings.isEnabled,
+                mode: settings.mode,
                 whitelist: settings.whitelist,
                 blacklist: settings.blacklist,
                 cooldownSeconds: settings.cooldownSeconds,
@@ -346,7 +354,7 @@ public final class AppState: ObservableObject {
     public func setShortRecordingThresholdSeconds(_ seconds: TimeInterval) {
         updateAutoStartSettings { settings in
             settings = AutoStartSettings(
-                isEnabled: settings.isEnabled,
+                mode: settings.mode,
                 whitelist: settings.whitelist,
                 blacklist: settings.blacklist,
                 cooldownSeconds: settings.cooldownSeconds,
@@ -507,7 +515,17 @@ public final class AppState: ObservableObject {
             settings: autoStartSettings
         )
 
-        applyAutoStartDecision(decision)
+        applyAutoStartDecision(
+            decision,
+            activeApplication: activeApplication,
+            audioActivity: audioActivity,
+            now: now
+        )
+
+        if decision.action == .ask, let source = decision.recordingSource {
+            publishAutoStartNotification("Call detected: \(source.appName)")
+            return
+        }
 
         guard decision.action == .start, let source = decision.recordingSource else {
             return
@@ -515,9 +533,10 @@ public final class AppState: ObservableObject {
 
         do {
             try await startRecording(source: source)
+            publishAutoStartNotification(notificationMessage(for: source))
         } catch {
             applyError(error)
-            AppLogger.recording.error("Auto-start failed: reason=\(decision.reason.rawValue, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), error=\(String(describing: error), privacy: .public)")
+            AppLogger.recording.error("Auto-start failed: reason=\(decision.reason.rawValue, privacy: .public), confidence=\(decision.confidence, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), error=\(String(describing: error), privacy: .public)")
         }
     }
 
@@ -592,7 +611,12 @@ public final class AppState: ObservableObject {
         }
     }
 
-    private func applyAutoStartDecision(_ decision: AutoStartDecision) {
+    private func applyAutoStartDecision(
+        _ decision: AutoStartDecision,
+        activeApplication: ActiveApplicationSnapshot?,
+        audioActivity: AudioActivitySnapshot,
+        now: Date
+    ) {
         autoStartLastDecision = "\(decision.reason.rawValue): \(decision.message)"
         let logKey = "\(decision.action)-\(decision.reason)-\(decision.message)"
         guard decision.action == .start || logKey != lastAutoStartDecisionLogKey else {
@@ -600,7 +624,23 @@ public final class AppState: ObservableObject {
         }
 
         lastAutoStartDecisionLogKey = logKey
-        AppLogger.recording.info("Auto-start decision: action=\(String(describing: decision.action), privacy: .public), reason=\(decision.reason.rawValue, privacy: .public), message=\(decision.message, privacy: .public)")
+        let cooldownRemaining = lastRecordingStoppedAt.map {
+            max(0, autoStartSettings.cooldownSeconds - now.timeIntervalSince($0))
+        } ?? 0
+        AppLogger.recording.info("Auto-start decision: action=\(String(describing: decision.action), privacy: .public), reason=\(decision.reason.rawValue, privacy: .public), confidence=\(decision.confidence, privacy: .public), active_app=\(activeApplication?.name ?? "none", privacy: .public), bundle_id=\(activeApplication?.bundleID ?? "", privacy: .public), mic_active=\(audioActivity.microphoneActive, privacy: .public), system_active=\(audioActivity.systemAudioActive, privacy: .public), cooldown_remaining=\(Int(cooldownRemaining.rounded(.up)), privacy: .public), message=\(decision.message, privacy: .public)")
+    }
+
+    private func publishAutoStartNotification(_ message: String) {
+        autoStartNotificationMessage = nil
+        autoStartNotificationMessage = message
+    }
+
+    private func notificationMessage(for source: RecordingSource) -> String {
+        if source.ruleID.contains("browser") {
+            return "Recording started: browser call detected"
+        }
+
+        return "Recording started: \(source.appName)"
     }
 
     private func applyError(_ error: Error) {
@@ -685,7 +725,7 @@ public final class AppState: ObservableObject {
         var settings = autoStartSettings
         mutate(&settings)
         autoStartSettings = AutoStartSettings(
-            isEnabled: settings.isEnabled,
+            mode: settings.mode,
             whitelist: normalizedAppList(settings.whitelist),
             blacklist: normalizedAppList(settings.blacklist),
             cooldownSeconds: settings.cooldownSeconds,

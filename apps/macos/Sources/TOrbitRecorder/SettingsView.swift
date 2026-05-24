@@ -115,13 +115,22 @@ struct SettingsView: View {
 
     private var autoStartSection: some View {
         SettingsSection(title: "Auto-start") {
-            Toggle(
-                "Auto-start enabled",
-                isOn: Binding(
-                    get: { appState.autoStartSettings.isEnabled },
-                    set: { appState.setAutoStartEnabled($0) }
+            Picker(
+                "Mode",
+                selection: Binding(
+                    get: { appState.autoStartSettings.mode },
+                    set: { appState.setAutoStartMode($0) }
                 )
-            )
+            ) {
+                Text("Off").tag(AutoStartMode.off)
+                Text("Ask first").tag(AutoStartMode.askFirst)
+                Text("Auto").tag(AutoStartMode.auto)
+            }
+            .pickerStyle(.segmented)
+
+            Text("Browser auto-start now looks for call-like window titles when available. YouTube-only browser detection is not perfect without a browser extension.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             TextField(
                 "Whitelist apps",
@@ -140,6 +149,10 @@ struct SettingsView: View {
                 )
             )
             .textFieldStyle(.roundedBorder)
+
+            Text("Optional blacklist hints: \(AutoStartSettings.defaultBlacklistHints.joined(separator: ", ")). Browsers are not blocked globally.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             Stepper(
                 value: Binding(
