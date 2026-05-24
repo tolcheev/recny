@@ -303,6 +303,9 @@ Expected behavior:
 - Main Latest strip shows a `Balanced` badge when balanced playback is ready.
 - Play uses `mixed_balanced.m4a` by default when it exists.
 - Diagnostics -> Audio Processing can play Current and Original.
+- Latest -> More can play Balanced, play Original, open the folder, open `audio_analysis.json`, or tag the recording.
+- Library rows show a compact `Balanced` badge when balanced playback is ready, or `Audio warning` when leveling failed.
+- Library details show original mixed size, balanced mixed size, mic gain, system gain, and audio warnings.
 
 Manual balance check: loud YouTube + quiet voice
 
@@ -329,6 +332,7 @@ Manual balance check: quiet YouTube + loud voice
    - `Play Original` should use `export/mixed.m4a`.
    - `Play Current` should use `export/mixed_balanced.m4a` when available.
 6. Confirm the balanced file does not make the microphone painfully loud.
+7. Use Latest -> More -> Show Audio Analysis and confirm `analysis/audio_analysis.json` opens.
 
 Limits:
 

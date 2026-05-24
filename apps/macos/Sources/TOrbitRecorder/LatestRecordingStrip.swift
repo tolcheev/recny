@@ -23,15 +23,7 @@ struct LatestRecordingStrip: View {
                 .truncationMode(.tail)
                 .accessibilityLabel("Latest recording summary")
 
-                if recording.audioProcessingStatus == .done {
-                    Text("Balanced")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.green)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(.green.opacity(0.12), in: Capsule())
-                        .accessibilityLabel("Audio balanced")
-                }
+                playbackBadge
 
                 Spacer(minLength: 12)
 
@@ -51,12 +43,47 @@ struct LatestRecordingStrip: View {
                     }
                     .accessibilityLabel("Open latest recording folder")
 
-                    Button {
-                        onTag()
+                    Menu {
+                        Button {
+                            openIfExists(recording.balancedMixedAudioURL)
+                        } label: {
+                            Label("Play Balanced", systemImage: "slider.horizontal.3")
+                        }
+                        .disabled(!isNonEmptyFile(recording.balancedMixedAudioURL))
+
+                        Button {
+                            openIfExists(recording.originalMixedAudioURL)
+                        } label: {
+                            Label("Play Original", systemImage: "waveform")
+                        }
+                        .disabled(!isNonEmptyFile(recording.originalMixedAudioURL))
+
+                        Divider()
+
+                        Button {
+                            NSWorkspace.shared.open(recording.sessionFolderURL)
+                        } label: {
+                            Label("Open Folder", systemImage: "folder")
+                        }
+
+                        Button {
+                            openIfExists(recording.audioAnalysisURL)
+                        } label: {
+                            Label("Show Audio Analysis", systemImage: "doc.text.magnifyingglass")
+                        }
+                        .disabled(!isNonEmptyFile(recording.audioAnalysisURL))
+
+                        Divider()
+
+                        Button {
+                            onTag()
+                        } label: {
+                            Label("Tag", systemImage: "tag")
+                        }
                     } label: {
-                        Label("Tag", systemImage: "tag")
+                        Label("More", systemImage: "ellipsis.circle")
                     }
-                    .accessibilityLabel("Tag latest recording")
+                    .accessibilityLabel("More latest recording actions")
                 }
                 .fixedSize()
             }
@@ -112,11 +139,46 @@ struct LatestRecordingStrip: View {
         return parts.joined(separator: "\n")
     }
 
+    private var playbackBadge: some View {
+        Text(RecordingDisplayFormatter.playbackStateText(recording.playbackDisplayState))
+            .font(.caption.weight(.medium))
+            .foregroundStyle(playbackBadgeColor)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(playbackBadgeColor.opacity(0.12), in: Capsule())
+            .accessibilityLabel(RecordingDisplayFormatter.audioProcessingCopy(state: recording.playbackDisplayState))
+    }
+
+    private var playbackBadgeColor: Color {
+        switch recording.playbackDisplayState {
+        case .balancedReady:
+            return .green
+        case .balancedFailed:
+            return .orange
+        case .missing:
+            return .red
+        default:
+            return .secondary
+        }
+    }
+
     private func playMixed() {
         guard recording.mixedPreviewState == "Ready" else {
             return
         }
 
         NSWorkspace.shared.open(recording.mixedAudioURL)
+    }
+
+    private func openIfExists(_ url: URL) {
+        guard isNonEmptyFile(url) else {
+            return
+        }
+
+        NSWorkspace.shared.open(url)
+    }
+
+    private func isNonEmptyFile(_ url: URL) -> Bool {
+        RecordingPlaybackResolver.nonEmptyFileSize(at: url) != nil
     }
 }

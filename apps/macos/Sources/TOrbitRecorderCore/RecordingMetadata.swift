@@ -445,16 +445,21 @@ public struct RecordingSummary: Equatable, Identifiable, Sendable {
     public let sessionFolderURL: URL
 
     public var mixedAudioURL: URL {
-        let balancedURL = sessionFolderURL
-            .appendingPathComponent("export", isDirectory: true)
-            .appendingPathComponent("mixed_balanced.m4a")
-        if FileManager.default.fileExists(atPath: balancedURL.path(percentEncoded: false)) {
-            return balancedURL
-        }
+        RecordingPlaybackResolver.preferredPlayback(
+            sessionFolderURL: sessionFolderURL
+        )?.url ?? originalMixedAudioURL
+    }
 
-        return sessionFolderURL
-            .appendingPathComponent("export", isDirectory: true)
-            .appendingPathComponent("mixed.m4a")
+    public var originalMixedAudioURL: URL {
+        RecordingPlaybackResolver.originalMixedURL(sessionFolderURL: sessionFolderURL)
+    }
+
+    public var balancedMixedAudioURL: URL {
+        RecordingPlaybackResolver.balancedMixedURL(sessionFolderURL: sessionFolderURL)
+    }
+
+    public var audioAnalysisURL: URL {
+        RecordingPlaybackResolver.audioAnalysisURL(sessionFolderURL: sessionFolderURL)
     }
 }
 
@@ -482,26 +487,29 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     public let tags: [String]
 
     public var mixedAudioURL: URL {
-        if audioProcessingStatus == .done || audioProcessingStatus == .partial {
-            let balancedURL = balancedMixedAudioURL
-            if FileManager.default.fileExists(atPath: balancedURL.path(percentEncoded: false)) {
-                return balancedURL
-            }
-        }
-
-        return originalMixedAudioURL
+        RecordingPlaybackResolver.preferredPlayback(
+            sessionFolderURL: sessionFolderURL,
+            processingStatus: audioProcessingStatus
+        )?.url ?? originalMixedAudioURL
     }
 
     public var originalMixedAudioURL: URL {
-        sessionFolderURL
-            .appendingPathComponent("export", isDirectory: true)
-            .appendingPathComponent("mixed.m4a")
+        RecordingPlaybackResolver.originalMixedURL(sessionFolderURL: sessionFolderURL)
     }
 
     public var balancedMixedAudioURL: URL {
-        sessionFolderURL
-            .appendingPathComponent("export", isDirectory: true)
-            .appendingPathComponent("mixed_balanced.m4a")
+        RecordingPlaybackResolver.balancedMixedURL(sessionFolderURL: sessionFolderURL)
+    }
+
+    public var audioAnalysisURL: URL {
+        RecordingPlaybackResolver.audioAnalysisURL(sessionFolderURL: sessionFolderURL)
+    }
+
+    public var playbackDisplayState: RecordingPlaybackDisplayState {
+        RecordingPlaybackResolver.displayState(
+            sessionFolderURL: sessionFolderURL,
+            processingStatus: audioProcessingStatus
+        )
     }
 
     public var displayStatus: String {
@@ -509,7 +517,10 @@ public struct LastRecordingSummary: Equatable, Identifiable, Sendable {
     }
 
     public var mixedPreviewState: String {
-        if balancedMixedTrackStatus == "completed" || (balancedMixedFileSizeBytes ?? 0) > 0 {
+        if RecordingPlaybackResolver.preferredPlayback(
+            sessionFolderURL: sessionFolderURL,
+            processingStatus: audioProcessingStatus
+        ) != nil {
             return "Ready"
         }
 

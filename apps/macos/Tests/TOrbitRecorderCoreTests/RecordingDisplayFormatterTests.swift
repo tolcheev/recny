@@ -71,4 +71,14 @@ struct RecordingDisplayFormatterTests {
             ) == "System audio permission needs app restart or re-approval"
         )
     }
+
+    @Test
+    func formatsPlaybackStateWithoutRawTechnicalStatuses() {
+        #expect(RecordingDisplayFormatter.playbackStateText(.balancedReady) == "Audio: Balanced")
+        #expect(RecordingDisplayFormatter.playbackStateText(.originalOnly) == "Audio: Original")
+        #expect(RecordingDisplayFormatter.playbackStateText(.balancedFailed) == "Audio: Balanced failed")
+        #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .balancedReady) == "Balanced audio ready")
+        #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .levelingSkipped) == "Audio leveling skipped")
+        #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .balancedFailed) == "Audio leveling failed")
+    }
 }

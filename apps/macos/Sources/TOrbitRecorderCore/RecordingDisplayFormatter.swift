@@ -65,6 +65,42 @@ public enum RecordingDisplayFormatter {
         return "Last: \(statusText(status)) · \(Self.duration(duration)) · \(audio)"
     }
 
+    public static func playbackStateText(_ state: RecordingPlaybackDisplayState) -> String {
+        switch state {
+        case .balancedReady:
+            return "Audio: Balanced"
+        case .originalOnly:
+            return "Audio: Original"
+        case .balancedFailed:
+            return "Audio: Balanced failed"
+        case .levelingSkipped:
+            return "Audio: Original"
+        case .fallbackSource(let kind):
+            return "Audio: \(kind.displayName)"
+        case .missing:
+            return "Audio: Missing"
+        }
+    }
+
+    public static func audioProcessingCopy(
+        state: RecordingPlaybackDisplayState
+    ) -> String {
+        switch state {
+        case .balancedReady:
+            return "Balanced audio ready"
+        case .originalOnly:
+            return "Original audio only"
+        case .balancedFailed:
+            return "Audio leveling failed"
+        case .levelingSkipped:
+            return "Audio leveling skipped"
+        case .fallbackSource(let kind):
+            return "\(kind.displayName) available"
+        case .missing:
+            return "Audio missing"
+        }
+    }
+
     public static func duration(_ duration: TimeInterval) -> String {
         let totalSeconds = max(0, Int(duration.rounded(.down)))
         let hours = totalSeconds / 3600

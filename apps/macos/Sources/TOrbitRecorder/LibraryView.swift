@@ -249,6 +249,7 @@ struct LibraryView: View {
                             LibraryRecordingRow(
                                 recording: recording,
                                 audioSummary: audioSummary(for: recording, metadata: metadata),
+                                playbackState: playbackState(for: recording, metadata: metadata),
                                 isSelected: recording.id == selectedRecordingID,
                                 onSelect: {
                                     selectedRecordingID = recording.id
@@ -258,6 +259,15 @@ struct LibraryView: View {
                                 },
                                 onOpen: {
                                     NSWorkspace.shared.open(recording.sessionFolderURL)
+                                },
+                                onPlayBalanced: {
+                                    openIfExists(recording.balancedMixedAudioURL)
+                                },
+                                onPlayOriginal: {
+                                    openIfExists(recording.originalMixedAudioURL)
+                                },
+                                onShowAnalysis: {
+                                    openIfExists(recording.audioAnalysisURL)
                                 },
                                 onEdit: {
                                     openTagEditor(for: recording)
@@ -431,12 +441,34 @@ struct LibraryView: View {
     }
 
     private func playMixedAudio(for recording: RecordingSummary) {
-        guard FileManager.default.fileExists(atPath: recording.mixedAudioURL.path(percentEncoded: false)) else {
-            actionError = "mixed.m4a is missing"
+        guard let playback = RecordingPlaybackResolver.preferredPlayback(
+            sessionFolderURL: recording.sessionFolderURL
+        ) else {
+            actionError = "No playable audio file found"
             return
         }
 
-        NSWorkspace.shared.open(recording.mixedAudioURL)
+        NSWorkspace.shared.open(playback.url)
+        actionError = nil
+    }
+
+    private func playbackState(
+        for recording: RecordingSummary,
+        metadata: RecordingMetadata?
+    ) -> RecordingPlaybackDisplayState {
+        RecordingPlaybackResolver.displayState(
+            sessionFolderURL: recording.sessionFolderURL,
+            processingStatus: metadata?.audio.processing.balancedMixStatus ?? .skipped
+        )
+    }
+
+    private func openIfExists(_ url: URL) {
+        guard RecordingPlaybackResolver.nonEmptyFileSize(at: url) != nil else {
+            actionError = "\(url.lastPathComponent) is missing"
+            return
+        }
+
+        NSWorkspace.shared.open(url)
         actionError = nil
     }
 
@@ -472,10 +504,14 @@ struct LibraryView: View {
 private struct LibraryRecordingRow: View {
     let recording: RecordingSummary
     let audioSummary: String
+    let playbackState: RecordingPlaybackDisplayState
     let isSelected: Bool
     let onSelect: () -> Void
     let onPlay: () -> Void
     let onOpen: () -> Void
+    let onPlayBalanced: () -> Void
+    let onPlayOriginal: () -> Void
+    let onShowAnalysis: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -490,6 +526,11 @@ private struct LibraryRecordingRow: View {
                     StatusBadge(
                         text: RecordingDisplayFormatter.statusText(recording.status),
                         tone: tone(for: recording.status)
+                    )
+
+                    StatusBadge(
+                        text: playbackBadgeText,
+                        tone: playbackBadgeTone
                     )
                 }
 
@@ -516,6 +557,27 @@ private struct LibraryRecordingRow: View {
                 .accessibilityLabel("Open recording folder")
 
                 Menu {
+                    Button(action: onPlayBalanced) {
+                        Label("Play Balanced", systemImage: "slider.horizontal.3")
+                    }
+                    .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.balancedMixedAudioURL) == nil)
+
+                    Button(action: onPlayOriginal) {
+                        Label("Play Original", systemImage: "waveform")
+                    }
+                    .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.originalMixedAudioURL) == nil)
+
+                    Button(action: onOpen) {
+                        Label("Open Folder", systemImage: "folder")
+                    }
+
+                    Button(action: onShowAnalysis) {
+                        Label("Show Audio Analysis", systemImage: "doc.text.magnifyingglass")
+                    }
+                    .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
+
+                    Divider()
+
                     Button(action: onEdit) {
                         Label("Tag", systemImage: "tag")
                     }
@@ -551,6 +613,34 @@ private struct LibraryRecordingRow: View {
         isSelected
             ? Color.accentColor.opacity(0.12)
             : Color(nsColor: .controlBackgroundColor).opacity(0.55)
+    }
+
+    private var playbackBadgeText: String {
+        switch playbackState {
+        case .balancedReady:
+            return "Balanced"
+        case .balancedFailed:
+            return "Audio warning"
+        case .originalOnly, .levelingSkipped:
+            return "Original"
+        case .fallbackSource(let kind):
+            return kind.displayName
+        case .missing:
+            return "Audio missing"
+        }
+    }
+
+    private var playbackBadgeTone: StatusTone {
+        switch playbackState {
+        case .balancedReady:
+            return .ready
+        case .balancedFailed, .fallbackSource:
+            return .warning
+        case .missing:
+            return .danger
+        default:
+            return .neutral
+        }
     }
 }
 
@@ -593,6 +683,7 @@ private struct LibraryRecordingDetailsPanel: View {
 
                 markersSection
                 filesSection
+                audioProcessingSection
                 metadataSection
 
                 Spacer(minLength: 0)
@@ -687,7 +778,21 @@ private struct LibraryRecordingDetailsPanel: View {
             if let reason = metadata?.source.reason {
                 detailRow("Reason", reason)
             }
-            if let warnings = metadata?.qualityWarnings, !warnings.isEmpty {
+        }
+    }
+
+    private var audioProcessingSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Audio")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            detailRow("Playback", RecordingDisplayFormatter.audioProcessingCopy(state: playbackState))
+            detailRow("Mic gain", gainText(metadata?.audio.processing.microphoneGainDB))
+            detailRow("System gain", gainText(metadata?.audio.processing.systemGainDB))
+
+            let warnings = audioWarnings
+            if !warnings.isEmpty {
                 detailRow("Warnings", warnings.joined(separator: " "))
             }
         }
@@ -697,14 +802,40 @@ private struct LibraryRecordingDetailsPanel: View {
         [
             FileRow(label: "Mic", value: fileDescription(kind: "microphone", fallback: "source/mic.m4a")),
             FileRow(label: "System", value: fileDescription(kind: "system", fallback: "source/system.m4a")),
-            FileRow(label: "Mixed", value: fileDescription(kind: "mixed", fallback: "export/mixed.m4a"))
+            FileRow(label: "Original mixed", value: fileDescription(kind: "mixed", fallback: "export/mixed.m4a")),
+            FileRow(label: "Balanced mixed", value: fileDescription(kind: "mixed_balanced", fallback: "export/mixed_balanced.m4a"))
         ]
+    }
+
+    private var playbackState: RecordingPlaybackDisplayState {
+        RecordingPlaybackResolver.displayState(
+            sessionFolderURL: recording.sessionFolderURL,
+            processingStatus: metadata?.audio.processing.balancedMixStatus ?? .skipped
+        )
+    }
+
+    private var audioWarnings: [String] {
+        let qualityWarnings = metadata?.qualityWarnings ?? []
+        let processingWarnings = metadata?.audio.processing.warnings ?? []
+        var seen = Set<String>()
+        return (qualityWarnings + processingWarnings).filter { seen.insert($0).inserted }
+    }
+
+    private func gainText(_ value: Double?) -> String {
+        guard let value else {
+            return "Not applied"
+        }
+
+        if value == 0 {
+            return "0 dB"
+        }
+
+        return String(format: "%+.1f dB", value)
     }
 
     private func fileDescription(kind: String, fallback: String) -> String {
         let track = metadata?.audioTracks.first { $0.kind == kind }
-        let status = track.map { " · \($0.status)" } ?? ""
-        return "\(RecordingDisplayFormatter.fileSize(track?.fileSizeBytes ?? fallbackFileSize(fallback)))\(status)"
+        return RecordingDisplayFormatter.fileSize(track?.fileSizeBytes ?? fallbackFileSize(fallback))
     }
 
     private func fallbackFileSize(_ relativePath: String) -> Int64? {

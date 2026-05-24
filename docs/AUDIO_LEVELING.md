@@ -12,6 +12,9 @@ Current behavior:
 - `analysis/audio_analysis.json` stores track analysis, gain plan, and balanced output summary.
 - `metadata.json` stores `audio.processing` summary fields.
 - The Latest strip and Diagnostics prefer balanced playback when it is ready.
+- Playback priority is `export/mixed_balanced.m4a`, then `export/mixed.m4a`, then an available source track.
+- Latest and Library expose Original playback through More/Details actions.
+- Diagnostics exposes the latest `analysis/audio_analysis.json`.
 
 V1 uses conservative track-level gain plus safe peak protection. It does not perform real-time AGC, AI enhancement, noise cancellation, or advanced mastering.
 

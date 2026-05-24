@@ -225,11 +225,15 @@ struct DiagnosticsView: View {
                 if let latest = appState.lastRecording {
                     DiagnosticLine(
                         label: "Balanced mix",
-                        value: latest.audioProcessingStatus.rawValue
+                        value: RecordingDisplayFormatter.audioProcessingCopy(state: latest.playbackDisplayState)
                     )
                     DiagnosticLine(
                         label: "Playback",
                         value: latest.mixedAudioURL.lastPathComponent
+                    )
+                    DiagnosticLine(
+                        label: "Analysis",
+                        value: latest.audioAnalysisURL.lastPathComponent
                     )
 
                     if !latest.audioProcessingWarnings.isEmpty {
@@ -253,6 +257,13 @@ struct DiagnosticsView: View {
                             Label("Play Original", systemImage: "waveform")
                         }
                         .disabled(!FileManager.default.fileExists(atPath: latest.originalMixedAudioURL.path(percentEncoded: false)))
+
+                        Button {
+                            NSWorkspace.shared.open(latest.audioAnalysisURL)
+                        } label: {
+                            Label("Open Analysis", systemImage: "doc.text.magnifyingglass")
+                        }
+                        .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: latest.audioAnalysisURL) == nil)
                     }
                 } else {
                     Text("No latest recording yet.")
