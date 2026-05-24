@@ -145,7 +145,7 @@ open /Applications/TOrbitRecorder.app
 
 Use `dist/` for shareable local artifacts and `/Applications/TOrbitRecorder.app` for a normal macOS launch. Do not use `apps/macos/.build/app/TOrbitRecorder.app` except when debugging the build script output directly.
 
-Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. When Audio leveling is enabled, it also creates `export/mixed_balanced.m4a` plus `analysis/audio_analysis.json`, and stores `audio.health` warnings in `metadata.json`. System audio uses ScreenCaptureKit audio capture only; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows. While recording, quick markers can be added for Important, Objection, Conflict, Review, and Bad audio moments.
+Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. When Audio leveling is enabled, it also creates `export/mixed_balanced.m4a` plus `analysis/audio_analysis.json`, and stores `audio.health` warnings in `metadata.json`. System audio uses a Core Audio process tap; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows. While recording, quick markers can be added for Important, Objection, Conflict, Review, and Bad audio moments.
 
 Older recordings can be reprocessed for balanced audio from `Library -> More -> Reprocess Audio`. Batch reprocessing for recordings missing `export/mixed_balanced.m4a` is available in `Diagnostics -> Audio Processing`.
 
@@ -196,7 +196,7 @@ Permissions are tied to the app bundle and code-signing identity that macOS sees
 open /Applications/TOrbitRecorder.app
 ```
 
-Do not keep multiple copies running from `.build`, `dist`, and `/Applications`. Screen & System Audio Recording permission is applied to the app bundle, current process, and code-signing requirement, so a second copy or freshly rebuilt ad-hoc binary can trigger the macOS permission prompt even when another `TOrbitRecorder` entry is already enabled.
+Do not keep multiple copies running from `.build`, `dist`, and `/Applications`. macOS permissions are applied to the app bundle, current process, and code-signing requirement, so a second copy or freshly rebuilt ad-hoc binary can trigger a macOS permission prompt even when another `TOrbitRecorder` entry is already enabled.
 
 Check for duplicate running copies:
 
@@ -204,7 +204,7 @@ Check for duplicate running copies:
 pgrep -fl TOrbitRecorder
 ```
 
-If the Screen & System Audio Recording toggle is enabled but the app still reports missing permission or shows the macOS prompt again, quit every TOrbitRecorder copy and reopen only the installed app:
+System audio is captured with a Core Audio process tap. It should not require screen video capture. If the app still reports missing system audio permission or shows the macOS prompt again, quit every TOrbitRecorder copy and reopen only the installed app:
 
 ```sh
 osascript -e 'tell application id "com.torbit.recorder" to quit' || true
@@ -213,12 +213,13 @@ open /Applications/TOrbitRecorder.app
 
 macOS often requires a process restart after this permission changes. The app now blocks duplicate launches and points you back to the already-running copy.
 
-If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`. On macOS Sequoia, system-audio-only capture may also be requested on the first actual Start Recording attempt; the app no longer blocks that request behind the screen-capture preflight check.
+If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in the system-audio section once, then restart `/Applications/TOrbitRecorder.app`. On macOS Sequoia, system-audio-only capture may also be requested on the first actual Start Recording attempt.
 
 Grant permissions in:
 
 - System Settings -> Privacy & Security -> Microphone
-- System Settings -> Privacy & Security -> Screen & System Audio Recording
+- System Settings -> Privacy & Security -> Screen & System Audio Recording -> `TOrbitRecorder`
+- If macOS shows a separate `Only System Audio Recording` section, enable `TOrbitRecorder` there too.
 
 Recordings are stored locally in `~/Recordings/TOrbitRecorder/`.
 
@@ -266,6 +267,7 @@ Before the first recording, grant permissions to `TOrbitRecorder` in macOS Syste
 
 - Privacy & Security -> Microphone
 - Privacy & Security -> Screen & System Audio Recording
+- If shown separately: Privacy & Security -> Screen & System Audio Recording -> Only System Audio Recording
 
 Manual full recording pass:
 
@@ -310,7 +312,7 @@ YouTube plus voice check:
 
 Permission error check:
 
-1. Revoke Microphone or Screen & System Audio Recording permission for `TOrbitRecorder` in System Settings.
+1. Revoke Microphone or system audio permission for `TOrbitRecorder` in System Settings.
 2. Quit and reopen the app.
 3. Start recording.
 4. Confirm the UI shows an error state and the logs explain the blocked permission.
@@ -331,4 +333,4 @@ System audio smoke test:
 swift run --package-path apps/macos TOrbitRecorderSystemAudioSmokeTest --duration 10 --root apps/macos/.build/e2e/system
 ```
 
-Play audio from another macOS app while this command runs. The command writes `source/system.m4a` and fails explicitly if ScreenCaptureKit cannot start or if no samples are captured.
+Play audio from another macOS app while this command runs. The command writes `source/system.m4a` and fails explicitly if the Core Audio process tap cannot start or if no samples are captured.

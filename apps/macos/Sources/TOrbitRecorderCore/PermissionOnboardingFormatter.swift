@@ -14,7 +14,7 @@ public enum PermissionOnboardingFormatter {
         case .microphone:
             return "Microphone"
         case .screenSystemAudio:
-            return "Screen & System Audio Recording"
+            return "System audio"
         case .storage:
             return "Output folder writable"
         }
@@ -74,7 +74,7 @@ public enum PermissionOnboardingFormatter {
         case .microphone:
             return state == .notDetermined ? "Request Microphone Access" : "Open Microphone Settings"
         case .screenSystemAudio:
-            return "Open Screen & System Audio Recording Settings"
+            return "Open System Audio Settings"
         case .storage:
             return "Open Recordings Folder"
         }

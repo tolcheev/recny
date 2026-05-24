@@ -86,12 +86,12 @@ public enum RecordingPermissionDisplay {
         lastErrorMessage: String?
     ) -> RecorderPermissionState {
         if let lastErrorMessage,
-           isDeniedScreenCaptureError(lastErrorMessage) {
+           isDeniedSystemAudioError(lastErrorMessage) {
             return processGranted || settingsOpened ? .restartRequired : .denied
         }
 
         if let lastErrorMessage,
-           isRestartRequiredScreenCaptureError(lastErrorMessage) {
+           isRestartRequiredSystemAudioError(lastErrorMessage) {
             return .restartRequired
         }
 
@@ -133,10 +133,10 @@ public enum RecordingPermissionDisplay {
 
         if systemAudioEnabled && isSystemAudioPermissionBlocking(snapshot.screenSystemAudio) {
             if snapshot.screenSystemAudio == .restartRequired {
-                return "Screen & System Audio Recording is enabled, but TOrbitRecorder must be restarted."
+                return "System audio access is enabled, but TOrbitRecorder must be restarted."
             }
 
-            return "Screen & System Audio Recording access is required before recording."
+            return "System audio access is required before recording."
         }
 
         if snapshot.storage != .granted {
@@ -153,21 +153,15 @@ public enum RecordingPermissionDisplay {
         !canStartRecording(snapshot, systemAudioEnabled: systemAudioEnabled)
     }
 
-    private static func isDeniedScreenCaptureError(_ message: String) -> Bool {
+    private static func isDeniedSystemAudioError(_ message: String) -> Bool {
         let lowered = message.lowercased()
-        return lowered.contains("declined")
-            || lowered.contains("denied")
-            || lowered.contains("отклонил")
-            || lowered.contains("запрет")
+        return lowered.contains("core audio system audio access denied")
+            || lowered.contains("audiohardwarecreateprocesstap")
     }
 
-    private static func isRestartRequiredScreenCaptureError(_ message: String) -> Bool {
+    private static func isRestartRequiredSystemAudioError(_ message: String) -> Bool {
         let lowered = message.lowercased()
-        return lowered.contains("screen & system audio recording permission")
-            || lowered.contains("scstreamerrordomain")
-            || lowered.contains("code: -3801")
-            || lowered.contains("перезап")
-            || lowered.contains("restart")
+        return lowered.contains("system audio permission needs app restart")
     }
 
     private static func isSystemAudioPermissionBlocking(_ state: RecorderPermissionState) -> Bool {

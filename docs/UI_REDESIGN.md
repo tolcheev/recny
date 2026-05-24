@@ -146,7 +146,7 @@ Tags are persisted to both `metadata.json` and the local SQLite index.
 Diagnostics is separate from daily use. It includes:
 
 - microphone permission
-- Screen & System Audio Recording permission
+- System audio permission
 - output folder writable status
 - selected input device
 - recommended input device
@@ -159,7 +159,7 @@ Diagnostics is separate from daily use. It includes:
 - local file log viewer showing the last 100 `app.log` lines
 - copy logs, open logs folder, and clear logs actions
 - 10 second test recording
-- Screen & System Audio Recording guidance for the macOS case where permission is enabled but the current app bundle still needs restart or re-approval
+- System audio guidance for the macOS case where permission is enabled but the current app bundle still needs restart or re-approval
 - collapsed raw recorder errors so the default view stays readable
 
 Recoverable recordings are never shown on the main screen.
@@ -183,6 +183,6 @@ The design keeps native macOS styling, supports light/dark mode through system c
 - No screenshot automation is currently wired for the native macOS window.
 - Settings still contain disabled placeholders for hotkeys because runtime hotkey capture is not implemented in MVP.
 - Library has local search and collapsed filters; advanced saved views are out of scope.
-- Diagnostics test recording requires local macOS microphone and Screen & System Audio Recording permissions.
-- macOS may require quitting and reopening the exact app bundle after enabling Screen & System Audio Recording permission, especially when switching between `.build`, `dist`, and `/Applications` builds.
+- Diagnostics test recording requires local macOS microphone and system audio permissions.
+- macOS may require quitting and reopening the exact app bundle after enabling system audio permission, especially when switching between `.build`, `dist`, and `/Applications` builds.
 - `Show Dock icon` defaults on for MVP. Turning it off switches the app to menu-bar-only accessory behavior; use the menu bar icon to bring windows back.

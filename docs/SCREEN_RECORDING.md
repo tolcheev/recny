@@ -51,7 +51,7 @@ Future phase after full-screen capture is reliable.
 
 Use ScreenCaptureKit.
 
-The app already uses ScreenCaptureKit for system audio capture. Future screen recording should extend that pipeline without making screen capture required for audio-only recording.
+The audio-only MVP uses a Core Audio process tap for system audio. Future screen recording should use ScreenCaptureKit as a separate explicit mode without making screen capture required for audio-only recording.
 
 ## UX Rules
 

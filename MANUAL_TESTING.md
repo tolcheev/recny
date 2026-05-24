@@ -1,6 +1,6 @@
 # Manual Testing
 
-Manual validation is required for the macOS MVP because microphone capture, ScreenCaptureKit system audio capture, app focus, and TCC permissions depend on the local Mac session.
+Manual validation is required for the macOS MVP because microphone capture, Core Audio system audio capture, app focus, and TCC permissions depend on the local Mac session.
 
 ## Test Device
 
@@ -162,7 +162,7 @@ Known dev-build caveat:
 6. Confirm there is enough free disk space for local audio files.
 7. Confirm Start does not create a recording folder when required preflight checks fail:
    - missing microphone permission
-   - missing Screen & System Audio Recording permission while system audio is enabled
+   - missing or denied system audio permission while system audio is enabled
    - no available microphone input
    - output folder not writable
    - free disk space below 2 GB
@@ -201,7 +201,7 @@ External mic check:
 On first launch, the app shows a permissions onboarding panel if anything needed for recording is missing. The panel checks:
 
 - Microphone
-- Screen & System Audio Recording
+- System audio
 - Output folder writable
 
 Each row shows one user-facing state:
@@ -217,14 +217,15 @@ Grant permissions in macOS System Settings:
 
 - Privacy & Security -> Microphone -> `TOrbitRecorder`
 - Privacy & Security -> Screen & System Audio Recording -> `TOrbitRecorder`
+- If macOS shows a separate `Only System Audio Recording` section, enable `TOrbitRecorder` there too.
 
 If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
 
-On macOS Sequoia, ScreenCaptureKit system-audio permission is finalized when the app actually starts audio capture. If the main screen shows `System audio: Ready`, click `Start Recording`; macOS may then show the system audio permission prompt or add the app to the System Settings list.
+On macOS Sequoia, Core Audio system-audio permission can be finalized when the app actually starts audio capture. If the main screen shows `System audio: Ready`, click `Start Recording`; macOS may then show the system audio permission prompt or add the app to the System Settings list.
 
-If Screen & System Audio Recording is denied or still missing after a failed start:
+If system audio is denied or still missing after a failed start:
 
-1. Click `Open Screen & System Audio Recording Settings`.
+1. Click `Open System Audio Settings`.
 2. Enable `TOrbitRecorder`.
 3. Return to the app.
 4. If the app shows `Permission is enabled. Restart TOrbitRecorder to apply it.`, click `Restart App` in onboarding or quit from the menu bar.
@@ -241,7 +242,7 @@ osascript -e 'tell application id "com.torbit.recorder" to quit' || true
 open /Applications/TOrbitRecorder.app
 ```
 
-When testing Screen & System Audio Recording, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted. This is why permission can look enabled in System Settings while the currently running process still reports missing access.
+When testing system audio permission, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted. This is why permission can look enabled in System Settings while the currently running process still reports missing access.
 
 Dev packages use the stable bundle identifier `com.torbit.recorder`, but ad-hoc signing still changes the code hash after rebuilds. If you previously approved an older build and the prompt still appears, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`.
 
@@ -588,13 +589,13 @@ Microphone:
 4. Confirm the UI shows Error and microphone permission denied.
 5. Confirm the app does not mark the session as a successful recording.
 
-Screen & System Audio Recording:
+System audio:
 
-1. Revoke Screen & System Audio Recording permission for `TOrbitRecorder`.
+1. Revoke system audio permission for `TOrbitRecorder`.
 2. Quit and reopen the app.
 3. Click Start Recording.
 4. Confirm the UI shows Error or system audio permission denied.
-5. Confirm logs explain the ScreenCaptureKit permission or setup failure.
+5. Confirm logs explain the Core Audio process tap permission or setup failure.
 
 ## Troubleshooting
 
@@ -614,23 +615,23 @@ Fix:
 
 The CLI smoke test uses the current terminal process. It needs separate microphone permission for that terminal/Codex process.
 
-### Screen & System Audio Recording Permission
+### System Audio Permission
 
 Symptom:
 
 - `source/system.m4a` is missing or empty.
-- ScreenCaptureKit start fails.
+- Core Audio process tap start fails.
 - System audio status shows permission denied or error.
 
 Fix:
 
 1. Open System Settings -> Privacy & Security -> Screen & System Audio Recording.
-2. Enable `TOrbitRecorder`.
+2. Enable `TOrbitRecorder`. If macOS shows `Only System Audio Recording`, enable it there too.
 3. Quit and reopen the exact same `TOrbitRecorder.app` bundle you are testing.
 4. Play audible audio from another app.
 5. Retry recording.
 
-If System Settings already shows `TOrbitRecorder` enabled but the app still reports a ScreenCaptureKit permission error, quit the app completely and reopen it. If you installed or opened another build path, approve that build too.
+If System Settings already shows `TOrbitRecorder` enabled but the app still reports a system audio permission error, quit the app completely and reopen it. If you installed or opened another build path, approve that build too.
 
 Developer reset if TCC gets stuck:
 

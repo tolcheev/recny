@@ -301,7 +301,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.informativeText = """
         \(pathText)
 
-        Quit all TOrbitRecorder copies, then open /Applications/TOrbitRecorder.app. Running .build, dist, and /Applications copies at the same time can make macOS ask for Screen & System Audio Recording permission again.
+        Quit all TOrbitRecorder copies, then open /Applications/TOrbitRecorder.app. Running .build, dist, and /Applications copies at the same time can make macOS ask for audio permissions again.
         """
         alert.addButton(withTitle: "Quit This Copy")
         alert.runModal()

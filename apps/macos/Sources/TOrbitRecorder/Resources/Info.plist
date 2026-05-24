@@ -31,7 +31,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TOrbitRecorder needs microphone access to record your side of calls.</string>
 	<key>NSScreenCaptureUsageDescription</key>
-	<string>TOrbitRecorder uses ScreenCaptureKit permission for system audio capture. Screen video recording is not part of the MVP.</string>
+	<string>TOrbitRecorder does not record screen video in the MVP. This permission is reserved for future explicit screen recording mode.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

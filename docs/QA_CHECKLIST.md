@@ -52,8 +52,9 @@ open /Applications/TOrbitRecorder.app
 
 - [ ] Microphone permission is granted:
   - System Settings -> Privacy & Security -> Microphone -> TOrbitRecorder enabled
-- [ ] Screen & System Audio Recording permission is granted:
+- [ ] System audio permission is granted:
   - System Settings -> Privacy & Security -> Screen & System Audio Recording -> TOrbitRecorder enabled
+  - If macOS shows `Only System Audio Recording`, TOrbitRecorder is enabled there too
 - [ ] App was restarted after permission changes:
 
 ```sh
@@ -63,7 +64,7 @@ open /Applications/TOrbitRecorder.app
 
 - [ ] Main UI no longer shows Fix Permissions.
 - [ ] Diagnostics shows Microphone as granted/authorized.
-- [ ] Diagnostics shows Screen & System Audio Recording as granted/available.
+- [ ] Diagnostics shows System audio as granted/available or ready for first capture prompt.
 - [ ] Storage/output folder is writable.
 
 ## 3. Manual Recording
@@ -228,7 +229,7 @@ plutil -p metadata.json
 - [ ] Start is disabled or Fix Permissions is shown.
 - [ ] No empty recording folder is created by failed preflight.
 - [ ] Diagnostics explains missing microphone permission.
-- [ ] Repeat with Screen & System Audio Recording permission revoked.
+- [ ] Repeat with system audio permission revoked.
 
 ### AirPods Mic Avoidance
 

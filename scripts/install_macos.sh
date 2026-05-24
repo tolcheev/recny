@@ -61,8 +61,8 @@ if [[ "$DRY_RUN" == "1" ]]; then
     echo
     echo "Next steps after a real install:"
     echo "1. Grant Microphone permission to TOrbitRecorder."
-    echo "2. Grant Screen & System Audio Recording permission to TOrbitRecorder."
-    echo "3. Quit and reopen TOrbitRecorder after changing Screen & System Audio Recording."
+    echo "2. Grant system audio permission to TOrbitRecorder."
+    echo "3. Quit and reopen TOrbitRecorder after changing audio permissions."
     echo "4. Recordings are stored in ~/Recordings/TOrbitRecorder/."
     exit 0
 fi
@@ -76,7 +76,8 @@ echo "Launched: open $INSTALL_APP"
 echo
 echo "Next steps:"
 echo "1. Grant Microphone permission in System Settings -> Privacy & Security -> Microphone."
-echo "2. Grant Screen & System Audio Recording in System Settings -> Privacy & Security -> Screen & System Audio Recording."
-echo "3. Quit and reopen TOrbitRecorder after changing Screen & System Audio Recording."
+echo "2. Grant system audio permission in System Settings -> Privacy & Security -> Screen & System Audio Recording."
+echo "   If macOS shows Only System Audio Recording, enable TOrbitRecorder there too."
+echo "3. Quit and reopen TOrbitRecorder after changing audio permissions."
 echo "4. Recordings are stored in ~/Recordings/TOrbitRecorder/."
 echo "5. Install guide: $ROOT_DIR/dist/INSTALL.md"

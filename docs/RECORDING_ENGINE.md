@@ -11,7 +11,7 @@ The engine is a testable core package, not SwiftUI view logic.
 - Capture microphone audio.
 - Store microphone audio as `source/mic.m4a`.
 - Record microphone audio as AAC in an m4a container at 48 kHz, mono, with the selected speech quality preset.
-- Capture full system audio through ScreenCaptureKit audio output.
+- Capture full system audio through a Core Audio process tap.
 - Store system audio as `source/system.m4a`.
 - Record system audio as AAC in an m4a container at 48 kHz, stereo, with the selected speech quality preset.
 - Create quick-listen mixed audio preview as `export/mixed.m4a`.
@@ -25,7 +25,7 @@ The engine is a testable core package, not SwiftUI view logic.
 ## Preferred Native APIs
 
 - Microphone: AVFoundation.
-- System audio: ScreenCaptureKit where available and permitted by macOS.
+- System audio: Core Audio process tap where available and permitted by macOS.
 - Mixing/export: native AVFoundation tooling unless a specific blocker is documented.
 
 Any capture limitation must be represented as a real failure state. Tests may use fixtures for state and storage behavior, but they must not fake a successful production audio capture path.
@@ -82,7 +82,7 @@ State transitions must be logged with timestamps and session id.
 1. Receive a start request from the autostart controller or UI.
 2. Run preflight before creating any recording session folder:
    - microphone permission granted
-   - Screen & System Audio Recording permission granted when system audio is enabled
+   - system audio capture available when system audio is enabled
    - deterministic microphone selection resolves to an available input device
    - output root exists and is writable
    - free disk space is at least 2 GB
@@ -91,7 +91,7 @@ State transitions must be logged with timestamps and session id.
 4. Resolve the session staging path.
 5. Create `source/`, `source/segments/`, `export/`, and `recovery.json`.
 6. Resolve the microphone input device using the deterministic input policy and temporarily select only that input device for the microphone writer.
-7. Start ScreenCaptureKit system audio writer at `source/segments/system-0001.m4a`.
+7. Start the Core Audio process tap system audio writer at `source/segments/system-0001.m4a`.
 8. Start microphone writer at `source/segments/mic-0001.m4a`.
 9. Emit a lifecycle log event and switch UI state to `recording`.
 

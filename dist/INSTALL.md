@@ -34,8 +34,8 @@ Grant permissions to the same app bundle you will keep using:
 2. Go to Privacy & Security -> Microphone.
 3. Enable TOrbitRecorder.
 4. Go to Privacy & Security -> Screen & System Audio Recording.
-5. Enable TOrbitRecorder.
-6. Quit and reopen TOrbitRecorder after changing Screen & System Audio Recording.
+5. Enable TOrbitRecorder. If macOS shows `Only System Audio Recording`, enable TOrbitRecorder there too.
+6. Quit and reopen TOrbitRecorder after changing audio permissions.
 
 If the toggle is enabled but the app still reports a missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. During development, avoid switching between `.build/app`, `dist/`, and `/Applications` because macOS permissions are tied to the launched app bundle and code-signing identity.
 
@@ -45,7 +45,7 @@ On macOS Sequoia, system-audio-only capture may be requested when you click Star
 
 ## Restart After Permissions
 
-Screen & System Audio Recording often requires a full app restart after the toggle is enabled:
+macOS audio permissions can require a full app restart after the toggle is enabled:
 
 ```sh
 osascript -e 'tell application id "com.torbit.recorder" to quit' || true

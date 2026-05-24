@@ -16,7 +16,12 @@ struct AVFoundationMicrophoneRecordingControllerTests {
     }
 
     @Test
-    func usesScreenCaptureKitSystemAudioSettingsWithoutMicrophoneCapture() {
+    func usesCoreAudioTapForSystemAudioByDefault() {
+        #expect(ScreenCaptureKitSystemAudioRecorder.captureBackendName == "Core Audio process tap")
+    }
+
+    @Test
+    func keepsLegacyScreenCaptureKitSettingsDocumentedWithoutMicrophoneCapture() {
         let configuration = ScreenCaptureKitSystemAudioRecorder.streamConfiguration()
         let writerSettings = ScreenCaptureKitSystemAudioRecorder.assetWriterAudioSettings
 

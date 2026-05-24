@@ -43,9 +43,9 @@ public enum RecordingControllerError: Error, Equatable, Sendable, CustomStringCo
         case .noInputDevice:
             return "No microphone input device is available"
         case .systemAudioPermissionDenied(let message):
-            return "Screen & System Audio Recording permission is unavailable: \(message)"
+            return "System audio permission is unavailable: \(message)"
         case .noShareableDisplay:
-            return "No display is available for ScreenCaptureKit system audio capture"
+            return "No system audio capture source is available"
         case .recorderSetupFailed(let message):
             return "Failed to configure microphone recorder: \(message)"
         case .fileWriteFailed(let message):

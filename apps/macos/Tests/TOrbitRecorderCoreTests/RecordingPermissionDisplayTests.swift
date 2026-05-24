@@ -35,25 +35,25 @@ struct RecordingPermissionDisplayTests {
     }
 
     @Test
-    func mapsScreenAudioDeclinedErrorToDenied() {
+    func mapsCoreAudioDeclinedErrorToDenied() {
         let state = RecordingPermissionDisplay.screenSystemAudioState(
             processGranted: false,
             settingsOpened: false,
-            lastErrorMessage: "The user declined ScreenCaptureKit permission"
+            lastErrorMessage: "Core Audio system audio access denied"
         )
 
         #expect(state == .denied)
     }
 
     @Test
-    func screenCaptureKitPermissionErrorOverridesPreflightGrant() {
+    func legacyScreenCaptureKitPermissionErrorDoesNotBlockAudioOnlyCapture() {
         let state = RecordingPermissionDisplay.screenSystemAudioState(
             processGranted: true,
             settingsOpened: false,
             lastErrorMessage: "Screen & System Audio Recording permission is unavailable: Пользователь отклонил положения и условия захвата приложения, окна или дисплея (domain: com.apple.ScreenCaptureKit.SCStreamErrorDomain, code: -3801)"
         )
 
-        #expect(state == .restartRequired)
+        #expect(state == .granted)
     }
 
     @Test
@@ -106,7 +106,7 @@ struct RecordingPermissionDisplayTests {
     @Test
     func formatsPermissionOnboardingRows() {
         #expect(PermissionOnboardingFormatter.title(for: .microphone) == "Microphone")
-        #expect(PermissionOnboardingFormatter.title(for: .screenSystemAudio) == "Screen & System Audio Recording")
+        #expect(PermissionOnboardingFormatter.title(for: .screenSystemAudio) == "System audio")
         #expect(PermissionOnboardingFormatter.title(for: .storage) == "Output folder writable")
 
         #expect(
@@ -131,7 +131,7 @@ struct RecordingPermissionDisplayTests {
             PermissionOnboardingFormatter.actionTitle(
                 for: .screenSystemAudio,
                 state: .missing
-            ) == "Open Screen & System Audio Recording Settings"
+            ) == "Open System Audio Settings"
         )
         #expect(
             PermissionOnboardingFormatter.explanation(

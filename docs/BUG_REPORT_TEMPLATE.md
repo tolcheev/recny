@@ -28,7 +28,7 @@ Short one-line description:
   - [ ] Not determined
   - [ ] Restart required
   - [ ] Unknown
-- Screen & System Audio Recording:
+- System audio:
   - [ ] Granted
   - [ ] Missing
   - [ ] Denied

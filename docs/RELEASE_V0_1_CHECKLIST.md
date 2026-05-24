@@ -41,7 +41,8 @@ git status --short --branch
 - [ ] Do not test release permissions with `.build/app/TOrbitRecorder.app`.
 - [ ] Do not mix `.build/app`, `dist/`, and `/Applications` while validating permissions.
 - [ ] Microphone permission is granted.
-- [ ] Screen & System Audio Recording permission is granted.
+- [ ] System audio permission is granted.
+- [ ] If macOS shows `Only System Audio Recording`, TOrbitRecorder is enabled there.
 - [ ] App is restarted after changing permissions in System Settings.
 - [ ] Main window opens from menu bar `Show Window`.
 - [ ] App remains running after closing the main window.
@@ -58,6 +59,7 @@ Permission locations:
 ```text
 System Settings -> Privacy & Security -> Microphone
 System Settings -> Privacy & Security -> Screen & System Audio Recording
+If shown: Screen & System Audio Recording -> Only System Audio Recording
 ```
 
 ## 3. Recording
@@ -211,7 +213,7 @@ plutil -p metadata.json
 
 ### Missing System Audio Permission
 
-- [ ] Revoke Screen & System Audio Recording permission.
+- [ ] Revoke system audio permission.
 - [ ] Launch app from `/Applications`.
 - [ ] Start is blocked or fails with human-readable message.
 - [ ] Diagnostics shows system audio permission issue.
