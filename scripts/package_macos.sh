@@ -15,8 +15,7 @@ DIST_ZIP="$DIST_DIR/$APP_NAME-$PACKAGE_VERSION-macOS.zip"
 mkdir -p "$DIST_DIR"
 rm -rf "$DIST_APP" "$DIST_ZIP" "$DIST_DIR/$APP_NAME-macOS-MVP.zip"
 
-if [[ ! -f "$DIST_INSTALL" ]]; then
-    cat > "$DIST_INSTALL" <<'INSTALL_GUIDE'
+cat > "$DIST_INSTALL" <<'INSTALL_GUIDE'
 # TOrbitRecorder macOS Install
 
 This folder contains the packaged macOS MVP build.
@@ -58,6 +57,15 @@ Grant permissions to the same app bundle you will keep using:
 
 If the toggle is enabled but the app still reports a missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. During development, avoid switching between `.build/app`, `dist/`, and `/Applications` because macOS permissions are tied to the launched app bundle.
 
+## Restart After Permissions
+
+Screen & System Audio Recording often requires a full app restart after the toggle is enabled:
+
+```sh
+osascript -e 'tell application id "com.torbit.recorder" to quit' || true
+open /Applications/TOrbitRecorder.app
+```
+
 ## Recordings Location
 
 Default local storage:
@@ -83,7 +91,6 @@ This does not delete recordings. To remove local recordings too:
 rm -rf ~/Recordings/TOrbitRecorder
 ```
 INSTALL_GUIDE
-fi
 
 cp -R "$BUILD_APP" "$DIST_APP"
 

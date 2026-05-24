@@ -21,6 +21,7 @@ struct DiagnosticsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
+                appInfoSection
                 permissionsSection
                 behaviorSection
                 deviceSection
@@ -74,6 +75,18 @@ struct DiagnosticsView: View {
                         Label("Recheck", systemImage: "arrow.clockwise")
                     }
                 }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var appInfoSection: some View {
+        GroupBox("App") {
+            VStack(alignment: .leading, spacing: 8) {
+                DiagnosticLine(label: "Version", value: BuildInfo.appVersion)
+                DiagnosticLine(label: "Build date", value: BuildInfo.buildDate)
+                DiagnosticLine(label: "Git commit", value: BuildInfo.gitCommit)
+                DiagnosticLine(label: "Local storage", value: appState.outputFolderPath)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

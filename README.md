@@ -153,7 +153,7 @@ Settings currently cover preferred microphone selection, recording toggles, auto
 
 Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
-Settings also includes an About section with the app version, build date, git commit hash, and local storage path.
+Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path.
 
 ## Launch At Login
 

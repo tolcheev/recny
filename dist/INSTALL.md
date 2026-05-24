@@ -39,6 +39,15 @@ Grant permissions to the same app bundle you will keep using:
 
 If the toggle is enabled but the app still reports a missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. During development, avoid switching between `.build/app`, `dist/`, and `/Applications` because macOS permissions are tied to the launched app bundle.
 
+## Restart After Permissions
+
+Screen & System Audio Recording often requires a full app restart after the toggle is enabled:
+
+```sh
+osascript -e 'tell application id "com.torbit.recorder" to quit' || true
+open /Applications/TOrbitRecorder.app
+```
+
 ## Recordings Location
 
 Default local storage:
