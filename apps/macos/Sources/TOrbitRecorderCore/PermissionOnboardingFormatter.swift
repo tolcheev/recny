@@ -47,7 +47,7 @@ public enum PermissionOnboardingFormatter {
         case (.screenSystemAudio, .missing):
             return "Required for source/system.m4a and mixed preview."
         case (.screenSystemAudio, .notDetermined):
-            return "macOS has not granted Screen & System Audio Recording access yet."
+            return "macOS requests system audio access when recording starts."
         case (.screenSystemAudio, .unknown):
             return "TOrbitRecorder cannot determine system audio permission."
 

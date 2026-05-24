@@ -19,19 +19,19 @@ struct RecordingPermissionDisplayTests {
             lastErrorMessage: nil
         )
 
-        #expect(state == .restartRequired)
-        #expect(state.title == "Restart required")
+        #expect(state == .notDetermined)
+        #expect(state.title == "Not determined")
     }
 
     @Test
-    func mapsScreenAudioMissingBeforeSettingsVisit() {
+    func mapsScreenAudioNotDeterminedBeforeCaptureStart() {
         let state = RecordingPermissionDisplay.screenSystemAudioState(
             processGranted: false,
             settingsOpened: false,
             lastErrorMessage: nil
         )
 
-        #expect(state == .missing)
+        #expect(state == .notDetermined)
     }
 
     @Test
@@ -70,10 +70,21 @@ struct RecordingPermissionDisplayTests {
         )
 
         #expect(
+            RecordingPermissionDisplay.canStartRecording(
+                RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                ),
+                systemAudioEnabled: true
+            )
+        )
+
+        #expect(
             !RecordingPermissionDisplay.canStartRecording(
                 RecorderPermissionSnapshot(
                     microphone: .granted,
-                    screenSystemAudio: .missing,
+                    screenSystemAudio: .denied,
                     storage: .granted
                 ),
                 systemAudioEnabled: true
@@ -121,6 +132,12 @@ struct RecordingPermissionDisplayTests {
                 for: .screenSystemAudio,
                 state: .missing
             ) == "Open Screen & System Audio Recording Settings"
+        )
+        #expect(
+            PermissionOnboardingFormatter.explanation(
+                for: .screenSystemAudio,
+                state: .notDetermined
+            ) == "macOS requests system audio access when recording starts."
         )
     }
 

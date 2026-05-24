@@ -99,11 +99,7 @@ public enum RecordingPermissionDisplay {
             return .granted
         }
 
-        if settingsOpened {
-            return .restartRequired
-        }
-
-        return .missing
+        return .notDetermined
     }
 
     public static func storageState(isWritable: Bool) -> RecorderPermissionState {
@@ -124,7 +120,7 @@ public enum RecordingPermissionDisplay {
             return true
         }
 
-        return snapshot.screenSystemAudio == .granted
+        return !isSystemAudioPermissionBlocking(snapshot.screenSystemAudio)
     }
 
     public static func blockingReason(
@@ -135,7 +131,7 @@ public enum RecordingPermissionDisplay {
             return "Microphone access is required before recording."
         }
 
-        if systemAudioEnabled && snapshot.screenSystemAudio != .granted {
+        if systemAudioEnabled && isSystemAudioPermissionBlocking(snapshot.screenSystemAudio) {
             if snapshot.screenSystemAudio == .restartRequired {
                 return "Screen & System Audio Recording is enabled, but TOrbitRecorder must be restarted."
             }
@@ -172,6 +168,15 @@ public enum RecordingPermissionDisplay {
             || lowered.contains("code: -3801")
             || lowered.contains("перезап")
             || lowered.contains("restart")
+    }
+
+    private static func isSystemAudioPermissionBlocking(_ state: RecorderPermissionState) -> Bool {
+        switch state {
+        case .denied, .restartRequired, .unknown:
+            return true
+        case .granted, .missing, .notDetermined:
+            return false
+        }
     }
 }
 

@@ -196,7 +196,7 @@ Permissions are tied to the app bundle and code-signing identity that macOS sees
 open /Applications/TOrbitRecorder.app
 ```
 
-Do not keep multiple copies running from `.build`, `dist`, and `/Applications`. Screen & System Audio Recording permission is applied to the app bundle and current process, so a second copy can trigger the macOS permission prompt even when another `TOrbitRecorder` entry is already enabled.
+Do not keep multiple copies running from `.build`, `dist`, and `/Applications`. Screen & System Audio Recording permission is applied to the app bundle, current process, and code-signing requirement, so a second copy or freshly rebuilt ad-hoc binary can trigger the macOS permission prompt even when another `TOrbitRecorder` entry is already enabled.
 
 Check for duplicate running copies:
 
@@ -213,7 +213,7 @@ open /Applications/TOrbitRecorder.app
 
 macOS often requires a process restart after this permission changes. The app now blocks duplicate launches and points you back to the already-running copy.
 
-If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`.
+If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`. On macOS Sequoia, system-audio-only capture may also be requested on the first actual Start Recording attempt; the app no longer blocks that request behind the screen-capture preflight check.
 
 Grant permissions in:
 

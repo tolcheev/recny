@@ -209,7 +209,7 @@ Each row shows one user-facing state:
 - `Granted`: ready
 - `Missing`: enable it in System Settings
 - `Denied`: permission was blocked and must be changed in System Settings
-- `Not determined`: macOS has not granted it yet
+- `Not determined`: macOS may request it when recording starts
 - `Restart required`: the setting was changed, but the current app process must be restarted
 - `Unknown`: the app cannot determine the state
 
@@ -220,7 +220,9 @@ Grant permissions in macOS System Settings:
 
 If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
 
-If Screen & System Audio Recording is missing:
+On macOS Sequoia, ScreenCaptureKit system-audio permission is finalized when the app actually starts audio capture. If the main screen shows `System audio: Ready`, click `Start Recording`; macOS may then show the system audio permission prompt or add the app to the System Settings list.
+
+If Screen & System Audio Recording is denied or still missing after a failed start:
 
 1. Click `Open Screen & System Audio Recording Settings`.
 2. Enable `TOrbitRecorder`.
@@ -241,7 +243,7 @@ open /Applications/TOrbitRecorder.app
 
 When testing Screen & System Audio Recording, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted. This is why permission can look enabled in System Settings while the currently running process still reports missing access.
 
-Dev packages are ad-hoc signed with the stable identifier `com.torbit.recorder`. If you previously approved an older unsigned/hash-signed build and the prompt still appears, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`.
+Dev packages use the stable bundle identifier `com.torbit.recorder`, but ad-hoc signing still changes the code hash after rebuilds. If you previously approved an older build and the prompt still appears, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`.
 
 For normal manual testing, prefer `/Applications/TOrbitRecorder.app` over `.build/app/TOrbitRecorder.app`.
 
@@ -635,6 +637,7 @@ Developer reset if TCC gets stuck:
 ```sh
 tccutil reset Microphone com.torbit.recorder
 tccutil reset ScreenCapture com.torbit.recorder
+tccutil reset AudioCapture com.torbit.recorder
 ```
 
 After reset, reopen the same app bundle and grant permissions again.

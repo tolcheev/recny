@@ -39,7 +39,9 @@ Grant permissions to the same app bundle you will keep using:
 
 If the toggle is enabled but the app still reports a missing permission, quit TOrbitRecorder and reopen `/Applications/TOrbitRecorder.app`. During development, avoid switching between `.build/app`, `dist/`, and `/Applications` because macOS permissions are tied to the launched app bundle and code-signing identity.
 
-Dev packages are ad-hoc signed with the stable identifier `com.torbit.recorder`. If you approved an older unsigned/hash-signed build, toggle `TOrbitRecorder` off and on again once, then restart `/Applications/TOrbitRecorder.app`.
+Dev packages use the stable bundle identifier `com.torbit.recorder`, but ad-hoc signing still changes the code hash after rebuilds. If you approved an older unsigned/hash-signed build, toggle `TOrbitRecorder` off and on again once, then restart `/Applications/TOrbitRecorder.app`.
+
+On macOS Sequoia, system-audio-only capture may be requested when you click Start Recording for the first time. If the app says System audio is ready, start a short test recording to let macOS finalize the permission.
 
 ## Restart After Permissions
 
