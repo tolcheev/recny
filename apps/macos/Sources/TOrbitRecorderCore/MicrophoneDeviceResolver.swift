@@ -119,6 +119,10 @@ public enum DevicePriorityResolver {
         let available = devices.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         let hasBluetooth = available.contains(where: isBluetoothHeadset)
         let selectedCategory = category(for: selection.device)
+        let preferredWasRequested = preferredDeviceID?.isEmpty == false
+        let preferredDevice = preferredWasRequested
+            ? available.first(where: { $0.id == preferredDeviceID })
+            : nil
 
         if selection.isBluetoothFallback {
             return "Only Bluetooth microphone is available."
@@ -128,6 +132,19 @@ public enum DevicePriorityResolver {
            !preferredDeviceID.isEmpty,
            selection.device.id == preferredDeviceID {
             return "Manual microphone selection is available."
+        }
+
+        if preferredWasRequested, preferredDevice == nil {
+            switch selectedCategory {
+            case .preferredExternal:
+                return "Preferred microphone is unavailable; auto selected an external microphone."
+            case .builtIn:
+                return "Preferred microphone is unavailable; auto selected the built-in microphone."
+            case .otherInput:
+                return "Preferred microphone is unavailable; auto selected the best available input."
+            case .bluetoothHeadset:
+                return "Preferred microphone is unavailable; only Bluetooth microphone is available."
+            }
         }
 
         if hasBluetooth, selectedCategory == .preferredExternal {
@@ -256,6 +273,67 @@ public enum MicrophoneDeviceProvider {
     }
 }
 
+public enum MicrophoneInputRestorePolicy {
+    public static func restoreTarget(
+        devices: [MicrophoneInputDevice],
+        originalDeviceID: String?,
+        currentSelectedDeviceID: String?
+    ) -> MicrophoneInputDevice? {
+        let available = devices.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard !available.isEmpty else {
+            return nil
+        }
+
+        let hasNonBluetooth = available.contains { !DevicePriorityResolver.isBluetoothHeadset($0) }
+        if let originalDeviceID,
+           let original = available.first(where: { $0.id == originalDeviceID }),
+           !DevicePriorityResolver.isBluetoothHeadset(original) || !hasNonBluetooth {
+            return original
+        }
+
+        if let currentSelectedDeviceID,
+           let currentSelected = available.first(where: { $0.id == currentSelectedDeviceID }),
+           !DevicePriorityResolver.isBluetoothHeadset(currentSelected) {
+            return currentSelected
+        }
+
+        return DevicePriorityResolver.resolve(
+            devices: available,
+            preferredDeviceID: nil
+        )?.device
+    }
+
+    public static func restoreReason(
+        devices: [MicrophoneInputDevice],
+        target: MicrophoneInputDevice?,
+        originalDeviceID: String?
+    ) -> String {
+        guard let target else {
+            return "No input device is available for microphone restore."
+        }
+
+        let original = originalDeviceID.flatMap { originalID in
+            devices.first(where: { $0.id == originalID })
+        }
+
+        if let original, original.id == target.id {
+            return "Restored original microphone input."
+        }
+
+        if let original,
+           DevicePriorityResolver.isBluetoothHeadset(original),
+           !DevicePriorityResolver.isBluetoothHeadset(target) {
+            return "Original Bluetooth microphone avoided during restore because a non-Bluetooth input is available."
+        }
+
+        if original == nil, originalDeviceID?.isEmpty == false {
+            return "Original microphone is unavailable; restored best available input."
+        }
+
+        return "Restored best available microphone input."
+    }
+}
+
 #if canImport(CoreAudio)
 public final class CoreAudioInputDeviceOverride {
     private let originalDeviceID: AudioDeviceID?
@@ -287,7 +365,26 @@ public final class CoreAudioInputDeviceOverride {
             return
         }
 
-        try? Self.setDefaultInputDeviceID(originalDeviceID)
+        let devices = Self.availableInputDevices()
+        let originalDeviceUID = Self.deviceUID(for: originalDeviceID)
+        let currentSelectedDeviceUID = Self.deviceUID(for: selectedDeviceID)
+        let target = MicrophoneInputRestorePolicy.restoreTarget(
+            devices: devices,
+            originalDeviceID: originalDeviceUID,
+            currentSelectedDeviceID: currentSelectedDeviceUID
+        )
+        let targetDeviceID = target.flatMap { Self.deviceID(forUID: $0.id) } ?? originalDeviceID
+
+        do {
+            try Self.setDefaultInputDeviceID(targetDeviceID)
+            AppLogger.file(
+                .info,
+                category: "recording",
+                "microphone input restore target=\(target?.name ?? "original") reason=\(MicrophoneInputRestorePolicy.restoreReason(devices: devices, target: target, originalDeviceID: originalDeviceUID))"
+            )
+        } catch {
+            AppLogger.file(.warning, category: "recording", "microphone input restore failed error=\(String(describing: error))")
+        }
         didChangeDefaultInput = false
     }
 

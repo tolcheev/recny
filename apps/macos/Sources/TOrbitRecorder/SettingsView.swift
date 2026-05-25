@@ -54,12 +54,15 @@ struct SettingsView: View {
                 )
             ) {
                 Text("Auto, recommended").tag(DevicePriorityResolver.autoRecommendedID)
+                if let unavailableDeviceID = unavailablePreferredMicrophoneDeviceID {
+                    Text("Selected device unavailable").tag(unavailableDeviceID)
+                }
                 ForEach(appState.availableMicrophoneDevices) { device in
                     Text("\(device.name) · \(appState.microphoneDeviceLabel(for: device))").tag(device.id)
                 }
             }
 
-            Text("Auto prefers external or built-in mic. Avoids AirPods mic.")
+            Text("Auto prefers external or built-in mic and avoids AirPods mic. If a manual device is unplugged, the next recording falls back to the best non-Bluetooth input.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -124,7 +127,7 @@ struct SettingsView: View {
             Divider()
 
             Toggle(
-                "Audio leveling",
+                "Volume leveling",
                 isOn: Binding(
                     get: { appState.recordingSettings.audioLevelingEnabled },
                     set: { appState.setAudioLevelingEnabled($0) }
@@ -149,6 +152,10 @@ struct SettingsView: View {
                     .disabled(true)
             }
             .disabled(!appState.recordingSettings.audioLevelingEnabled)
+
+            Text(levelingModeHelp)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -283,7 +290,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("Shortcuts work when TOrbitRecorder is the active app. Global shortcuts are not part of this MVP step.")
+            Text("Show Window works globally. Recording, Library, and Diagnostics shortcuts work when T-Orbit Recorder is the active app. Marker shortcuts are hidden for now.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -318,7 +325,7 @@ struct SettingsView: View {
                 )
             )
 
-            Text("When off, TOrbitRecorder stays as a menu bar app. Use the menu bar item to show the window again.")
+            Text("When off, T-Orbit Recorder stays in the menu bar. Use the menu bar item or Ctrl+Option+Cmd+R to show the window again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -330,7 +337,7 @@ struct SettingsView: View {
                 )
             )
 
-            Text("Starts TOrbitRecorder when you log in.")
+            Text("Starts T-Orbit Recorder when you log in.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -364,6 +371,28 @@ struct SettingsView: View {
 
     private var isDefaultRoot: Bool {
         appState.outputFolderURL.path(percentEncoded: false) == RecordingPaths.defaultRoot.path(percentEncoded: false)
+    }
+
+    private var unavailablePreferredMicrophoneDeviceID: String? {
+        guard let preferredID = appState.recordingSettings.microphoneDeviceID,
+              !preferredID.isEmpty,
+              !appState.availableMicrophoneDevices.contains(where: { $0.id == preferredID })
+        else {
+            return nil
+        }
+
+        return preferredID
+    }
+
+    private var levelingModeHelp: String {
+        switch appState.recordingSettings.audioLevelingMode {
+        case .balanced:
+            return "Balanced evens out microphone and system audio for normal listening."
+        case .conservative:
+            return "Conservative uses smaller gain changes when the original recording already sounds usable."
+        case .voiceBoost:
+            return "Voice Boost is reserved for a later speech-focused processing pass."
+        }
     }
 
     private func openOutputFolder() {

@@ -10,7 +10,7 @@ enum AppWindows {
 
     static func openLibrary(appState: AppState) {
         let window = libraryWindow ?? makeWindow(
-            title: "TOrbit Recorder Library",
+            title: "T-Orbit Recorder Library",
             width: 1_040,
             height: 700,
             rootView: LibraryView(appState: appState)
@@ -21,7 +21,7 @@ enum AppWindows {
 
     static func openDiagnostics(appState: AppState) {
         let window = diagnosticsWindow ?? makeWindow(
-            title: "TOrbit Recorder Diagnostics",
+            title: "T-Orbit Recorder Diagnostics",
             width: 760,
             height: 620,
             rootView: DiagnosticsView(appState: appState)
@@ -32,7 +32,7 @@ enum AppWindows {
 
     static func openSettings(appState: AppState) {
         let window = settingsWindow ?? makeWindow(
-            title: "TOrbit Recorder Settings",
+            title: "T-Orbit Recorder Settings",
             width: 700,
             height: 720,
             rootView: SettingsView(appState: appState)

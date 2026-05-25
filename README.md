@@ -145,13 +145,13 @@ open /Applications/TOrbitRecorder.app
 
 Use `dist/` for shareable local artifacts and `/Applications/TOrbitRecorder.app` for a normal macOS launch. Do not use `apps/macos/.build/app/TOrbitRecorder.app` except when debugging the build script output directly.
 
-Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. When Audio leveling is enabled, it also creates `export/mixed_balanced.m4a` plus `analysis/audio_analysis.json`, and stores `audio.health` warnings in `metadata.json`. System audio uses a Core Audio process tap; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows. While recording, quick markers can be added for Important, Objection, Conflict, Review, and Bad audio moments.
+Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. When Volume leveling is enabled, it also creates `export/mixed_balanced.m4a` plus `analysis/audio_analysis.json`, and stores `audio.health` warnings in `metadata.json`. System audio uses a Core Audio process tap; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action; Library and Diagnostics open as separate windows. Marker metadata still exists, but marker controls are hidden from the default recorder UI until the workflow is clearer.
 
 Older recordings can be reprocessed for balanced audio from `Library -> More -> Reprocess Audio`. Batch reprocessing for recordings missing `export/mixed_balanced.m4a` is available in `Diagnostics -> Audio Processing`.
 
-Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkey placeholders, and local privacy controls. Unimplemented controls are disabled in the UI.
+Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkeys, Dock/menu-bar behavior, and local privacy controls. Unimplemented controls are disabled in the UI.
 
-Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
+Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. `Ctrl+Option+Cmd+R` shows the app window globally, including when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
 Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path.
 
@@ -276,9 +276,8 @@ Manual full recording pass:
 3. Click Start Recording from the menu bar item or main panel.
 4. Speak into the microphone and play audible audio from another macOS app.
 5. Record for longer than the short-recording threshold. The MVP default is 60 seconds; use at least 65 seconds for the normal post-call tagging path.
-6. While recording, click one or two marker buttons such as `Important` or `Bad audio`, or use `Cmd+1` through `Cmd+5`.
-7. Click Stop Recording.
-8. Confirm the session folder contains:
+6. Click Stop Recording.
+7. Confirm the session folder contains:
 
 ```text
 source/mic.m4a
@@ -287,7 +286,7 @@ export/mixed.m4a
 metadata.json
 ```
 
-9. Confirm `metadata.json` contains a `markers` array with marker timestamps.
+8. Confirm `metadata.json` contains audio health and processing fields.
 10. Confirm the post-call tagging panel opens.
 11. Add title, participant text, and tags, then save.
 12. Open Library and confirm the recording appears in the recent recordings list.
@@ -304,7 +303,7 @@ Short recording check:
 YouTube plus voice check:
 
 1. Open a YouTube video in a browser and keep the browser audible through the normal Mac output device.
-2. Start recording in TOrbit Recorder.
+2. Start recording in T-Orbit Recorder.
 3. Speak into the selected microphone while the YouTube audio is playing.
 4. Stop recording and use Play from the latest strip.
 5. Confirm playback prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.

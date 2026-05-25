@@ -7,7 +7,7 @@ public enum PermissionRequirement: String, CaseIterable, Sendable {
 }
 
 public enum PermissionOnboardingFormatter {
-    public static let restartMessage = "Permission is enabled. Restart TOrbitRecorder to apply it."
+    public static let restartMessage = "Permission is enabled. Restart T-Orbit Recorder to apply it."
 
     public static func title(for requirement: PermissionRequirement) -> String {
         switch requirement {
@@ -36,7 +36,7 @@ public enum PermissionOnboardingFormatter {
         case (.microphone, .missing):
             return "Microphone access is required for source/mic.m4a."
         case (.microphone, .unknown):
-            return "TOrbitRecorder cannot determine microphone permission."
+            return "T-Orbit Recorder cannot determine microphone permission."
 
         case (.screenSystemAudio, .granted):
             return "System audio recording is available."
@@ -49,7 +49,7 @@ public enum PermissionOnboardingFormatter {
         case (.screenSystemAudio, .notDetermined):
             return "macOS requests system audio access when recording starts."
         case (.screenSystemAudio, .unknown):
-            return "TOrbitRecorder cannot determine system audio permission."
+            return "T-Orbit Recorder cannot determine system audio permission."
 
         case (.storage, .granted):
             return "The local recordings folder is writable."
@@ -62,7 +62,7 @@ public enum PermissionOnboardingFormatter {
         case (.storage, .notDetermined):
             return "The app has not confirmed write access to the recordings folder yet."
         case (.storage, .unknown):
-            return "TOrbitRecorder cannot determine output folder access."
+            return "T-Orbit Recorder cannot determine output folder access."
         }
     }
 

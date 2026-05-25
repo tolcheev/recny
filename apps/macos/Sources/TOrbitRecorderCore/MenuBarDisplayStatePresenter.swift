@@ -55,7 +55,7 @@ public enum MenuBarDisplayStatePresenter {
                 canOpenLastRecordingFolder: hasLastRecording,
                 symbolName: "record.circle.fill",
                 tint: showRecordingIndicator ? .recording : .none,
-                accessibilityDescription: "TOrbit Recorder is recording"
+                accessibilityDescription: "T-Orbit Recorder is recording"
             )
         case .error:
             return MenuBarDisplayState(
@@ -63,9 +63,9 @@ public enum MenuBarDisplayStatePresenter {
                 recordingToggleAction: .start,
                 canPlayLastRecording: hasPlayableLastRecording,
                 canOpenLastRecordingFolder: hasLastRecording,
-                symbolName: "exclamationmark.circle.fill",
+                symbolName: "exclamationmark.triangle.fill",
                 tint: .error,
-                accessibilityDescription: "TOrbit Recorder error"
+                accessibilityDescription: "T-Orbit Recorder error"
             )
         case .idle:
             return MenuBarDisplayState(
@@ -73,9 +73,9 @@ public enum MenuBarDisplayStatePresenter {
                 recordingToggleAction: .start,
                 canPlayLastRecording: hasPlayableLastRecording,
                 canOpenLastRecordingFolder: hasLastRecording,
-                symbolName: "record.circle",
+                symbolName: "waveform.circle",
                 tint: .none,
-                accessibilityDescription: "TOrbit Recorder idle"
+                accessibilityDescription: "T-Orbit Recorder idle"
             )
         }
     }

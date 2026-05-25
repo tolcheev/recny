@@ -74,12 +74,12 @@ struct RecordingDisplayFormatterTests {
 
     @Test
     func formatsPlaybackStateWithoutRawTechnicalStatuses() {
-        #expect(RecordingDisplayFormatter.playbackStateText(.balancedReady) == "Audio: Balanced")
-        #expect(RecordingDisplayFormatter.playbackStateText(.originalOnly) == "Audio: Original")
-        #expect(RecordingDisplayFormatter.playbackStateText(.balancedFailed) == "Audio: Balanced failed")
+        #expect(RecordingDisplayFormatter.playbackStateText(.balancedReady) == "Playback: Balanced")
+        #expect(RecordingDisplayFormatter.playbackStateText(.originalOnly) == "Playback: Original")
+        #expect(RecordingDisplayFormatter.playbackStateText(.balancedFailed) == "Playback: Balanced failed")
         #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .balancedReady) == "Balanced audio ready")
-        #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .levelingSkipped) == "Audio leveling skipped")
-        #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .balancedFailed) == "Audio leveling failed")
+        #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .levelingSkipped) == "Volume leveling skipped")
+        #expect(RecordingDisplayFormatter.audioProcessingCopy(state: .balancedFailed) == "Volume leveling failed")
     }
 
     @Test

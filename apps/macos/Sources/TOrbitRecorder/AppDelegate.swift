@@ -8,7 +8,10 @@ import UserNotifications
 final class AppDelegate: NSObject, NSApplicationDelegate {
     lazy var appState = AppState(appSettings: AppSettingsStore.load())
 
-    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    private lazy var globalHotKeyController = GlobalHotKeyController { [weak self] in
+        self?.showMainWindow()
+    }
     private var cancellables: Set<AnyCancellable> = []
     private var recordingToggleItem: NSMenuItem?
     private var playLastItem: NSMenuItem?
@@ -24,14 +27,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyActivationPolicy()
         configureStatusItem()
         bindState()
+        globalHotKeyController.start()
         Self.requestNotificationAuthorization()
         appState.startAutoStartMonitoring()
         appState.startMicrophoneDeviceMonitoring()
-        AppLogger.app.info("TOrbitRecorder launched")
+        AppLogger.app.info("T-Orbit Recorder launched")
         AppLogger.file(.info, category: "app", "app start version=\(BuildInfo.appVersion) commit=\(BuildInfo.gitCommit)")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        globalHotKeyController.stop()
         AppLogger.file(.info, category: "app", "app stop")
     }
 
@@ -52,11 +57,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func configureStatusItem() {
         if let button = statusItem.button {
-            button.image = NSImage(
-                systemSymbolName: "record.circle",
-                accessibilityDescription: "TOrbitRecorder"
+            button.image = menuBarImage(
+                symbolName: "waveform.circle",
+                accessibilityDescription: "T-Orbit Recorder"
             )
-            button.toolTip = "TOrbitRecorder"
+            button.imagePosition = .imageOnly
+            button.toolTip = "T-Orbit Recorder"
         }
 
         let menu = NSMenu()
@@ -64,9 +70,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let showWindowItem = NSMenuItem(
             title: "Show Window",
             action: #selector(showWindow),
-            keyEquivalent: ""
+            keyEquivalent: KeyboardShortcutCatalog.showWindowGlobal.keyEquivalent
         )
         showWindowItem.target = self
+        showWindowItem.keyEquivalentModifierMask = [.command, .option, .control]
         menu.addItem(showWindowItem)
 
         menu.addItem(.separator())
@@ -197,7 +204,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private nonisolated static func deliverNotification(_ message: String) {
         let content = UNMutableNotificationContent()
-        content.title = "TOrbit Recorder"
+        content.title = "T-Orbit Recorder"
         content.body = message
         content.sound = nil
 
@@ -234,8 +241,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recordingToggleItem?.isEnabled = true
         playLastItem?.isEnabled = displayState.canPlayLastRecording
         openLastFolderItem?.isEnabled = displayState.canOpenLastRecordingFolder
-        statusItem.button?.image = NSImage(
-            systemSymbolName: displayState.symbolName,
+        statusItem.button?.image = menuBarImage(
+            symbolName: displayState.symbolName,
             accessibilityDescription: displayState.accessibilityDescription
         )
         statusItem.button?.contentTintColor = switch displayState.tint {
@@ -250,6 +257,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func applyActivationPolicy() {
         NSApp.setActivationPolicy(appState.privacySettings.showDockIcon ? .regular : .accessory)
+    }
+
+    private func menuBarImage(symbolName: String, accessibilityDescription: String) -> NSImage? {
+        let image = NSImage(
+            systemSymbolName: symbolName,
+            accessibilityDescription: accessibilityDescription
+        ) ?? NSImage(
+            systemSymbolName: "record.circle",
+            accessibilityDescription: accessibilityDescription
+        )
+        image?.isTemplate = true
+        return image
     }
 
     private func enforceSingleRunningInstance() -> Bool {
@@ -294,14 +313,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Another TOrbitRecorder copy is already running"
+        alert.messageText = "Another T-Orbit Recorder copy is already running"
         let pathText = existingPaths.isEmpty
-            ? "A previous TOrbitRecorder process is still active."
+            ? "A previous T-Orbit Recorder process is still active."
             : "Running copy:\n\(existingPaths.joined(separator: "\n"))"
         alert.informativeText = """
         \(pathText)
 
-        Quit all TOrbitRecorder copies, then open /Applications/TOrbitRecorder.app. Running .build, dist, and /Applications copies at the same time can make macOS ask for audio permissions again.
+        Quit all T-Orbit Recorder copies, then open /Applications/TOrbitRecorder.app. Running .build, dist, and /Applications copies at the same time can make macOS ask for audio permissions again.
         """
         alert.addButton(withTitle: "Quit This Copy")
         alert.runModal()
@@ -402,7 +421,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
         let mainWindow = NSApp.windows.first { window in
-            window.identifier == .torbitMainWindow || window.title == "TOrbit Recorder"
+            window.identifier == .torbitMainWindow || window.title == "T-Orbit Recorder" || window.title == "TOrbit Recorder"
         } ?? fallbackMainWindow ?? makeFallbackMainWindow()
 
         mainWindow.identifier = .torbitMainWindow
@@ -418,7 +437,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "TOrbit Recorder"
+        window.title = "T-Orbit Recorder"
         window.identifier = .torbitMainWindow
         window.contentViewController = NSHostingController(rootView: MainRecorderView(appState: appState))
         window.isReleasedWhenClosed = false
@@ -436,7 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func quit() {
-        AppLogger.app.info("TOrbitRecorder quit requested")
+        AppLogger.app.info("T-Orbit Recorder quit requested")
         AppLogger.file(.info, category: "app", "quit requested")
         NSApp.terminate(nil)
     }
@@ -447,7 +466,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Recording is active. Stop and quit?"
-        alert.informativeText = "TOrbitRecorder will stop the current recording before quitting."
+        alert.informativeText = "T-Orbit Recorder will stop the current recording before quitting."
         alert.addButton(withTitle: "Stop and Quit")
         alert.addButton(withTitle: "Cancel")
 

@@ -5,7 +5,7 @@ struct TOrbitRecorderApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        Window("TOrbit Recorder", id: "main") {
+        Window("T-Orbit Recorder", id: "main") {
             MainRecorderView(appState: appDelegate.appState)
         }
         .commands {

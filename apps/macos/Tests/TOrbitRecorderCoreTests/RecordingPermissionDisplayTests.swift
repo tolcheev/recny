@@ -113,7 +113,7 @@ struct RecordingPermissionDisplayTests {
             PermissionOnboardingFormatter.explanation(
                 for: .screenSystemAudio,
                 state: .restartRequired
-            ) == "Permission is enabled. Restart TOrbitRecorder to apply it."
+            ) == "Permission is enabled. Restart T-Orbit Recorder to apply it."
         )
         #expect(
             PermissionOnboardingFormatter.actionTitle(

@@ -45,10 +45,6 @@ struct MainRecorderView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            Text("TOrbit Recorder")
-                .font(.title2.weight(.semibold))
-                .lineLimit(1)
-
             Spacer()
 
             StatusBadge(

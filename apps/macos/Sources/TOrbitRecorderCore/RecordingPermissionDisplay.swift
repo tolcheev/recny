@@ -133,7 +133,7 @@ public enum RecordingPermissionDisplay {
 
         if systemAudioEnabled && isSystemAudioPermissionBlocking(snapshot.screenSystemAudio) {
             if snapshot.screenSystemAudio == .restartRequired {
-                return "System audio access is enabled, but TOrbitRecorder must be restarted."
+                return "System audio access is enabled, but T-Orbit Recorder must be restarted."
             }
 
             return "System audio access is required before recording."

@@ -20,6 +20,13 @@ public struct KeyboardShortcutDefinition: Equatable, Identifiable, Sendable {
 }
 
 public enum KeyboardShortcutCatalog {
+    public static let showWindowGlobal = KeyboardShortcutDefinition(
+        id: "show_window_global",
+        title: "Show window",
+        keyEquivalent: "r",
+        displayText: "Ctrl+Option+Cmd+R"
+    )
+
     public static let toggleRecording = KeyboardShortcutDefinition(
         id: "toggle_recording",
         title: "Start/Stop recording",
@@ -63,11 +70,12 @@ public enum KeyboardShortcutCatalog {
     ]
 
     public static let appActiveShortcuts: [KeyboardShortcutDefinition] = [
+        showWindowGlobal,
         toggleRecording,
         openLatestRecordingFolder,
         openLibrary,
         openDiagnostics
-    ] + markerShortcuts
+    ]
 
     private static func markerShortcut(for kind: RecordingMarkerKind) -> KeyboardShortcutDefinition {
         KeyboardShortcutDefinition(

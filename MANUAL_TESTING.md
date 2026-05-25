@@ -28,7 +28,7 @@ Settings, Library, and Diagnostics open as separate app windows. If a window is 
 
 The main window should stay recorder-first:
 
-- Header shows `TOrbit Recorder`, auto-start state, and a small Ready/Recording/Error status dot.
+- Header area shows compact auto-start and Ready/Recording/Error state. The app name stays in the window title/menu bar instead of being repeated in the content.
 - Idle shows one large `Start Recording` button, then Mic, System audio, and Auto-start summaries.
 - Recording shows a large timer, one large `Stop Recording` button, and recording copy.
 - Error shows `Recording failed`, a short reason, `Open Diagnostics`, and `Try Again`.
@@ -78,38 +78,34 @@ Dock behavior:
 
 - Settings -> Privacy / Behavior -> Show Dock icon defaults on for MVP.
 - Turning it off switches the app to menu-bar-only accessory behavior.
-- If the Dock icon is hidden, use the menu bar item to reopen the main window.
+- If the Dock icon is hidden, use the menu bar item or `Ctrl+Option+Cmd+R` to reopen the main window.
 
 ## Keyboard Shortcuts
 
-Shortcuts are app-active only in the MVP. Bring TOrbitRecorder to the foreground first with the menu bar item or Dock icon.
+The Show Window shortcut is global. Other shortcuts are app-active only in the MVP.
 
 Expected shortcuts:
 
+- `Ctrl+Option+Cmd+R`: Show Window, including when the Dock icon is hidden.
 - `Cmd+Shift+R`: Start Recording when idle, Stop Recording when recording.
 - `Cmd+Shift+O`: Open Latest Recording Folder.
 - `Cmd+Shift+L`: Open Library.
 - `Cmd+Shift+D`: Open Diagnostics.
-- `Cmd+1`: Add Important marker while recording.
-- `Cmd+2`: Add Objection marker while recording.
-- `Cmd+3`: Add Conflict marker while recording.
-- `Cmd+4`: Add Review marker while recording.
-- `Cmd+5`: Add Bad audio marker while recording.
 
 Manual check:
 
 1. Open TOrbitRecorder from `/Applications` or `dist/`.
-2. Bring the app to the foreground.
-3. Press `Cmd+Shift+L` and confirm Library opens.
-4. Press `Cmd+Shift+D` and confirm Diagnostics opens.
-5. Create or keep a latest recording, then press `Cmd+Shift+O` and confirm Finder opens that recording folder.
-6. Press `Cmd+Shift+R` while idle and confirm recording starts.
-7. Press `Cmd+1` and `Cmd+5` while recording and confirm the marker count increases in the recording UI.
+2. Hide the Dock icon in Settings -> Behavior, switch to another app, then press `Ctrl+Option+Cmd+R`.
+3. Confirm T-Orbit Recorder comes to front.
+4. Press `Cmd+Shift+L` and confirm Library opens.
+5. Press `Cmd+Shift+D` and confirm Diagnostics opens.
+6. Create or keep a latest recording, then press `Cmd+Shift+O` and confirm Finder opens that recording folder.
+7. Press `Cmd+Shift+R` while idle and confirm recording starts.
 8. Press `Cmd+Shift+R` while recording and confirm recording stops.
 9. Open Settings -> Hotkeys and confirm the same shortcuts are listed.
 10. Open a text field in Settings or Tag dialog and confirm normal typing still works.
 
-Global shortcuts are not implemented in this step. If another app is active, these shortcuts are not expected to control TOrbitRecorder.
+Marker shortcuts and marker buttons are hidden from the default UI for now. Existing recordings can still display marker metadata in Library details if metadata contains markers.
 
 ## Launch At Login
 
@@ -136,7 +132,7 @@ open /Applications/TOrbitRecorder.app
 7. Quit TOrbitRecorder.
 8. Log out and log back in, or restart the Mac.
 9. Confirm TOrbitRecorder launches after login and the menu bar item appears.
-10. Turn `Launch at Login` off and confirm TOrbitRecorder is removed or disabled from Login Items.
+10. Turn `Launch at Login` off and confirm T-Orbit Recorder is removed or disabled from Login Items.
 
 Known dev-build caveat:
 
@@ -193,8 +189,10 @@ External mic check:
 2. Keep Preferred microphone on `Auto, recommended`.
 3. Click Refresh or wait a few seconds for device refresh.
 4. Confirm Main shows the external microphone name.
-5. Start a recording, then connect another microphone.
-6. Confirm the active recording input does not change mid-recording; the new best input can be selected for the next recording.
+5. Manually select an external mic, then unplug it.
+6. Confirm Main and Diagnostics fall back to MacBook/Built-in microphone instead of AirPods when the built-in mic is available.
+7. Start a recording, then connect another microphone.
+8. Confirm the active recording input does not change mid-recording; the new best input can be selected for the next recording.
 
 ## Permissions
 
@@ -228,7 +226,7 @@ If system audio is denied or still missing after a failed start:
 1. Click `Open System Audio Settings`.
 2. Enable `TOrbitRecorder`.
 3. Return to the app.
-4. If the app shows `Permission is enabled. Restart TOrbitRecorder to apply it.`, click `Restart App` in onboarding or quit from the menu bar.
+4. If the app shows `Permission is enabled. Restart T-Orbit Recorder to apply it.`, click `Restart App` in onboarding or quit from the menu bar.
 5. Reopen the same app bundle shown by onboarding. Normal manual test path:
 
 ```sh
@@ -269,21 +267,20 @@ Use this path for the normal MVP success case.
 1. Start playing audible system audio from another app.
 2. Click Start Recording.
 3. Speak into the microphone.
-4. Add at least two markers from the recording UI, for example `Important` and `Bad audio`.
-5. Keep recording for at least 65 seconds with default settings.
-6. Click Stop Recording.
-7. Confirm the UI returns to Idle.
-8. Confirm the post-call tagging panel opens.
-9. Fill:
+4. Keep recording for at least 65 seconds with default settings.
+5. Click Stop Recording.
+6. Confirm the UI returns to Idle.
+7. Confirm the post-call tagging panel opens.
+8. Fill:
    - title
    - participant free text
    - at least one MVP tag
-10. Save the post-call panel.
-11. Open Library and confirm the recording appears in recent recordings.
-12. Select the recording and confirm the details panel shows marker timestamps and labels.
-13. Expand Library filters and filter the list by the saved tag.
-14. Click Open in Finder on the recording row.
-15. Confirm Finder opens the recording folder.
+9. Save the post-call panel.
+10. Open Library and confirm the recording appears in recent recordings.
+11. Select the recording and confirm the details panel shows audio analysis and tags.
+12. Expand Library filters and filter the list by the saved tag.
+13. Click Open in Finder on the recording row.
+14. Confirm Finder opens the recording folder.
 
 ## Output Files
 
@@ -313,7 +310,7 @@ plutil -p analysis/audio_analysis.json
 Expected metadata:
 
 - `status` is `needs_tagging`, `saved`, `needs_review`, or `reviewed` after a normal recording.
-- `audio_tracks` includes `microphone`, `system`, `mixed`, and `mixed_balanced` when Audio leveling is enabled.
+- `audio_tracks` includes `microphone`, `system`, `mixed`, and `mixed_balanced` when Volume leveling is enabled.
 - Completed audio tracks have `file_size_bytes` greater than 0.
 - Completed audio tracks include `signal.had_signal`, `signal.approximate_silence_ratio`, and `signal.clipping_detected`.
 - `audio.processing.balanced_mix_status` is `done` when `mixed_balanced.m4a` was created.
@@ -326,7 +323,7 @@ Expected metadata:
 - `source.trigger` is `manual` for manual starts.
 - `sync` remains `local_only`.
 - `ai` remains `not_started`.
-- `markers` contains timestamped marker objects when markers were added during recording.
+- `markers` is present. It may be empty because marker controls are hidden from the default UI.
 
 Marker metadata example:
 
@@ -357,7 +354,7 @@ Expected behavior:
   - `export/mixed_balanced.m4a`
 - Analysis is saved:
   - `analysis/audio_analysis.json`
-- Main Latest strip shows `Audio: Balanced` plus `Audio OK`, `Audio warning`, or `Audio failed`.
+- Main Latest strip shows `Playback: Balanced` plus `Audio OK`, `Audio warning`, or `Audio failed`.
 - Play uses `mixed_balanced.m4a` by default when it exists.
 - Diagnostics -> Audio Processing can play Current and Original.
 - Latest -> More can play Balanced, play Original, open the folder, open `audio_analysis.json`, or tag the recording.
@@ -397,7 +394,7 @@ Reprocess all old recordings:
 Manual balance check: loud YouTube + quiet voice
 
 1. Open Settings -> Recording.
-2. Confirm Audio leveling is on and mode is `Balanced`.
+2. Confirm Volume leveling is on and mode is `Balanced`.
 3. Play YouTube or another loud system audio source.
 4. Speak quietly into the microphone.
 5. Record for 20-30 seconds.
@@ -458,7 +455,7 @@ Clipping check:
 
 Balanced mix failure check:
 
-1. Temporarily disable Audio leveling or simulate a missing/failed balanced export during development.
+1. Temporarily disable Volume leveling or simulate a missing/failed balanced export during development.
 2. Confirm Play still falls back to `export/mixed.m4a`.
 3. Confirm `metadata.json` records `audio.health.warnings` with `balanced_mix_failed` when leveling fails.
 4. Confirm UI copy says `Balanced mix failed, original audio is available`.

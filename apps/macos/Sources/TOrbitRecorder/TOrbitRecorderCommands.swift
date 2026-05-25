@@ -6,7 +6,7 @@ struct TOrbitRecorderCommands: Commands {
     let appDelegate: AppDelegate
 
     var body: some Commands {
-        CommandMenu("TOrbit Recorder") {
+        CommandMenu("T-Orbit Recorder") {
             Button(appState.status == .recording ? "Stop Recording" : "Start Recording") {
                 appDelegate.toggleRecordingFromShortcut()
             }
@@ -39,19 +39,6 @@ struct TOrbitRecorderCommands: Commands {
                 KeyEquivalent(Character(KeyboardShortcutCatalog.openDiagnostics.keyEquivalent)),
                 modifiers: [.command, .shift]
             )
-
-            Divider()
-
-            ForEach(RecordingMarkerKind.allCases) { markerKind in
-                Button("Add \(markerKind.label) Marker") {
-                    appDelegate.addMarkerFromShortcut(markerKind)
-                }
-                .keyboardShortcut(
-                    KeyEquivalent(Character(markerKind.shortcutKey)),
-                    modifiers: [.command]
-                )
-                .disabled(appState.status != .recording)
-            }
         }
     }
 }

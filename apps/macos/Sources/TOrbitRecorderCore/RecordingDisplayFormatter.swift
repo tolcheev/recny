@@ -68,17 +68,17 @@ public enum RecordingDisplayFormatter {
     public static func playbackStateText(_ state: RecordingPlaybackDisplayState) -> String {
         switch state {
         case .balancedReady:
-            return "Audio: Balanced"
+            return "Playback: Balanced"
         case .originalOnly:
-            return "Audio: Original"
+            return "Playback: Original"
         case .balancedFailed:
-            return "Audio: Balanced failed"
+            return "Playback: Balanced failed"
         case .levelingSkipped:
-            return "Audio: Original"
+            return "Playback: Original"
         case .fallbackSource(let kind):
-            return "Audio: \(kind.displayName)"
+            return "Playback: \(kind.displayName)"
         case .missing:
-            return "Audio: Missing"
+            return "Playback: Missing"
         }
     }
 
@@ -91,9 +91,9 @@ public enum RecordingDisplayFormatter {
         case .originalOnly:
             return "Original audio only"
         case .balancedFailed:
-            return "Audio leveling failed"
+            return "Volume leveling failed"
         case .levelingSkipped:
-            return "Audio leveling skipped"
+            return "Volume leveling skipped"
         case .fallbackSource(let kind):
             return "\(kind.displayName) available"
         case .missing:
@@ -138,7 +138,7 @@ public enum RecordingDisplayFormatter {
         case .failed:
             return "Balanced mix failed, original audio is available"
         case .skipped:
-            return "Audio leveling skipped"
+            return "Volume leveling skipped"
         case .partial:
             return "Balanced mix was created from available audio"
         }

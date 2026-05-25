@@ -22,7 +22,7 @@ enum LaunchAtLoginController {
         case .notRegistered:
             return LaunchAtLoginSnapshot(
                 isOn: false,
-                message: "Off. TOrbitRecorder will not start automatically."
+                message: "Off. T-Orbit Recorder will not start automatically."
             )
         case .notFound:
             return LaunchAtLoginSnapshot(

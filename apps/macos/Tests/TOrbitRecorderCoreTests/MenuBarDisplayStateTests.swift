@@ -15,9 +15,9 @@ struct MenuBarDisplayStateTests {
         #expect(state.recordingToggleAction == .start)
         #expect(state.canPlayLastRecording == false)
         #expect(state.canOpenLastRecordingFolder == false)
-        #expect(state.symbolName == "record.circle")
+        #expect(state.symbolName == "waveform.circle")
         #expect(state.tint == .none)
-        #expect(state.accessibilityDescription == "TOrbit Recorder idle")
+        #expect(state.accessibilityDescription == "T-Orbit Recorder idle")
     }
 
     @Test
@@ -35,7 +35,7 @@ struct MenuBarDisplayStateTests {
         #expect(state.canOpenLastRecordingFolder)
         #expect(state.symbolName == "record.circle.fill")
         #expect(state.tint == .recording)
-        #expect(state.accessibilityDescription == "TOrbit Recorder is recording")
+        #expect(state.accessibilityDescription == "T-Orbit Recorder is recording")
     }
 
     @Test
@@ -49,7 +49,7 @@ struct MenuBarDisplayStateTests {
 
         #expect(state.symbolName == "record.circle.fill")
         #expect(state.tint == .none)
-        #expect(state.accessibilityDescription == "TOrbit Recorder is recording")
+        #expect(state.accessibilityDescription == "T-Orbit Recorder is recording")
     }
 
     @Test
@@ -65,8 +65,8 @@ struct MenuBarDisplayStateTests {
         #expect(state.recordingToggleAction == .start)
         #expect(state.canPlayLastRecording)
         #expect(state.canOpenLastRecordingFolder)
-        #expect(state.symbolName == "exclamationmark.circle.fill")
+        #expect(state.symbolName == "exclamationmark.triangle.fill")
         #expect(state.tint == .error)
-        #expect(state.accessibilityDescription == "TOrbit Recorder error")
+        #expect(state.accessibilityDescription == "T-Orbit Recorder error")
     }
 }

@@ -9,7 +9,7 @@ struct PermissionsOnboardingView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Set up recording permissions")
                     .font(.headline)
-                Text("TOrbitRecorder needs local access before Start Recording is available.")
+                Text("T-Orbit Recorder needs local access before Start Recording is available.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

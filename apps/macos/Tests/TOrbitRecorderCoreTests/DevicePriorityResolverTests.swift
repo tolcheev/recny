@@ -112,6 +112,94 @@ struct DevicePriorityResolverTests {
     }
 
     @Test
+    func missingPreferredExternalFallsBackToBuiltInInsteadOfAirPods() throws {
+        let devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods Pro 2"),
+            MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone")
+        ]
+
+        let selection = try #require(DevicePriorityResolver.resolve(devices: devices, preferredDeviceID: "shure"))
+
+        #expect(selection.device.id == "builtin")
+        #expect(selection.warning == nil)
+        #expect(
+            DevicePriorityResolver.selectionReason(
+                devices: devices,
+                selection: selection,
+                preferredDeviceID: "shure"
+            ) == "Preferred microphone is unavailable; auto selected the built-in microphone."
+        )
+    }
+
+    @Test
+    func restoreAvoidsOriginalAirPodsWhenBuiltInInputExists() throws {
+        let devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods Pro 2"),
+            MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone")
+        ]
+
+        let target = try #require(
+            MicrophoneInputRestorePolicy.restoreTarget(
+                devices: devices,
+                originalDeviceID: "airpods",
+                currentSelectedDeviceID: "builtin"
+            )
+        )
+
+        #expect(target.id == "builtin")
+        #expect(
+            MicrophoneInputRestorePolicy.restoreReason(
+                devices: devices,
+                target: target,
+                originalDeviceID: "airpods"
+            ) == "Original Bluetooth microphone avoided during restore because a non-Bluetooth input is available."
+        )
+    }
+
+    @Test
+    func restoreKeepsOriginalExternalWhenStillAvailable() throws {
+        let devices = [
+            MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone"),
+            MicrophoneInputDevice(id: "shure", name: "Shure MV7")
+        ]
+
+        let target = try #require(
+            MicrophoneInputRestorePolicy.restoreTarget(
+                devices: devices,
+                originalDeviceID: "shure",
+                currentSelectedDeviceID: "builtin"
+            )
+        )
+
+        #expect(target.id == "shure")
+    }
+
+    @Test
+    func restoreUsesBuiltInWhenOriginalExternalWasUnplugged() throws {
+        let devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods Pro 2"),
+            MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone")
+        ]
+
+        let target = try #require(
+            MicrophoneInputRestorePolicy.restoreTarget(
+                devices: devices,
+                originalDeviceID: "shure",
+                currentSelectedDeviceID: "builtin"
+            )
+        )
+
+        #expect(target.id == "builtin")
+        #expect(
+            MicrophoneInputRestorePolicy.restoreReason(
+                devices: devices,
+                target: target,
+                originalDeviceID: "shure"
+            ) == "Original microphone is unavailable; restored best available input."
+        )
+    }
+
+    @Test
     func categorizesBluetoothHandsFreeProfileAsBluetoothFallback() {
         let category = DevicePriorityResolver.category(
             for: MicrophoneInputDevice(id: "hfp", name: "Bluetooth Headset Hands-Free")

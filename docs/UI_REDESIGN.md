@@ -24,7 +24,7 @@ The main window deliberately avoids database controls, raw technical status, rec
 
 ## Menu Bar Behavior
 
-TOrbitRecorder is controlled primarily from the macOS menu bar. The menu exposes:
+T-Orbit Recorder is controlled primarily from the macOS menu bar. The menu exposes:
 
 - Show Window
 - Start Recording / Stop Recording
@@ -39,26 +39,27 @@ TOrbitRecorder is controlled primarily from the macOS menu bar. The menu exposes
 
 The menu bar icon reflects recorder state:
 
-- idle: neutral record icon
+- idle: neutral waveform icon
 - recording: filled red record icon when the recording indicator is enabled
-- error: orange error icon
+- error: orange warning icon
 
 If Quit is selected while recording is active, the app asks for confirmation before stopping the recording and quitting.
 
 App-active keyboard shortcuts mirror the primary menu actions:
 
+- `Ctrl+Option+Cmd+R`: Show Window globally, including when the Dock icon is hidden
 - `Cmd+Shift+R`: Start/Stop Recording
 - `Cmd+Shift+O`: Open Latest Recording Folder
 - `Cmd+Shift+L`: Open Library
 - `Cmd+Shift+D`: Open Diagnostics
 
-Global shortcuts are intentionally out of scope for the MVP shortcut pass.
+Marker shortcuts are hidden from the default UI until the marker workflow is useful enough for daily use.
 
 ## Main Window States
 
 UI v3 keeps the main window as a compact recorder surface instead of a library dashboard:
 
-- Header: `TOrbit Recorder`, compact auto-start badge, and a small Ready/Recording/Error status dot
+- Header: compact auto-start badge and a small Ready/Recording/Error status dot; the app name stays in the window title/menu bar
 - Center recording area: the only primary daily action, either `Start Recording` or `Stop Recording`
 - Latest strip: one compact row for the last recording only, with Play/Open/Tag
 - Footer: Library, Settings, and Diagnostics entry points
@@ -181,8 +182,8 @@ The design keeps native macOS styling, supports light/dark mode through system c
 ## Known Limitations
 
 - No screenshot automation is currently wired for the native macOS window.
-- Settings still contain disabled placeholders for hotkeys because runtime hotkey capture is not implemented in MVP.
+- Settings still contain disabled placeholders for custom hotkey capture because editable shortcut capture is not implemented in MVP.
 - Library has local search and collapsed filters; advanced saved views are out of scope.
 - Diagnostics test recording requires local macOS microphone and system audio permissions.
 - macOS may require quitting and reopening the exact app bundle after enabling system audio permission, especially when switching between `.build`, `dist`, and `/Applications` builds.
-- `Show Dock icon` defaults on for MVP. Turning it off switches the app to menu-bar-only accessory behavior; use the menu bar icon to bring windows back.
+- `Show Dock icon` defaults on for MVP. Turning it off switches the app to menu-bar-only accessory behavior; use the menu bar icon or `Ctrl+Option+Cmd+R` to bring windows back.
