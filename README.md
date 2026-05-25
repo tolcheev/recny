@@ -250,7 +250,7 @@ scripts/build_macos.sh
 open -n apps/macos/.build/app/TOrbitRecorder.app
 ```
 
-The app runs as a menu bar app. Use the menu bar icon for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Last Recording Folder, Open Library, Settings, Diagnostics, and Quit.
+The app runs as a menu bar app. Use the menu bar icon for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings Folder, Open Library, Settings, Diagnostics, and Quit.
 
 For normal dev usage prefer:
 
@@ -259,7 +259,7 @@ For normal dev usage prefer:
 open /Applications/TOrbitRecorder.app
 ```
 
-The menu bar app provides Show Window, Start Recording or Stop Recording, Play Last Recording, Open Last Recording Folder, Open Library, Settings, Diagnostics, and Quit.
+The menu bar app provides Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings Folder, Open Library, Settings, Diagnostics, and Quit.
 
 ## Manual MVP End-To-End Check
 
@@ -309,8 +309,8 @@ YouTube plus voice check:
 1. Open a YouTube video in a browser and keep the browser audible through the normal Mac output device.
 2. Start recording in T-Orbit Recorder.
 3. Speak into the selected microphone while the YouTube audio is playing.
-4. Stop recording and use Play from the latest strip.
-5. Confirm playback prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.
+4. Stop recording, open Library, and use Play on the new row.
+5. Confirm playback opens the built-in T-Orbit Recorder player and prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.
 6. Confirm the mixed preview contains both your voice and the YouTube audio.
 
 Permission error check:

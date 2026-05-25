@@ -100,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.playLastItem = playLastItem
 
         let openLastFolderItem = NSMenuItem(
-            title: "Open Last Recording Folder",
+            title: "Open Recordings Folder",
             action: #selector(openLastRecordingFolder),
             keyEquivalent: KeyboardShortcutCatalog.openLatestRecordingFolder.keyEquivalent
         )
@@ -240,7 +240,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             : #selector(startRecording)
         recordingToggleItem?.isEnabled = true
         playLastItem?.isEnabled = displayState.canPlayLastRecording
-        openLastFolderItem?.isEnabled = displayState.canOpenLastRecordingFolder
+        openLastFolderItem?.isEnabled = true
         statusItem.button?.image = menuBarImage(
             symbolName: displayState.symbolName,
             accessibilityDescription: displayState.accessibilityDescription
@@ -353,23 +353,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func playLastRecording() {
         guard let lastRecording = appState.lastRecording,
-              FileManager.default.fileExists(atPath: lastRecording.mixedAudioURL.path(percentEncoded: false))
+              let playback = RecordingPlaybackResolver.preferredPlayback(
+                sessionFolderURL: lastRecording.sessionFolderURL
+              )
         else {
             return
         }
 
-        NSWorkspace.shared.open(lastRecording.mixedAudioURL)
-        AppLogger.storage.info("Played latest recording mixed preview")
+        AppWindows.openAudioPlayer(
+            url: playback.url,
+            title: "\(lastRecording.title) - \(playback.kind.displayName)"
+        )
+        AppLogger.storage.info("Opened latest recording in app player")
     }
 
     @objc private func openLastRecordingFolder() {
-        guard let lastRecording = appState.lastRecording else {
-            openLibrary()
-            return
-        }
-
-        NSWorkspace.shared.open(lastRecording.sessionFolderURL)
-        AppLogger.storage.info("Opened latest recording folder")
+        AppWindows.openRecordingsFolder(appState: appState)
+        AppLogger.storage.info("Opened recordings folder")
     }
 
     @objc private func openLibrary() {

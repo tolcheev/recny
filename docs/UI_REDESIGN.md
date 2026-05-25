@@ -29,7 +29,7 @@ T-Orbit Recorder is controlled primarily from the macOS menu bar. The menu expos
 - Show Window
 - Start Recording / Stop Recording
 - Play Last Recording
-- Open Last Recording Folder
+- Open Recordings Folder
 - Open Library
 - Settings
 - Diagnostics
@@ -49,7 +49,7 @@ App-active keyboard shortcuts mirror the primary menu actions:
 
 - `Ctrl+Option+Cmd+R`: Show Window globally, including when the Dock icon is hidden
 - `Cmd+Shift+R`: Start/Stop Recording
-- `Cmd+Shift+O`: Open Latest Recording Folder
+- `Cmd+Shift+O`: Open Recordings Folder
 - `Cmd+Shift+L`: Open Library
 - `Cmd+Shift+D`: Open Diagnostics
 
@@ -61,8 +61,7 @@ UI v3 keeps the main window as a compact recorder surface instead of a library d
 
 - Header: compact auto-start badge and a small Ready/Recording/Error status dot; the app name stays in the window title/menu bar
 - Center recording area: the only primary daily action, either `Start Recording` or `Stop Recording`
-- Latest strip: one compact row for the last recording only, with Play/Open/Tag
-- Footer: Library, Settings, and Diagnostics entry points
+- Footer: Library, Open Recordings, Settings, and Diagnostics entry points
 
 The main screen no longer shows file sizes, folder names, raw metadata, recoverable sessions, filters, or a recording list. Those details remain in Library and Diagnostics.
 
@@ -99,16 +98,9 @@ The error state avoids stack traces on the main screen. It shows:
 
 Detailed error text remains in Diagnostics.
 
-### Latest Strip
+### Recent Recordings
 
-The latest recording is intentionally compressed into one row:
-
-- `Last: Saved · 01:12 · Mic + system`
-- Play
-- Open
-- Tag
-
-Short recordings use human copy such as `Short recording`; they are not presented as failures.
+The main screen does not show a latest recording strip. Recent recordings, playback, details, notes, tags, and file actions live in the separate Library window.
 
 ## Library Behavior
 
@@ -120,16 +112,17 @@ Library is a separate window opened from the main footer or menu bar. It default
 - compact row actions: Play, Open, and an icon-only More menu
 - a details panel for the selected recording with files, audio analysis summary, metadata summary, tags, markers, and actions
 - an `Open Library Folder` action for jumping to local storage
-- More actions: Tag, Reprocess Audio, Show Audio Analysis, and Delete Local Recording
+- More actions: Edit Note / Tags, Reprocess Audio, Reveal Audio Analysis, and Delete Local Recording
 
-Title, participant, and tags are edited through the Tag dialog instead of inline fields.
+Title, participant, context note, and tags are edited through the Tag dialog instead of inline fields.
 
 ## Tag Dialog Behavior
 
-The Tag dialog opens from the main Latest strip or from a Library row/details action. It includes:
+The Tag dialog opens from a Library row/details action. It includes:
 
 - optional title
 - optional participant
+- optional context note for company/screening/interview context
 - quick tag chips for the MVP review tags
 - custom tags input with normalization to `#tag`
 - status choices: `Saved`, `Needs review`, and `Reviewed`

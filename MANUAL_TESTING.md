@@ -20,7 +20,7 @@ scripts/package_macos.sh
 open -n dist/TOrbitRecorder.app
 ```
 
-The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Last Recording Folder, Open Library, Settings, Diagnostics, and Quit.
+The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings Folder, Open Library, Settings, Diagnostics, and Quit.
 
 Settings, Library, and Diagnostics open as separate app windows. If a window is behind other apps, use the menu bar item again; the app should activate and bring that window forward.
 
@@ -32,9 +32,8 @@ The main window should stay recorder-first:
 - Idle shows one large `Start Recording` button, then Mic, System audio, and Auto-start summaries.
 - Recording shows a large timer, one large `Stop Recording` button, and recording copy.
 - Error shows `Recording failed`, a short reason, `Open Diagnostics`, and `Try Again`.
-- If a latest recording exists, it appears as one compact row: `Last: ...` with Play, Open, and Tag.
-- If the latest recording has tags, the latest row shows compact tag chips only.
-- The main window should not show file sizes, folder names, library filters, recoverable sessions, or a full recordings list.
+- Recent recordings do not appear on the main window. Use Library for recent recordings, playback, details, and tagging.
+- The main window should not show file sizes, folder names, library filters, recoverable sessions, details links, or a full recordings list.
 
 ## Menu Bar And Window Behavior
 
@@ -43,7 +42,7 @@ Expected menu items:
 - `Show Window`
 - `Start Recording` when idle, `Stop Recording` while recording
 - `Play Last Recording`
-- `Open Last Recording Folder`
+- `Open Recordings Folder`
 - `Open Library`
 - `Settings`
 - `Diagnostics`
@@ -88,7 +87,7 @@ Expected shortcuts:
 
 - `Ctrl+Option+Cmd+R`: Show Window, including when the Dock icon is hidden.
 - `Cmd+Shift+R`: Start Recording when idle, Stop Recording when recording.
-- `Cmd+Shift+O`: Open Latest Recording Folder.
+- `Cmd+Shift+O`: Open Recordings Folder.
 - `Cmd+Shift+L`: Open Library.
 - `Cmd+Shift+D`: Open Diagnostics.
 
@@ -99,7 +98,7 @@ Manual check:
 3. Confirm T-Orbit Recorder comes to front.
 4. Press `Cmd+Shift+L` and confirm Library opens.
 5. Press `Cmd+Shift+D` and confirm Diagnostics opens.
-6. Create or keep a latest recording, then press `Cmd+Shift+O` and confirm Finder opens that recording folder.
+6. Press `Cmd+Shift+O` and confirm Finder opens the root recordings folder.
 7. Press `Cmd+Shift+R` while idle and confirm recording starts.
 8. Press `Cmd+Shift+R` while recording and confirm recording stops.
 9. Open Settings -> Hotkeys and confirm the same shortcuts are listed.
@@ -362,11 +361,11 @@ Expected behavior:
   - `export/mixed_balanced.m4a`
 - Analysis is saved:
   - `analysis/audio_analysis.json`
-- Main Latest strip shows `Playback: Balanced` plus `Audio OK`, `Audio warning`, or `Audio failed`.
-- Play uses `mixed_balanced.m4a` by default when it exists.
+- Library rows show `Balanced` plus `Audio OK`, `Audio warning`, or `Audio failed`.
+- Play opens the built-in T-Orbit Recorder player and uses `mixed_balanced.m4a` by default when it exists.
 - Diagnostics -> Audio Processing can play Current and Original.
-- Latest -> More can play Balanced, play Original, open the folder, open `audio_analysis.json`, or tag the recording.
-- Latest shows a `Details` link when audio health is warning/failed.
+- Library row -> More can play Balanced, play Original, open the folder, reveal `audio_analysis.json`, reprocess audio, or edit note/tags.
+- Library details show audio health when audio health is warning/failed.
 - Library rows show a compact `Balanced` badge when balanced playback is ready, or `Audio warning` when leveling failed.
 - Library rows also show a compact audio warning badge for problematic recordings.
 - Library details show original mixed size, balanced mixed size, mic gain, system gain, audio health, and audio warnings.
@@ -424,7 +423,7 @@ Manual balance check: quiet YouTube + loud voice
    - `Play Original` should use `export/mixed.m4a`.
    - `Play Current` should use `export/mixed_balanced.m4a` when available.
 6. Confirm the balanced file does not make the microphone painfully loud.
-7. Use Latest -> More -> Show Audio Analysis and confirm `analysis/audio_analysis.json` opens.
+7. Use Library -> More -> Reveal Audio Analysis and confirm Finder selects `analysis/audio_analysis.json`.
 
 Limits:
 
@@ -440,8 +439,8 @@ Silent microphone check:
 
 1. Start a short manual recording with the microphone muted or without speaking.
 2. Stop the recording.
-3. Confirm the Latest strip shows `Audio warning`.
-4. Click `Details` or open Library details and confirm the copy includes `Microphone track is silent`.
+3. Confirm the Library row shows `Audio warning`.
+4. Open Library details and confirm the copy includes `Microphone track is silent`.
 5. Open `metadata.json` and confirm `audio.health.warnings` contains `mic_silent`.
 6. Confirm the microphone track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
 
@@ -449,7 +448,7 @@ Silent system audio check:
 
 1. Start a short manual recording with no system audio playing.
 2. Stop the recording.
-3. Confirm the Latest strip shows `Audio warning`.
+3. Confirm the Library row shows `Audio warning`.
 4. Open Library details and confirm the copy includes `System audio track is silent`.
 5. Open `metadata.json` and confirm `audio.health.warnings` contains `system_silent`.
 6. Confirm the system track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
@@ -502,10 +501,10 @@ Check collapsed filters:
 Check actions:
 
 - Open recording folder
-- Play mixed preview
-- Edit title/participant/tags through `More -> Tag` or the details `Edit / Tag` action
-- Add/remove tags in the tag dialog
-- Show Audio Analysis from details when `analysis/audio_analysis.json` exists
+- Play mixed preview in the built-in T-Orbit Recorder player
+- Edit title/participant/context note/tags through `More -> Edit Note / Tags` or the details `Edit / Tag` action
+- Add/remove tags and context notes in the tag dialog
+- Reveal Audio Analysis from details when `analysis/audio_analysis.json` exists
 - Delete local record with confirmation
 
 Delete confirmation should say `This removes audio files and metadata.` Delete should remove the local session folder and the SQLite index row.
@@ -525,7 +524,7 @@ With default settings, the short recording threshold is 60 seconds.
 ```
 
 6. Confirm post-call tagging does not open automatically.
-7. Confirm the compact Latest strip shows `Short recording`, Play/Open/Tag work, and metadata still exists for false-positive review.
+7. Open Library and confirm the row shows `Short recording`, Play/Open/Edit work, and metadata still exists for false-positive review.
 
 ## Auto-Start: Zoom
 

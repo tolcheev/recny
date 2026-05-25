@@ -15,14 +15,13 @@ struct TOrbitRecorderCommands: Commands {
                 modifiers: [.command, .shift]
             )
 
-            Button("Open Latest Recording Folder") {
+            Button("Open Recordings Folder") {
                 appDelegate.openLatestRecordingFolderFromShortcut()
             }
             .keyboardShortcut(
                 KeyEquivalent(Character(KeyboardShortcutCatalog.openLatestRecordingFolder.keyEquivalent)),
                 modifiers: [.command, .shift]
             )
-            .disabled(appState.lastRecording == nil)
 
             Button("Open Library") {
                 appDelegate.openLibraryFromShortcut()

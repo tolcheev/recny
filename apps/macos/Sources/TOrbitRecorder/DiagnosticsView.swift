@@ -323,23 +323,29 @@ struct DiagnosticsView: View {
 
                     HStack(spacing: 8) {
                         Button {
-                            NSWorkspace.shared.open(latest.mixedAudioURL)
+                            AppWindows.openAudioPlayer(
+                                url: latest.mixedAudioURL,
+                                title: "\(latest.title) - Current"
+                            )
                         } label: {
                             Label("Play Current", systemImage: "play.fill")
                         }
                         .disabled(latest.mixedPreviewState != "Ready")
 
                         Button {
-                            NSWorkspace.shared.open(latest.originalMixedAudioURL)
+                            AppWindows.openAudioPlayer(
+                                url: latest.originalMixedAudioURL,
+                                title: "\(latest.title) - Original"
+                            )
                         } label: {
                             Label("Play Original", systemImage: "waveform")
                         }
                         .disabled(!FileManager.default.fileExists(atPath: latest.originalMixedAudioURL.path(percentEncoded: false)))
 
                         Button {
-                            NSWorkspace.shared.open(latest.audioAnalysisURL)
+                            NSWorkspace.shared.activateFileViewerSelecting([latest.audioAnalysisURL])
                         } label: {
-                            Label("Open Analysis", systemImage: "doc.text.magnifyingglass")
+                            Label("Reveal Analysis", systemImage: "doc.text.magnifyingglass")
                         }
                         .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: latest.audioAnalysisURL) == nil)
                     }

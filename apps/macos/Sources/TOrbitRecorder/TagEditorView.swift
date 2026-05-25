@@ -68,6 +68,11 @@ struct TagEditorView: View {
                 .textFieldStyle(.roundedBorder)
                 .accessibilityLabel("Participant")
                 .onSubmit(save)
+
+            TextField("Context / note, optional", text: $draft.category)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityLabel("Recording context or note")
+                .onSubmit(save)
         }
     }
 

@@ -315,13 +315,19 @@ struct LibraryView: View {
                                     NSWorkspace.shared.open(recording.sessionFolderURL)
                                 },
                                 onPlayBalanced: {
-                                    openIfExists(recording.balancedMixedAudioURL)
+                                    playIfExists(
+                                        recording.balancedMixedAudioURL,
+                                        title: "\(recording.title) - Balanced"
+                                    )
                                 },
                                 onPlayOriginal: {
-                                    openIfExists(recording.originalMixedAudioURL)
+                                    playIfExists(
+                                        recording.originalMixedAudioURL,
+                                        title: "\(recording.title) - Original"
+                                    )
                                 },
                                 onShowAnalysis: {
-                                    openIfExists(recording.audioAnalysisURL)
+                                    revealIfExists(recording.audioAnalysisURL)
                                 },
                                 onReprocess: {
                                     requestReprocess(for: recording)
@@ -358,7 +364,7 @@ struct LibraryView: View {
                         openTagEditor(for: selectedRecording)
                     },
                     onShowAnalysis: {
-                        openIfExists(selectedRecording.audioAnalysisURL)
+                        revealIfExists(selectedRecording.audioAnalysisURL)
                     },
                     onDelete: {
                         deleteCandidate = selectedRecording
@@ -516,7 +522,10 @@ struct LibraryView: View {
             return
         }
 
-        NSWorkspace.shared.open(playback.url)
+        AppWindows.openAudioPlayer(
+            url: playback.url,
+            title: "\(recording.title) - \(playback.kind.displayName)"
+        )
         actionError = nil
     }
 
@@ -530,14 +539,25 @@ struct LibraryView: View {
         )
     }
 
-    private func openIfExists(_ url: URL) {
+    private func playIfExists(_ url: URL, title: String) {
         guard RecordingPlaybackResolver.nonEmptyFileSize(at: url) != nil else {
             actionError = "\(url.lastPathComponent) is missing"
             actionMessage = nil
             return
         }
 
-        NSWorkspace.shared.open(url)
+        AppWindows.openAudioPlayer(url: url, title: title)
+        actionError = nil
+    }
+
+    private func revealIfExists(_ url: URL) {
+        guard RecordingPlaybackResolver.nonEmptyFileSize(at: url) != nil else {
+            actionError = "\(url.lastPathComponent) is missing"
+            actionMessage = nil
+            return
+        }
+
+        NSWorkspace.shared.activateFileViewerSelecting([url])
         actionError = nil
     }
 
@@ -672,7 +692,7 @@ private struct LibraryRecordingRow: View {
                 Button(action: onPlay) {
                     Label("Play", systemImage: "play.fill")
                 }
-                .disabled(!FileManager.default.fileExists(atPath: recording.mixedAudioURL.path(percentEncoded: false)))
+                .disabled(playbackState == .missing)
                 .accessibilityLabel("Play recording")
 
                 Button(action: onOpen) {
@@ -696,7 +716,7 @@ private struct LibraryRecordingRow: View {
                     }
 
                     Button(action: onShowAnalysis) {
-                        Label("Show Audio Analysis", systemImage: "doc.text.magnifyingglass")
+                        Label("Reveal Audio Analysis", systemImage: "doc.text.magnifyingglass")
                     }
                     .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
 
@@ -708,7 +728,7 @@ private struct LibraryRecordingRow: View {
                     Divider()
 
                     Button(action: onEdit) {
-                        Label("Tag", systemImage: "tag")
+                        Label("Edit Note / Tags", systemImage: "tag")
                     }
 
                     Divider()
@@ -800,6 +820,17 @@ private struct LibraryRecordingDetailsPanel: View {
                         .foregroundStyle(.secondary)
                 }
 
+                if recording.category != "unsorted" {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Note")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(recording.category)
+                            .font(.caption)
+                            .textSelection(.enabled)
+                    }
+                }
+
                 detailsGrid
 
                 if !recording.tags.isEmpty || !recording.participant.isEmpty {
@@ -822,7 +853,7 @@ private struct LibraryRecordingDetailsPanel: View {
                     Button(action: onPlay) {
                         Label("Play", systemImage: "play.fill")
                     }
-                    .disabled(!FileManager.default.fileExists(atPath: recording.mixedAudioURL.path(percentEncoded: false)))
+                    .disabled(playbackState == .missing)
 
                     Button(action: onOpen) {
                         Label("Open", systemImage: "folder")
@@ -834,7 +865,7 @@ private struct LibraryRecordingDetailsPanel: View {
                 }
 
                 Button(action: onShowAnalysis) {
-                    Label("Show Audio Analysis", systemImage: "doc.text.magnifyingglass")
+                    Label("Reveal Audio Analysis", systemImage: "doc.text.magnifyingglass")
                 }
                 .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
 

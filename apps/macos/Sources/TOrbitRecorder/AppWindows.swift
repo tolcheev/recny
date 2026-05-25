@@ -7,6 +7,7 @@ enum AppWindows {
     private static var libraryWindow: NSWindow?
     private static var diagnosticsWindow: NSWindow?
     private static var settingsWindow: NSWindow?
+    private static var audioPlayerWindow: NSWindow?
 
     static func openLibrary(appState: AppState) {
         let window = libraryWindow ?? makeWindow(
@@ -39,6 +40,31 @@ enum AppWindows {
         )
         settingsWindow = window
         present(window)
+    }
+
+    static func openAudioPlayer(url: URL, title: String) {
+        audioPlayerWindow?.close()
+        let window = makeWindow(
+            title: "T-Orbit Recorder Player",
+            width: 520,
+            height: 180,
+            rootView: AudioPlayerView(url: url, title: title)
+        )
+        audioPlayerWindow = window
+        AppLogger.file(.info, category: "playback", "open in-app player path=\(url.path(percentEncoded: false))")
+        present(window)
+    }
+
+    static func openRecordingsFolder(appState: AppState) {
+        do {
+            try FileManager.default.createDirectory(
+                at: appState.outputFolderURL,
+                withIntermediateDirectories: true
+            )
+            NSWorkspace.shared.open(appState.outputFolderURL)
+        } catch {
+            AppLogger.file(.error, category: "storage", "open recordings folder failed path=\(appState.outputFolderPath) error=\(String(describing: error))")
+        }
     }
 
     private static func makeWindow<Content: View>(

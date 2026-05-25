@@ -12,11 +12,6 @@ struct MainRecorderView: View {
                 PermissionsOnboardingView(appState: appState)
             }
             RecordingStatusCard(appState: appState)
-            if let lastRecording = appState.lastRecording {
-                LatestRecordingStrip(recording: lastRecording) {
-                    appState.editLastRecordingTags()
-                }
-            }
             footerActions
         }
         .padding(18)
@@ -112,6 +107,13 @@ struct MainRecorderView: View {
                 Label("Library", systemImage: "tray.full")
             }
             .accessibilityLabel("Open Library")
+
+            Button {
+                AppWindows.openRecordingsFolder(appState: appState)
+            } label: {
+                Label("Open Recordings", systemImage: "folder")
+            }
+            .accessibilityLabel("Open recordings folder")
 
             Button {
                 AppWindows.openSettings(appState: appState)
