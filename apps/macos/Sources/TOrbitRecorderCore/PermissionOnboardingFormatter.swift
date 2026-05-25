@@ -45,9 +45,9 @@ public enum PermissionOnboardingFormatter {
         case (.screenSystemAudio, .denied):
             return "System audio access is denied. Enable it in System Settings, then restart the app."
         case (.screenSystemAudio, .missing):
-            return "Required for source/system.m4a and mixed preview."
+            return "Required for source/system.m4a and mixed preview. Request access before recording."
         case (.screenSystemAudio, .notDetermined):
-            return "macOS requests system audio access when recording starts."
+            return "Click Request System Audio Access to show the macOS prompt before recording."
         case (.screenSystemAudio, .unknown):
             return "T-Orbit Recorder cannot determine system audio permission."
 
@@ -74,7 +74,12 @@ public enum PermissionOnboardingFormatter {
         case .microphone:
             return state == .notDetermined ? "Request Microphone Access" : "Open Microphone Settings"
         case .screenSystemAudio:
-            return "Open System Audio Settings"
+            switch state {
+            case .notDetermined, .missing:
+                return "Request System Audio Access"
+            default:
+                return "Open System Audio Settings"
+            }
         case .storage:
             return "Open Recordings Folder"
         }

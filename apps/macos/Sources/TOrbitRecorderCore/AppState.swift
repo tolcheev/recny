@@ -530,6 +530,24 @@ public final class AppState: ObservableObject {
         refreshPermissionSnapshot()
     }
 
+    public func noteSystemAudioPermissionRequestSucceeded() {
+        if let errorMessage,
+           errorMessage.localizedCaseInsensitiveContains("system audio") {
+            self.errorMessage = nil
+        }
+        if status == .error {
+            status = .idle
+        }
+        systemAudioStatus = .idle
+        refreshPermissionSnapshot()
+    }
+
+    public func noteSystemAudioPermissionRequestFailed(_ error: Error) {
+        errorMessage = String(describing: error)
+        systemAudioStatus = .permissionDenied
+        refreshPermissionSnapshot()
+    }
+
     public func setPreferredMicrophoneDeviceID(_ deviceID: String?) {
         recordingSettings.microphoneDeviceID = deviceID?.isEmpty == true ? nil : deviceID
         refreshSelectedMicrophone(allowSelectionChange: status != .recording)

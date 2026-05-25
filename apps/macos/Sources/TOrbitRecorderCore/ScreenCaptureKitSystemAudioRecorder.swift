@@ -21,6 +21,10 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
         true
     }
 
+    public static func requestSystemAudioAccess() async throws {
+        try CoreAudioProcessTapSystemAudioRecorder.requestSystemAudioAccess()
+    }
+
     public static var assetWriterAudioSettings: [String: Any] {
         assetWriterAudioSettings(for: .standard)
     }
@@ -94,6 +98,24 @@ private final class CoreAudioProcessTapSystemAudioRecorder: @unchecked Sendable 
     private var lastSampleTime: Float64?
     private var lastSampleWallClock: Date?
     private var writeError: OSStatus = noErr
+
+    static func requestSystemAudioAccess() throws {
+        var tapID = AudioObjectID(0)
+        let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
+        description.name = "\(tapName) Permission Probe"
+        description.isPrivate = true
+        description.muteBehavior = .unmuted
+
+        let status = AudioHardwareCreateProcessTap(description, &tapID)
+        guard status == noErr, tapID != 0 else {
+            throw RecordingControllerError.systemAudioPermissionDenied(
+                "Core Audio system audio access denied or unavailable: \(osStatusMessage(status, operation: "AudioHardwareCreateProcessTap"))"
+            )
+        }
+
+        AudioHardwareDestroyProcessTap(tapID)
+        AppLogger.file(.info, category: "permissions", "system audio permission probe succeeded backend=core_audio_process_tap")
+    }
 
     func start(
         outputURL: URL,

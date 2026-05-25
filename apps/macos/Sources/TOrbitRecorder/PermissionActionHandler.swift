@@ -5,40 +5,20 @@ import TOrbitRecorderCore
 @MainActor
 enum PermissionActionHandler {
     static func handlePrimaryFixAction(appState: AppState) {
-        let snapshot = appState.permissionSnapshot
-        if snapshot.microphone != .granted {
-            handleMicrophoneAction(appState: appState)
-            return
+        Task { @MainActor in
+            await requestMissingPermissions(appState: appState)
         }
-
-        if appState.recordingSettings.systemAudioEnabled,
-           snapshot.screenSystemAudio != .granted {
-            openScreenSystemAudioSettings(appState: appState)
-            return
-        }
-
-        if snapshot.storage != .granted {
-            openRecordingsFolder(appState: appState)
-            return
-        }
-
-        AppWindows.openDiagnostics(appState: appState)
     }
 
     static func handleMicrophoneAction(appState: AppState) {
-        guard appState.permissionSnapshot.microphone == .notDetermined else {
-            openMicrophoneSettings(appState: appState)
-            return
+        Task { @MainActor in
+            _ = await requestMicrophoneAccessOrOpenSettings(appState: appState)
         }
+    }
 
-        Task {
-            _ = await AVCaptureDevice.requestAccess(for: .audio)
-            await MainActor.run {
-                appState.refreshPermissionSnapshot()
-                if appState.permissionSnapshot.microphone != .granted {
-                    openMicrophoneSettings(appState: appState)
-                }
-            }
+    static func handleSystemAudioAction(appState: AppState) {
+        Task { @MainActor in
+            _ = await requestSystemAudioAccessOrOpenSettings(appState: appState)
         }
     }
 
@@ -92,6 +72,71 @@ enum PermissionActionHandler {
         }
 
         NSWorkspace.shared.open(url)
+    }
+
+    private static func requestMissingPermissions(appState: AppState) async {
+        appState.refreshMicrophoneDevices()
+        appState.refreshPermissionSnapshot()
+
+        if appState.permissionSnapshot.microphone != .granted {
+            let microphoneGranted = await requestMicrophoneAccessOrOpenSettings(appState: appState)
+            guard microphoneGranted else {
+                return
+            }
+        }
+
+        appState.refreshPermissionSnapshot()
+        if appState.recordingSettings.systemAudioEnabled,
+           appState.permissionSnapshot.screenSystemAudio != .granted {
+            _ = await requestSystemAudioAccessOrOpenSettings(appState: appState)
+            appState.refreshPermissionSnapshot()
+            guard appState.permissionSnapshot.screenSystemAudio == .granted else {
+                return
+            }
+        }
+
+        if appState.permissionSnapshot.storage != .granted {
+            openRecordingsFolder(appState: appState)
+            return
+        }
+
+        AppWindows.openDiagnostics(appState: appState)
+    }
+
+    private static func requestMicrophoneAccessOrOpenSettings(appState: AppState) async -> Bool {
+        guard appState.permissionSnapshot.microphone == .notDetermined else {
+            openMicrophoneSettings(appState: appState)
+            return appState.permissionSnapshot.microphone == .granted
+        }
+
+        _ = await AVCaptureDevice.requestAccess(for: .audio)
+        appState.refreshPermissionSnapshot()
+        if appState.permissionSnapshot.microphone != .granted {
+            openMicrophoneSettings(appState: appState)
+        }
+
+        return appState.permissionSnapshot.microphone == .granted
+    }
+
+    private static func requestSystemAudioAccessOrOpenSettings(appState: AppState) async -> Bool {
+        appState.refreshPermissionSnapshot()
+        switch appState.permissionSnapshot.screenSystemAudio {
+        case .granted:
+            return true
+        case .notDetermined, .missing:
+            do {
+                AppLogger.file(.info, category: "permissions", "system audio permission request started from onboarding")
+                try await ScreenCaptureKitSystemAudioRecorder.requestSystemAudioAccess()
+                appState.noteSystemAudioPermissionRequestSucceeded()
+            } catch {
+                AppLogger.file(.error, category: "permissions", "system audio permission request failed error=\(String(describing: error))")
+                appState.noteSystemAudioPermissionRequestFailed(error)
+            }
+            return appState.permissionSnapshot.screenSystemAudio == .granted
+        case .denied, .restartRequired, .unknown:
+            openScreenSystemAudioSettings(appState: appState)
+            return false
+        }
     }
 
     private static func shellQuoted(_ value: String) -> String {

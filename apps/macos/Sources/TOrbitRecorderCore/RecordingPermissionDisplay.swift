@@ -166,9 +166,9 @@ public enum RecordingPermissionDisplay {
 
     private static func isSystemAudioPermissionBlocking(_ state: RecorderPermissionState) -> Bool {
         switch state {
-        case .denied, .restartRequired, .unknown:
+        case .denied, .missing, .notDetermined, .restartRequired, .unknown:
             return true
-        case .granted, .missing, .notDetermined:
+        case .granted:
             return false
         }
     }

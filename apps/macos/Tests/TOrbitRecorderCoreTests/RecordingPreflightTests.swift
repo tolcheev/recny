@@ -4,7 +4,7 @@ import Testing
 
 struct RecordingPreflightTests {
     @Test
-    func requestableSystemAudioPermissionDoesNotBlockPreflight() throws {
+    func systemAudioNotDeterminedBlocksPreflightBeforeStart() throws {
         let checker = DefaultRecordingPreflightChecker(minimumFreeDiskSpaceBytes: 0)
         let context = RecordingPreflightContext(
             permissionSnapshot: RecorderPermissionSnapshot(
@@ -22,7 +22,9 @@ struct RecordingPreflightTests {
             isRecordingActive: false
         )
 
-        try checker.validate(context)
+        #expect(throws: RecordingControllerError.preflightFailed("System audio access is required before recording.")) {
+            try checker.validate(context)
+        }
     }
 
     @Test

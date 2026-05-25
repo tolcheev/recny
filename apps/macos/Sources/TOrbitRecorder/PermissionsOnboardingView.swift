@@ -53,7 +53,7 @@ struct PermissionChecklistContent: View {
                 ),
                 actionSystemImage: "speaker.wave.2"
             ) {
-                PermissionActionHandler.openScreenSystemAudioSettings(appState: appState)
+                PermissionActionHandler.handleSystemAudioAction(appState: appState)
             }
 
             PermissionStatusRow(

@@ -207,7 +207,7 @@ Each row shows one user-facing state:
 - `Granted`: ready
 - `Missing`: enable it in System Settings
 - `Denied`: permission was blocked and must be changed in System Settings
-- `Not determined`: macOS may request it when recording starts
+- `Not determined`: click the onboarding action to show the macOS prompt before recording
 - `Restart required`: the setting was changed, but the current app process must be restarted
 - `Unknown`: the app cannot determine the state
 
@@ -219,7 +219,15 @@ Grant permissions in macOS System Settings:
 
 If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
 
-On macOS Sequoia, Core Audio system-audio permission can be finalized when the app actually starts audio capture. If the main screen shows `System audio: Ready`, click `Start Recording`; macOS may then show the system audio permission prompt or add the app to the System Settings list.
+If System audio is `Not determined` or `Missing`, click `Request System Audio Access` or the main `Fix Permissions` button. The app runs a lightweight Core Audio permission probe that should show the macOS system-audio prompt before any recording folder is created. `Start Recording` should remain unavailable until this permission is granted.
+
+Expected first-launch flow:
+
+1. Click `Fix Permissions`.
+2. Approve the microphone prompt if macOS shows it.
+3. Approve the system-audio prompt when macOS shows it.
+4. If onboarding shows `Restart required`, restart the same app bundle.
+5. Confirm the main button changes back to `Start Recording`.
 
 If system audio is denied or still missing after a failed start:
 

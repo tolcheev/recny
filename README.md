@@ -213,7 +213,9 @@ open /Applications/TOrbitRecorder.app
 
 macOS often requires a process restart after this permission changes. The app now blocks duplicate launches and points you back to the already-running copy.
 
-If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in the system-audio section once, then restart `/Applications/TOrbitRecorder.app`. On macOS Sequoia, system-audio-only capture may also be requested on the first actual Start Recording attempt.
+If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in the system-audio section once, then restart `/Applications/TOrbitRecorder.app`.
+
+On first launch, use `Fix Permissions` before recording. It requests microphone access and then runs a lightweight Core Audio system-audio permission probe, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created.
 
 Grant permissions in:
 
@@ -263,11 +265,13 @@ The menu bar app provides Show Window, Start Recording or Stop Recording, Play L
 
 Detailed manual validation lives in `MANUAL_TESTING.md`.
 
-Before the first recording, grant permissions to `TOrbitRecorder` in macOS System Settings:
+Before the first recording, click `Fix Permissions` in the app. The onboarding flow should request all required permissions before recording starts:
 
-- Privacy & Security -> Microphone
-- Privacy & Security -> Screen & System Audio Recording
-- If shown separately: Privacy & Security -> Screen & System Audio Recording -> Only System Audio Recording
+- Microphone
+- Screen & System Audio Recording
+- If shown separately: Screen & System Audio Recording -> Only System Audio Recording
+
+If a permission is already denied, the app opens the matching System Settings pane so you can enable `TOrbitRecorder`, then restart the same app bundle.
 
 Manual full recording pass:
 
@@ -313,8 +317,9 @@ Permission error check:
 
 1. Revoke Microphone or system audio permission for `TOrbitRecorder` in System Settings.
 2. Quit and reopen the app.
-3. Start recording.
-4. Confirm the UI shows an error state and the logs explain the blocked permission.
+3. Confirm Start is blocked and the app shows `Fix Permissions`.
+4. Click `Fix Permissions`.
+5. Confirm the UI shows the missing permission state and the logs explain the blocked permission.
 
 ## Smoke Tests
 

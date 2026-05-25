@@ -70,10 +70,21 @@ struct RecordingPermissionDisplayTests {
         )
 
         #expect(
-            RecordingPermissionDisplay.canStartRecording(
+            !RecordingPermissionDisplay.canStartRecording(
                 RecorderPermissionSnapshot(
                     microphone: .granted,
                     screenSystemAudio: .notDetermined,
+                    storage: .granted
+                ),
+                systemAudioEnabled: true
+            )
+        )
+
+        #expect(
+            !RecordingPermissionDisplay.canStartRecording(
+                RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .missing,
                     storage: .granted
                 ),
                 systemAudioEnabled: true
@@ -131,13 +142,19 @@ struct RecordingPermissionDisplayTests {
             PermissionOnboardingFormatter.actionTitle(
                 for: .screenSystemAudio,
                 state: .missing
+            ) == "Request System Audio Access"
+        )
+        #expect(
+            PermissionOnboardingFormatter.actionTitle(
+                for: .screenSystemAudio,
+                state: .denied
             ) == "Open System Audio Settings"
         )
         #expect(
             PermissionOnboardingFormatter.explanation(
                 for: .screenSystemAudio,
                 state: .notDetermined
-            ) == "macOS requests system audio access when recording starts."
+            ) == "Click Request System Audio Access to show the macOS prompt before recording."
         )
     }
 
