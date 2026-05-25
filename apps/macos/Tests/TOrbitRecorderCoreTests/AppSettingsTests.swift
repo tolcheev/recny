@@ -22,8 +22,8 @@ struct AppSettingsTests {
         #expect(settings.privacy.localOnlyMode)
         #expect(settings.privacy.showRecordingIndicator)
         #expect(settings.privacy.showFocusModeReminder)
-        #expect(settings.privacy.showDockIcon)
-        #expect(settings.privacy.launchAtLogin == false)
+        #expect(settings.privacy.showDockIcon == false)
+        #expect(settings.privacy.launchAtLogin)
         #expect(settings.hotkeys.startStopHotkey == "")
         #expect(settings.hotkeys.addMarkerHotkey == "")
     }
@@ -70,7 +70,7 @@ struct AppSettingsTests {
     }
 
     @Test
-    func privacySettingsDecodeOldPayloadWithDockIconDefaultOn() throws {
+    func privacySettingsDecodeOldPayloadWithMenuBarAndLoginDefaults() throws {
         let json = """
         {
           "localOnlyMode": true,
@@ -87,8 +87,22 @@ struct AppSettingsTests {
         #expect(settings.localOnlyMode)
         #expect(settings.showRecordingIndicator == false)
         #expect(settings.showFocusModeReminder)
-        #expect(settings.showDockIcon)
-        #expect(settings.launchAtLogin == false)
+        #expect(settings.showDockIcon == false)
+        #expect(settings.launchAtLogin)
+    }
+
+    @Test
+    func loadsExistingSettingsWithMenuBarAndLoginMigration() throws {
+        let defaults = try Self.makeDefaults()
+        var settings = AppSettings()
+        settings.privacy.showDockIcon = true
+        settings.privacy.launchAtLogin = false
+
+        AppSettingsStore.save(settings, defaults: defaults)
+        let loaded = AppSettingsStore.load(defaults: defaults)
+
+        #expect(loaded.privacy.showDockIcon == false)
+        #expect(loaded.privacy.launchAtLogin)
     }
 
     @Test

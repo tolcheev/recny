@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bindState()
         globalHotKeyController.start()
         Self.requestNotificationAuthorization()
+        syncLaunchAtLoginPreferenceOnLaunch()
         appState.startAutoStartMonitoring()
         appState.startMicrophoneDeviceMonitoring()
         AppLogger.app.info("T-Orbit Recorder launched")
@@ -260,15 +261,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func menuBarImage(symbolName: String, accessibilityDescription: String) -> NSImage? {
-        let image = NSImage(
-            systemSymbolName: symbolName,
-            accessibilityDescription: accessibilityDescription
-        ) ?? NSImage(
-            systemSymbolName: "record.circle",
-            accessibilityDescription: accessibilityDescription
-        )
-        image?.isTemplate = true
+        let iconState: MenuBarIconState
+        if symbolName.contains("exclamationmark") {
+            iconState = .error
+        } else if symbolName.contains("fill") {
+            iconState = .recording
+        } else {
+            iconState = .idle
+        }
+
+        let image = NSImage(size: NSSize(width: 18, height: 18))
+        image.accessibilityDescription = accessibilityDescription
+        image.lockFocus()
+
+        let strokeColor = NSColor.black
+        strokeColor.setStroke()
+        strokeColor.setFill()
+
+        let outerRect = NSRect(x: 2.5, y: 3, width: 13, height: 12)
+        let outerPath = NSBezierPath(roundedRect: outerRect, xRadius: 3.5, yRadius: 3.5)
+        outerPath.lineWidth = 1.8
+        outerPath.stroke()
+
+        switch iconState {
+        case .idle:
+            let center = NSBezierPath(ovalIn: NSRect(x: 6.25, y: 6.25, width: 5.5, height: 5.5))
+            center.lineWidth = 1.6
+            center.stroke()
+        case .recording:
+            NSBezierPath(ovalIn: NSRect(x: 5.7, y: 5.7, width: 6.6, height: 6.6)).fill()
+        case .error:
+            let indicator = NSBezierPath()
+            indicator.lineWidth = 1.8
+            indicator.move(to: NSPoint(x: 9, y: 11.7))
+            indicator.line(to: NSPoint(x: 9, y: 7.2))
+            indicator.stroke()
+            NSBezierPath(ovalIn: NSRect(x: 8.1, y: 4.9, width: 1.8, height: 1.8)).fill()
+        }
+
+        image.unlockFocus()
+        image.isTemplate = true
         return image
+    }
+
+    private func syncLaunchAtLoginPreferenceOnLaunch() {
+        guard appState.privacySettings.launchAtLogin else {
+            return
+        }
+
+        do {
+            let snapshot = try LaunchAtLoginController.setEnabled(true)
+            appState.setLaunchAtLoginPreference(snapshot.isOn)
+            AppLogger.file(.info, category: "app", "launch at login startup sync enabled=\(snapshot.isOn) message=\(snapshot.message)")
+        } catch {
+            let errorMessage = LaunchAtLoginController.humanReadableError(error)
+            appState.setLaunchAtLoginPreference(true, errorMessage: errorMessage)
+            AppLogger.file(.error, category: "app", "launch at login startup sync failed error=\(String(describing: error))")
+        }
     }
 
     private func enforceSingleRunningInstance() -> Bool {
@@ -495,4 +544,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 private extension NSUserInterfaceItemIdentifier {
     static let torbitMainWindow = NSUserInterfaceItemIdentifier("com.torbit.recorder.main-window")
+}
+
+private enum MenuBarIconState {
+    case idle
+    case recording
+    case error
 }

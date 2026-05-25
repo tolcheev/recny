@@ -42,7 +42,7 @@ DRY_RUN=1 ./scripts/install_macos.sh
 open /Applications/TOrbitRecorder.app
 ```
 
-TOrbitRecorder lives in the macOS menu bar. Use the menu bar item to show the window, start or stop recording, open the Library, Settings, or Diagnostics.
+TOrbitRecorder lives in the macOS menu bar by default and does not show a Dock icon unless you enable it in Settings -> Behavior. Use the menu bar item to show the window, start or stop recording, open the Library, Settings, or Diagnostics.
 
 ## Permissions
 
@@ -60,6 +60,16 @@ If the toggle is enabled but the app still reports a missing permission, quit TO
 Dev packages use the stable bundle identifier `com.torbit.recorder`, but ad-hoc signing still changes the code hash after rebuilds. If you approved an older unsigned/hash-signed build, toggle `TOrbitRecorder` off and on again once, then restart `/Applications/TOrbitRecorder.app`.
 
 On macOS Sequoia, system-audio-only capture may be requested when you click Start Recording for the first time. If the app says System audio is ready, start a short test recording to let macOS finalize the permission.
+
+## Launch At Login
+
+Launch at Login is enabled by default so the recorder is available after you log in. The app first uses macOS `SMAppService`; development/ad-hoc bundles can fall back to:
+
+```text
+~/Library/LaunchAgents/com.torbit.recorder.login.plist
+```
+
+Diagnostics shows which path is active.
 
 ## Restart After Permissions
 

@@ -75,9 +75,9 @@ Quit while recording:
 
 Dock behavior:
 
-- Settings -> Privacy / Behavior -> Show Dock icon defaults on for MVP.
-- Turning it off switches the app to menu-bar-only accessory behavior.
-- If the Dock icon is hidden, use the menu bar item or `Ctrl+Option+Cmd+R` to reopen the main window.
+- Settings -> Behavior -> Show Dock icon defaults off for MVP.
+- With the Dock icon hidden, the app stays in the macOS menu bar.
+- Use the menu bar item or `Ctrl+Option+Cmd+R` to reopen the main window.
 
 ## Keyboard Shortcuts
 
@@ -94,7 +94,7 @@ Expected shortcuts:
 Manual check:
 
 1. Open TOrbitRecorder from `/Applications` or `dist/`.
-2. Hide the Dock icon in Settings -> Behavior, switch to another app, then press `Ctrl+Option+Cmd+R`.
+2. Confirm Show Dock icon is off in Settings -> Behavior, switch to another app, then press `Ctrl+Option+Cmd+R`.
 3. Confirm T-Orbit Recorder comes to front.
 4. Press `Cmd+Shift+L` and confirm Library opens.
 5. Press `Cmd+Shift+D` and confirm Diagnostics opens.
@@ -108,7 +108,7 @@ Marker shortcuts and marker buttons are hidden from the default UI for now. Exis
 
 ## Launch At Login
 
-Launch at Login uses the modern macOS login item API through `SMAppService.mainApp`.
+Launch at Login is on by default. The app first uses the modern macOS login item API through `SMAppService.mainApp`; development/ad-hoc builds can fall back to a local user LaunchAgent if macOS reports that the main login item service is unavailable.
 
 Manual check:
 
@@ -120,8 +120,8 @@ open /Applications/TOrbitRecorder.app
 ```
 
 2. Open Settings -> Behavior.
-3. Turn on `Launch at Login`.
-4. Confirm the helper text says it is enabled, or says approval is required.
+3. Confirm `Launch at Login` is already checked.
+4. Confirm the helper text says it is enabled, enabled via local login agent, or says approval is required.
 5. If approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder.
 6. Open Diagnostics and confirm Behavior shows:
    - Launch at Login preference
@@ -131,7 +131,7 @@ open /Applications/TOrbitRecorder.app
 7. Quit TOrbitRecorder.
 8. Log out and log back in, or restart the Mac.
 9. Confirm TOrbitRecorder launches after login and the menu bar item appears.
-10. Turn `Launch at Login` off and confirm T-Orbit Recorder is removed or disabled from Login Items.
+10. Turn `Launch at Login` off and confirm T-Orbit Recorder is removed or disabled from Login Items. If Diagnostics reported the local login agent fallback, confirm `~/Library/LaunchAgents/com.torbit.recorder.login.plist` is removed.
 
 Known dev-build caveat:
 

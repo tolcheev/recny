@@ -179,4 +179,5 @@ The design keeps native macOS styling, supports light/dark mode through system c
 - Library has local search and collapsed filters; advanced saved views are out of scope.
 - Diagnostics test recording requires local macOS microphone and system audio permissions.
 - macOS may require quitting and reopening the exact app bundle after enabling system audio permission, especially when switching between `.build`, `dist`, and `/Applications` builds.
-- `Show Dock icon` defaults on for MVP. Turning it off switches the app to menu-bar-only accessory behavior; use the menu bar icon or `Ctrl+Option+Cmd+R` to bring windows back.
+- `Show Dock icon` defaults off for MVP. The app is menu-bar-first by default; use the menu bar icon or `Ctrl+Option+Cmd+R` to bring windows back.
+- `Launch at Login` defaults on so the menu bar recorder is available after macOS login. Diagnostics shows whether this is backed by `SMAppService` or the local LaunchAgent fallback used by some development/ad-hoc bundles.

@@ -8,6 +8,13 @@ struct LaunchAtLoginSnapshot: Equatable {
 
 enum LaunchAtLoginController {
     static func snapshot() -> LaunchAtLoginSnapshot {
+        if LaunchAgentLoginItemStore.isRegistered {
+            return LaunchAtLoginSnapshot(
+                isOn: true,
+                message: "Enabled via local login agent. TOrbitRecorder starts when you log in."
+            )
+        }
+
         switch SMAppService.mainApp.status {
         case .enabled:
             return LaunchAtLoginSnapshot(
@@ -39,11 +46,26 @@ enum LaunchAtLoginController {
 
     static func setEnabled(_ isEnabled: Bool) throws -> LaunchAtLoginSnapshot {
         if isEnabled {
-            if SMAppService.mainApp.status != .enabled {
-                try SMAppService.mainApp.register()
+            if SMAppService.mainApp.status == .notFound {
+                try LaunchAgentLoginItemStore.register()
+                return snapshot()
             }
-        } else if SMAppService.mainApp.status != .notRegistered {
-            try SMAppService.mainApp.unregister()
+
+            if SMAppService.mainApp.status != .enabled,
+               SMAppService.mainApp.status != .requiresApproval {
+                do {
+                    try SMAppService.mainApp.register()
+                } catch {
+                    try LaunchAgentLoginItemStore.register()
+                    return snapshot()
+                }
+            }
+        } else {
+            try LaunchAgentLoginItemStore.unregister()
+            if SMAppService.mainApp.status != .notRegistered,
+               SMAppService.mainApp.status != .notFound {
+                try SMAppService.mainApp.unregister()
+            }
         }
 
         return snapshot()
@@ -52,5 +74,68 @@ enum LaunchAtLoginController {
     static func humanReadableError(_ error: Error) -> String {
         let details = (error as NSError).localizedDescription
         return "Could not update Launch at Login. Run the installed app bundle from /Applications and try again. Details: \(details)"
+    }
+}
+
+private enum LaunchAgentLoginItemStore {
+    private static let label = "com.torbit.recorder.login"
+
+    private static var plistURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents", isDirectory: true)
+            .appendingPathComponent("\(label).plist")
+    }
+
+    private static var launchAppURL: URL {
+        let installedURL = URL(fileURLWithPath: "/Applications/TOrbitRecorder.app")
+        if FileManager.default.fileExists(atPath: installedURL.path),
+           Bundle(url: installedURL)?.bundleIdentifier == Bundle.main.bundleIdentifier {
+            return installedURL
+        }
+
+        return Bundle.main.bundleURL
+    }
+
+    static var isRegistered: Bool {
+        guard let plist = NSDictionary(contentsOf: plistURL) as? [String: Any],
+              plist["Label"] as? String == label,
+              let arguments = plist["ProgramArguments"] as? [String]
+        else {
+            return false
+        }
+
+        return arguments.contains(launchAppURL.path)
+    }
+
+    static func register() throws {
+        try FileManager.default.createDirectory(
+            at: plistURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+
+        let plist: [String: Any] = [
+            "Label": label,
+            "ProgramArguments": [
+                "/usr/bin/open",
+                "-n",
+                launchAppURL.path
+            ],
+            "RunAtLoad": true
+        ]
+
+        let data = try PropertyListSerialization.data(
+            fromPropertyList: plist,
+            format: .xml,
+            options: 0
+        )
+        try data.write(to: plistURL, options: .atomic)
+    }
+
+    static func unregister() throws {
+        guard FileManager.default.fileExists(atPath: plistURL.path) else {
+            return
+        }
+
+        try FileManager.default.removeItem(at: plistURL)
     }
 }

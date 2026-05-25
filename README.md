@@ -151,19 +151,19 @@ Older recordings can be reprocessed for balanced audio from `Library -> More -> 
 
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkeys, Dock/menu-bar behavior, and local privacy controls. Unimplemented controls are disabled in the UI.
 
-Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. `Ctrl+Option+Cmd+R` shows the app window globally, including when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
+Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. T-Orbit Recorder is menu-bar-first by default; `Ctrl+Option+Cmd+R` shows the app window globally when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
 Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path.
 
 ## Launch At Login
 
-Enable automatic launch in:
+Automatic launch is enabled by default. You can review or disable it in:
 
 ```text
 Settings -> Behavior -> Launch at Login
 ```
 
-This uses the modern macOS `SMAppService.mainApp` login item API. It is intended for the installed app bundle:
+The app first uses the modern macOS `SMAppService.mainApp` login item API. If a development/ad-hoc bundle reports that the main login item service is unavailable, the app falls back to a local user LaunchAgent and Diagnostics labels that state explicitly. The intended test path is still the installed app bundle:
 
 ```sh
 ./scripts/install_macos.sh
@@ -225,7 +225,7 @@ Grant permissions in:
 
 Recordings are stored locally in `~/Recordings/TOrbitRecorder/`.
 
-If Launch at Login fails in a development build, install the app into `/Applications`, reopen that exact bundle, and toggle Launch at Login again.
+If Launch at Login fails in a development build, install the app into `/Applications`, reopen that exact bundle, and toggle Launch at Login again. When the local LaunchAgent fallback is used, the plist is stored at `~/Library/LaunchAgents/com.torbit.recorder.login.plist`.
 
 ## Microphone Input Policy
 

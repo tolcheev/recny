@@ -325,7 +325,7 @@ struct SettingsView: View {
                 )
             )
 
-            Text("When off, T-Orbit Recorder stays in the menu bar. Use the menu bar item or Ctrl+Option+Cmd+R to show the window again.")
+            Text("Off by default. T-Orbit Recorder stays in the menu bar; use the menu bar item or Ctrl+Option+Cmd+R to show the window again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -337,7 +337,7 @@ struct SettingsView: View {
                 )
             )
 
-            Text("Starts T-Orbit Recorder when you log in.")
+            Text("On by default so auto-start is available after you log in.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -423,11 +423,22 @@ struct SettingsView: View {
     }
 
     private func refreshLaunchAtLogin() {
-        let snapshot = LaunchAtLoginController.snapshot()
-        launchAtLoginEnabled = snapshot.isOn
-        launchAtLoginMessage = snapshot.message
-        launchAtLoginError = nil
-        appState.setLaunchAtLoginPreference(snapshot.isOn)
+        do {
+            let snapshot = appState.privacySettings.launchAtLogin
+                ? try LaunchAtLoginController.setEnabled(true)
+                : LaunchAtLoginController.snapshot()
+            launchAtLoginEnabled = snapshot.isOn
+            launchAtLoginMessage = snapshot.message
+            launchAtLoginError = nil
+            appState.setLaunchAtLoginPreference(snapshot.isOn)
+        } catch {
+            let snapshot = LaunchAtLoginController.snapshot()
+            let errorMessage = LaunchAtLoginController.humanReadableError(error)
+            launchAtLoginEnabled = appState.privacySettings.launchAtLogin
+            launchAtLoginMessage = snapshot.message
+            launchAtLoginError = errorMessage
+            appState.setLaunchAtLoginPreference(appState.privacySettings.launchAtLogin, errorMessage: errorMessage)
+        }
     }
 
     private func setLaunchAtLogin(_ isEnabled: Bool) {

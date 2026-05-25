@@ -160,8 +160,8 @@ public struct PrivacySettings: Codable, Equatable, Sendable {
         localOnlyMode: Bool = true,
         showRecordingIndicator: Bool = true,
         showFocusModeReminder: Bool = true,
-        showDockIcon: Bool = true,
-        launchAtLogin: Bool = false
+        showDockIcon: Bool = false,
+        launchAtLogin: Bool = true
     ) {
         self.localOnlyMode = localOnlyMode
         self.showRecordingIndicator = showRecordingIndicator
@@ -183,8 +183,8 @@ public struct PrivacySettings: Codable, Equatable, Sendable {
         self.localOnlyMode = try container.decodeIfPresent(Bool.self, forKey: .localOnlyMode) ?? true
         self.showRecordingIndicator = try container.decodeIfPresent(Bool.self, forKey: .showRecordingIndicator) ?? true
         self.showFocusModeReminder = try container.decodeIfPresent(Bool.self, forKey: .showFocusModeReminder) ?? true
-        self.showDockIcon = try container.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? true
-        self.launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
+        self.showDockIcon = try container.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? false
+        self.launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? true
     }
 }
 
@@ -212,21 +212,34 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
 public enum AppSettingsStore {
     private static let key = "com.torbit.recorder.app.settings.v1"
+    private static let behaviorDefaultsMigrationKey = "com.torbit.recorder.app.settings.behavior-defaults-v2"
 
     public static func load(defaults: UserDefaults = .standard) -> AppSettings {
         guard let data = defaults.data(forKey: key),
               let settings = try? JSONDecoder().decode(AppSettings.self, from: data)
         else {
-            return AppSettings()
+            let settings = AppSettings()
+            defaults.set(true, forKey: behaviorDefaultsMigrationKey)
+            save(settings, defaults: defaults)
+            return settings
         }
 
-        return AppSettings(
+        var resolvedSettings = AppSettings(
             recording: settings.recording,
             autoStart: settings.autoStart,
             storage: settings.storage,
             hotkeys: settings.hotkeys,
             privacy: settings.privacy
         )
+
+        if !defaults.bool(forKey: behaviorDefaultsMigrationKey) {
+            resolvedSettings.privacy.showDockIcon = false
+            resolvedSettings.privacy.launchAtLogin = true
+            defaults.set(true, forKey: behaviorDefaultsMigrationKey)
+            save(resolvedSettings, defaults: defaults)
+        }
+
+        return resolvedSettings
     }
 
     public static func save(_ settings: AppSettings, defaults: UserDefaults = .standard) {
