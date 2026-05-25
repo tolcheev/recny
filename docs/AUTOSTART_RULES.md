@@ -82,9 +82,11 @@ Known direct call apps can start confidently from active app + call audio activi
 For Zoom and other known call apps, the MVP accepts either:
 
 - microphone activity, with the configured minimum detection duration
-- system audio activity, immediately
+- for Zoom only: system audio activity, immediately
 
-The system-audio path exists because macOS/CoreAudio can report the default input device as inactive while Zoom is already using another microphone path or while the user is muted. Browser rules remain stricter.
+The Zoom system-audio path exists because macOS/CoreAudio can report the default input device as inactive while Zoom is already using another microphone path or while the user is muted. Browser, Telegram, and Discord rules remain stricter.
+
+Zoom can also continue as a recent call candidate after the user switches to another window. If Zoom was recently foregrounded and system audio activity appears within the continuation window, the app can start with `autostart.v2.zoom` even while another app is frontmost. This matches real call behavior where the user opens Zoom, joins a call, and then works in a browser, IDE, notes, or slides.
 
 Browser heuristic v2:
 
@@ -141,7 +143,7 @@ Rules:
 - Do not start multiple sessions for the same continuous call signal.
 - Keep a 3 minute default cooldown after stop before a new automatic start can occur.
 - Keep the call signal stable for the configured minimum detection duration before starting.
-- Known direct call apps with system audio activity can bypass the minimum detection duration because they are already high-confidence call surfaces.
+- Zoom with system audio activity can bypass the minimum detection duration because it is a high-confidence call surface.
 - If a recording is below the short-session threshold, classify it under `Inbox/Short/`.
 - Short sessions must still keep metadata so false positives can be debugged.
 - V1 short-session threshold defaults to 60 seconds and is configurable from Settings.
@@ -176,6 +178,7 @@ V2 logs both start and non-start decisions. Repeated identical non-start decisio
 ## Known False Positive Cases
 
 - A whitelisted direct call app is foreground and has microphone or system audio activity, but the user is not in a real call.
+- Zoom remains open after a call and another app produces system audio within the continuation window.
 - A browser is foreground while another tab or app creates microphone and system audio activity.
 - A browser call title is unavailable, forcing fallback to microphone + system audio activity.
 - A non-call browser page contains words such as `Call` or `Interview` in the title.

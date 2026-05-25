@@ -210,12 +210,16 @@ public struct AutoStartEvaluationContext: Equatable, Sendable {
 }
 
 public struct AutoStartEngine: Sendable {
+    private static let knownCallAppContinuationWindowSeconds: TimeInterval = 10 * 60
+
     private var candidate: Candidate?
+    private var recentKnownCallApp: RecentKnownCallApp?
 
     public init() {}
 
     public mutating func resetCandidate() {
         candidate = nil
+        recentKnownCallApp = nil
     }
 
     public mutating func evaluate(
@@ -226,11 +230,33 @@ public struct AutoStartEngine: Sendable {
             return ignore(.disabled, "Auto-start disabled")
         }
 
+        guard !context.isAlreadyRecording else {
+            recentKnownCallApp = nil
+            return ignore(.alreadyRecording, "Recording is already active")
+        }
+
+        if let lastStoppedAt = context.lastStoppedAt {
+            let elapsed = context.now.timeIntervalSince(lastStoppedAt)
+            guard elapsed >= settings.cooldownSeconds else {
+                recentKnownCallApp = nil
+                let remaining = max(0, settings.cooldownSeconds - elapsed)
+                return ignore(.cooldownActive, "Cooldown active for \(Int(remaining.rounded(.up))) more seconds")
+            }
+        }
+
         guard let activeApplication = context.activeApplication else {
+            if let continuation = continuationDecision(context, settings: settings) {
+                return continuation
+            }
             return ignore(.noActiveApp, "No active app")
         }
 
+        rememberKnownCallAppIfEligible(activeApplication, settings: settings, now: context.now)
+
         guard matches(activeApplication, entries: settings.whitelist) else {
+            if let continuation = continuationDecision(context, settings: settings) {
+                return continuation
+            }
             return ignore(.appNotWhitelisted, "\(activeApplication.name) is not whitelisted")
         }
 
@@ -238,19 +264,11 @@ public struct AutoStartEngine: Sendable {
             return ignore(.appBlacklisted, "\(activeApplication.name) is blacklisted")
         }
 
-        guard !context.isAlreadyRecording else {
-            return ignore(.alreadyRecording, "Recording is already active")
-        }
-
-        if let lastStoppedAt = context.lastStoppedAt {
-            let elapsed = context.now.timeIntervalSince(lastStoppedAt)
-            guard elapsed >= settings.cooldownSeconds else {
-                let remaining = max(0, settings.cooldownSeconds - elapsed)
-                return ignore(.cooldownActive, "Cooldown active for \(Int(remaining.rounded(.up))) more seconds")
-            }
-        }
-
         guard let signal = startSignal(for: activeApplication, audioActivity: context.audioActivity) else {
+            if let continuation = continuationDecision(context, settings: settings) {
+                return continuation
+            }
+
             if !context.audioActivity.microphoneActive {
                 let title = activeApplication.windowTitle.map { " title=\($0)" } ?? ""
                 return ignore(.microphoneInactive, "Microphone activity is not detected.\(title)")
@@ -282,9 +300,18 @@ public struct AutoStartEngine: Sendable {
         }
 
         candidate = nil
+        recentKnownCallApp = nil
+        return startDecision(for: activeApplication, signal: signal, settings: settings)
+    }
+
+    private func startDecision(
+        for app: ActiveApplicationSnapshot,
+        signal: AutoStartSignal,
+        settings: AutoStartSettings
+    ) -> AutoStartDecision {
         let source = RecordingSource(
-            appName: activeApplication.name,
-            bundleID: activeApplication.bundleID,
+            appName: app.name,
+            bundleID: app.bundleID,
             trigger: "autostart",
             ruleID: signal.ruleID,
             confidence: signal.confidence,
@@ -294,9 +321,56 @@ public struct AutoStartEngine: Sendable {
             action: settings.mode == .askFirst ? .ask : .start,
             reason: .startRecording,
             recordingSource: source,
-            message: "\(signal.reason) app=\(activeApplication.name)",
+            message: "\(signal.reason) app=\(app.name)",
             confidence: signal.confidence
         )
+    }
+
+    private mutating func rememberKnownCallAppIfEligible(
+        _ app: ActiveApplicationSnapshot,
+        settings: AutoStartSettings,
+        now: Date
+    ) {
+        guard matches(app, entries: settings.whitelist),
+              !matches(app, entries: settings.blacklist),
+              isKnownCallApp(app)
+        else {
+            return
+        }
+
+        recentKnownCallApp = RecentKnownCallApp(application: app, observedAt: now)
+    }
+
+    private mutating func continuationDecision(
+        _ context: AutoStartEvaluationContext,
+        settings: AutoStartSettings
+    ) -> AutoStartDecision? {
+        guard let recentKnownCallApp = self.recentKnownCallApp else {
+            return nil
+        }
+
+        let elapsed = context.now.timeIntervalSince(recentKnownCallApp.observedAt)
+        guard elapsed <= Self.knownCallAppContinuationWindowSeconds else {
+            self.recentKnownCallApp = nil
+            return nil
+        }
+
+        let app = recentKnownCallApp.application
+        guard matches(app, entries: settings.whitelist),
+              !matches(app, entries: settings.blacklist),
+              let signal = startSignal(
+                for: app,
+                audioActivity: context.audioActivity,
+                recentlyActive: true
+              ),
+              signal.startsImmediately
+        else {
+            return nil
+        }
+
+        candidate = nil
+        self.recentKnownCallApp = nil
+        return startDecision(for: app, signal: signal, settings: settings)
     }
 
     private mutating func ignore(_ reason: AutoStartDecisionReason, _ message: String) -> AutoStartDecision {
@@ -306,16 +380,15 @@ public struct AutoStartEngine: Sendable {
 
     private func startSignal(
         for app: ActiveApplicationSnapshot,
-        audioActivity: AudioActivitySnapshot
+        audioActivity: AudioActivitySnapshot,
+        recentlyActive: Bool = false
     ) -> AutoStartSignal? {
         if isKnownCallApp(app) {
-            if audioActivity.systemAudioActive {
+            if isZoom(app), audioActivity.systemAudioActive {
                 return AutoStartSignal(
-                    ruleID: isZoom(app) ? "autostart.v2.zoom" : "autostart.v2.known_call_app",
+                    ruleID: "autostart.v2.zoom",
                     confidence: "high",
-                    reason: isZoom(app)
-                        ? "Zoom active with system audio activity."
-                        : "\(app.name) active with system audio activity.",
+                    reason: "Zoom \(recentlyActive ? "recently active" : "active") with system audio activity.",
                     startsImmediately: true
                 )
             }
@@ -458,6 +531,11 @@ public struct AutoStartEngine: Sendable {
 
     private struct Candidate: Sendable {
         let key: String
+        let observedAt: Date
+    }
+
+    private struct RecentKnownCallApp: Sendable {
+        let application: ActiveApplicationSnapshot
         let observedAt: Date
     }
 
