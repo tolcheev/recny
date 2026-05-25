@@ -100,7 +100,7 @@ enum PermissionActionHandler {
             return
         }
 
-        AppWindows.openDiagnostics(appState: appState)
+        AppLogger.file(.info, category: "permissions", "permission onboarding completed without opening diagnostics")
     }
 
     private static func requestMicrophoneAccessOrOpenSettings(appState: AppState) async -> Bool {

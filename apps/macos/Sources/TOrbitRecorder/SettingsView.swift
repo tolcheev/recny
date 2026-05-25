@@ -290,7 +290,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("Show Window works globally. Recording, Library, and Diagnostics shortcuts work when T-Orbit Recorder is the active app. Marker shortcuts are hidden for now.")
+            Text("Recording, Library, and Diagnostics shortcuts work when T-Orbit Recorder is the active app. Use the menu bar icon to show the window; global Show Window is disabled to avoid conflicts.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -325,7 +325,7 @@ struct SettingsView: View {
                 )
             )
 
-            Text("Off by default. T-Orbit Recorder stays in the menu bar; use the menu bar item or Option+R to show the window again.")
+            Text("Off by default. T-Orbit Recorder stays in the menu bar; use the menu bar item to show the window again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

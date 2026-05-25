@@ -77,15 +77,14 @@ Dock behavior:
 
 - Settings -> Behavior -> Show Dock icon defaults off for MVP.
 - With the Dock icon hidden, the app stays in the macOS menu bar.
-- Use the menu bar item or `Option+R` to reopen the main window.
+- Use the menu bar item to reopen the main window. Global Show Window hotkeys are disabled for now to avoid conflicts with other apps.
 
 ## Keyboard Shortcuts
 
-The Show Window shortcut is global. Other shortcuts are app-active only in the MVP.
+Shortcuts are app-active only in the MVP. Use the menu bar icon for Show Window when the Dock icon is hidden.
 
 Expected shortcuts:
 
-- `Option+R`: Show Window, including when the Dock icon is hidden.
 - `Cmd+Shift+R`: Start Recording when idle, Stop Recording when recording.
 - `Cmd+Shift+O`: Open Recordings.
 - `Cmd+Shift+L`: Open Library.
@@ -94,7 +93,7 @@ Expected shortcuts:
 Manual check:
 
 1. Open TOrbitRecorder from `/Applications` or `dist/`.
-2. Confirm Show Dock icon is off in Settings -> Behavior, switch to another app, then press `Option+R`.
+2. Confirm Show Dock icon is off in Settings -> Behavior, then use the menu bar item -> Show Window.
 3. Confirm T-Orbit Recorder comes to front.
 4. Press `Cmd+Shift+L` and confirm Library opens.
 5. Press `Cmd+Shift+D` and confirm Diagnostics opens.
@@ -230,15 +229,16 @@ If Microphone is `Not determined`, use the onboarding button to trigger the macO
 
 If System audio is `Not determined` or `Missing`, click `Request System Audio Access` or the main `Fix Permissions` button. The app runs a lightweight Core Audio permission probe that should show the macOS system-audio prompt before any recording folder is created. `Start Recording` should remain unavailable until this permission is granted.
 
-After that probe succeeds, the app persists a local "system audio probe succeeded" state for the installed bundle. This is intentional: on macOS Sequoia, the Core Audio system-audio permission can be granted even when the older screen-capture preflight API still reports `false`. If a real recording start later fails with a system-audio permission error, the app clears the persisted state and returns to onboarding.
+After that probe succeeds, the app persists a local "system audio probe succeeded" state for the current installed build. This is intentional: on macOS Sequoia, the Core Audio system-audio permission can be granted even when the older screen-capture preflight API still reports `false`. Rebuilt ad-hoc packages must probe again so an older approved binary cannot make a new build look granted before macOS accepts it. If a real recording start later fails with a system-audio permission error, the app clears the persisted state and returns to onboarding.
 
 Expected first-launch flow:
 
 1. Click `Fix Permissions`.
 2. Approve the microphone prompt if macOS shows it.
 3. Approve the system-audio prompt when macOS shows it.
-4. If onboarding shows `Restart required`, restart the same app bundle.
-5. Confirm the main button changes back to `Start Recording`.
+4. Confirm the app stays on the main window instead of opening Diagnostics automatically.
+5. If onboarding shows `Restart required`, restart the same app bundle.
+6. Confirm the main button changes back to `Start Recording`.
 
 If system audio is denied or still missing after a failed start:
 
@@ -289,12 +289,12 @@ Use this path for the normal MVP success case.
 4. Keep recording for at least 65 seconds with default settings.
 5. Click Stop Recording.
 6. Confirm the UI returns to Idle.
-7. Confirm the post-call tagging panel opens.
-8. Fill:
+7. Confirm no tag dialog opens automatically.
+8. Open Library, choose More -> Tag or details -> Edit / Tag, then fill:
    - title
    - participant free text
-   - at least one MVP tag
-9. Save the post-call panel.
+   - one of the MVP quick tags: `#лид`, `#скрининг`, `#интервью`, `#важное`
+9. Save the tag dialog.
 10. Open Library and confirm the recording appears in recent recordings.
 11. Select the recording and confirm the details panel shows audio analysis and tags.
 12. Expand Library filters and filter the list by the saved tag.
@@ -482,11 +482,11 @@ Balanced mix failure check:
 ## Post-Call Tagging
 
 1. Stop a recording longer than the short threshold.
-2. Confirm the post-call tagging panel appears.
-3. Close the panel without saving.
-4. Confirm the metadata status remains `needs_tagging`.
-5. Open Library.
-6. Click More -> Tag on the recording row and edit title, participant, quick tags, custom tags, and status.
+2. Confirm the post-call tagging panel does not appear automatically.
+3. Confirm the metadata status remains `needs_tagging` until the recording is tagged.
+4. Open Library.
+5. Click More -> Tag on the recording row and edit title, participant, quick tags, custom tags, and status.
+6. Confirm the quick tags are `#лид`, `#скрининг`, `#интервью`, and `#важное`.
 7. Confirm Enter saves from text fields, Cmd+Enter saves, and Escape closes without saving.
 8. Save edits.
 9. Confirm `metadata.json` and the SQLite list reflect the changed title/tags/status.

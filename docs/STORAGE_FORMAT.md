@@ -278,19 +278,10 @@ Deleting a local record removes the session folder and the SQLite index row. It 
 ## MVP Tags
 
 ```text
-#ученик
 #лид
-#клиент
-#мок
-#собес
-#разбор
-#продажа
-#конфликт
+#скрининг
+#интервью
 #важное
-#разобрать
-#плохой_звук
-#сильный_созвон
-#просадка_продажи
 ```
 
 ## Suggested Status Values

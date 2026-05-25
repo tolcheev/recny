@@ -9,9 +9,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     lazy var appState = AppState(appSettings: AppSettingsStore.load())
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-    private lazy var globalHotKeyController = GlobalHotKeyController { [weak self] in
-        self?.showMainWindow()
-    }
     private var cancellables: Set<AnyCancellable> = []
     private var recordingToggleItem: NSMenuItem?
     private var playLastItem: NSMenuItem?
@@ -27,7 +24,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyActivationPolicy()
         configureStatusItem()
         bindState()
-        globalHotKeyController.start()
         Self.requestNotificationAuthorization()
         syncLaunchAtLoginPreferenceOnLaunch()
         appState.startAutoStartMonitoring()
@@ -37,7 +33,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        globalHotKeyController.stop()
         AppLogger.file(.info, category: "app", "app stop")
     }
 
@@ -71,10 +66,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let showWindowItem = NSMenuItem(
             title: "Show Window",
             action: #selector(showWindow),
-            keyEquivalent: KeyboardShortcutCatalog.showWindowGlobal.keyEquivalent
+            keyEquivalent: ""
         )
         showWindowItem.target = self
-        showWindowItem.keyEquivalentModifierMask = [.option]
         menu.addItem(showWindowItem)
 
         menu.addItem(.separator())

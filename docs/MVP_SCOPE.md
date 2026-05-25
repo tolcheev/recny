@@ -14,7 +14,7 @@
 - Separate microphone and system source files.
 - Mixed `m4a` export.
 - `metadata.json` next to every session.
-- Compact post-call tagging panel after stop.
+- Manual tagging from Library after stop.
 - MVP tags.
 - Status values: `needs_tagging`, `saved`, `needs_review`, `reviewed`, `failed`, `short_recording`.
 - SQLite recordings index for local filters and library actions.
@@ -67,8 +67,7 @@
 - System audio is written to `source/system.m4a`.
 - Mixed audio is written to `export/mixed.m4a`.
 - `metadata.json` is created with the MVP schema.
-- Stop opens compact post-call tagging.
-- Closing post-call tagging without saving leaves status `needs_tagging`.
+- Stop does not open tagging automatically; the recording remains `needs_tagging` until edited from Library.
 - Recordings shorter than the configured short-recording threshold are classified as `short_recording` and placed under `Inbox/Short/`; the MVP default is 60 seconds.
 - Tags persist to `metadata.json` and `db/app.sqlite`.
 - Recordings can be filtered by date, status, source app, title, and tag in the app.

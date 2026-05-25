@@ -6,16 +6,21 @@ struct KeyboardShortcutCatalogTests {
     func exposesMVPAppActiveShortcuts() {
         let shortcuts = KeyboardShortcutCatalog.appActiveShortcuts
 
-        #expect(shortcuts.count == 5)
+        #expect(shortcuts.count == 4)
         #expect(shortcuts.map(\.displayText) == [
-            "Option+R",
             "Cmd+Shift+R",
             "Cmd+Shift+O",
             "Cmd+Shift+L",
             "Cmd+Shift+D"
         ])
-        #expect(shortcuts.map(\.keyEquivalent) == ["r", "r", "o", "l", "d"])
+        #expect(shortcuts.map(\.keyEquivalent) == ["r", "o", "l", "d"])
         #expect(KeyboardShortcutCatalog.openLatestRecordingFolder.title == "Open recordings")
+    }
+
+    @Test
+    func showWindowGlobalShortcutIsDisabledToAvoidAppConflicts() {
+        #expect(KeyboardShortcutCatalog.showWindowGlobal.keyEquivalent.isEmpty)
+        #expect(KeyboardShortcutCatalog.showWindowGlobal.displayText == "Menu bar")
     }
 
     @Test

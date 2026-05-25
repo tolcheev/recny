@@ -49,11 +49,12 @@ If Quit is selected while recording is active, the app asks for confirmation bef
 
 App-active keyboard shortcuts mirror the primary menu actions:
 
-- `Option+R`: Show Window globally, including when the Dock icon is hidden
 - `Cmd+Shift+R`: Start/Stop Recording
 - `Cmd+Shift+O`: Open Recordings
 - `Cmd+Shift+L`: Open Library
 - `Cmd+Shift+D`: Open Diagnostics
+
+Show Window is opened from the menu bar item. The previous global `Option+R` shortcut is disabled because it conflicted with other apps.
 
 Marker shortcuts are hidden from the default UI until the marker workflow is useful enough for daily use.
 
@@ -128,7 +129,7 @@ The Tag dialog opens from a Library row/details action. It includes:
 - optional title
 - optional participant
 - optional context note for company/screening/interview context
-- quick tag chips for the MVP review tags
+- quick tag chips for the interview-first tags: `#лид`, `#скрининг`, `#интервью`, `#важное`
 - custom tags input with normalization to `#tag`
 - status choices: `Saved`, `Needs review`, and `Reviewed`
 
@@ -184,5 +185,5 @@ The design keeps native macOS styling, supports light/dark mode through system c
 - Library has local search and collapsed filters; advanced saved views are out of scope.
 - Diagnostics test recording requires local macOS microphone and system audio permissions.
 - macOS may require quitting and reopening the exact app bundle after enabling system audio permission, especially when switching between `.build`, `dist`, and `/Applications` builds.
-- `Show Dock icon` defaults off for MVP. The app is menu-bar-first by default; use the menu bar icon or `Option+R` to bring windows back.
+- `Show Dock icon` defaults off for MVP. The app is menu-bar-first by default; use the menu bar icon to bring windows back.
 - `Launch at Login` defaults on so the menu bar recorder is available after macOS login. Diagnostics shows whether this is backed by `SMAppService` or the local LaunchAgent fallback used by some development/ad-hoc bundles.

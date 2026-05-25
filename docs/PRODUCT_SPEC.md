@@ -45,7 +45,7 @@ The MVP is intentionally not a media studio, meeting bot, cloud recorder, or T-O
 - Separate source tracks for microphone and system audio.
 - Mixed audio export for quick playback.
 - `metadata.json` saved next to each recording.
-- Compact post-call tagging after stop.
+- Manual tagging from Library after stop.
 - MVP tags saved to `metadata.json` and local SQLite.
 - Recording list filtering by date, status, source app, title, and tag.
 - Local library actions: Open in Finder, Play mixed preview, edit title, add tags, and delete with confirmation.
@@ -108,8 +108,8 @@ AI and sync fields exist in the schema even though AI processing and T-Orbit syn
 - A real call can be recorded as microphone audio plus system audio.
 - The app starts recording automatically when a configured local rule matches.
 - A completed session has both source tracks, a mixed export, and metadata.
-- Stopping a recording opens post-call tagging.
-- Closing post-call tagging without saving leaves status as `needs_tagging`.
+- Stopping a recording returns to the recorder UI without opening a modal.
+- Recordings stay `needs_tagging` until the user edits title, participant, tags, or status from Library.
 - Recordings shorter than the configured short-recording threshold are stored under `Inbox/Short/` with status `short_recording`; the MVP default is 60 seconds.
 - Saved recordings are queryable through the local SQLite index.
 - Failed capture is visible in `Inbox/Failed/` or logs, not silently ignored.

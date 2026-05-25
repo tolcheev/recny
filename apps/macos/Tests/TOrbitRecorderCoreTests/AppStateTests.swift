@@ -321,6 +321,49 @@ struct AppStateTests {
     }
 
     @Test
+    func normalStopDoesNotOpenTagDialogAutomatically() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: NeedsTaggingRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+
+        try await appState.startRecording()
+        try await appState.stopRecording()
+
+        let draft = try #require(appState.postCallDraft)
+        #expect(draft.status == .needsTagging)
+        #expect(!appState.isPostCallPanelPresented)
+    }
+
+    @Test
+    func staleSystemAudioProbeFlagDoesNotGrantCurrentBuild() {
+        let legacyKey = "com.torbit.recorder.systemAudioPermissionProbeSucceeded"
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        UserDefaults.standard.set(true, forKey: legacyKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: legacyKey)
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+
+        #expect(appState.permissionSnapshot.screenSystemAudio == .notDetermined)
+        #expect(!appState.isRecordingStartAllowed)
+    }
+
+    @Test
     func recordingMarkersPersistAfterStop() async throws {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(
@@ -379,6 +422,11 @@ struct AppStateTests {
 
     @Test
     func successfulSystemAudioProbeOverridesStaticNotDeterminedSnapshot() {
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
         let appState = AppState(
             recordingController: StubRecordingController(),
             outputFolderURL: Self.testOutputFolder(),
@@ -498,6 +546,13 @@ struct AppStateTests {
             .appendingPathComponent("test-recordings", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
     }
+
+    private static var currentSystemAudioProbeKey: String {
+        let fingerprint = "\(BuildInfo.appVersion).\(BuildInfo.gitCommit)"
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "/", with: "_")
+        return "com.torbit.recorder.systemAudioPermissionProbeSucceeded.\(fingerprint)"
+    }
 }
 
 private final class StaticPermissionChecker: RecordingPermissionChecking, @unchecked Sendable {
@@ -569,5 +624,61 @@ private final class DelayedStopRecordingController: RecordingController {
         stopCallCount += 1
         try await Task.sleep(for: stopDelay)
         return try await wrapped.stopRecording()
+    }
+}
+
+private final class NeedsTaggingRecordingController: RecordingController {
+    private var session: RecordingSession?
+    private var store: FileSystemRecordingStore?
+    private var startedAt: Date?
+
+    func startRecording(
+        outputFolder: URL,
+        source: RecordingSource,
+        settings: RecordingRuntimeSettings
+    ) async throws -> RecordingControllerUpdate {
+        let startedAt = Date()
+        let store = FileSystemRecordingStore(rootURL: outputFolder)
+        let session = try store.startSession(startedAt: startedAt, source: source)
+
+        self.startedAt = startedAt
+        self.session = session
+        self.store = store
+
+        return RecordingControllerUpdate(
+            status: .recording,
+            micStatus: .ready,
+            systemAudioStatus: .ready,
+            startedAt: startedAt,
+            duration: 0,
+            session: session
+        )
+    }
+
+    func stopRecording() async throws -> RecordingControllerUpdate {
+        guard let session, let store, let startedAt else {
+            throw RecordingControllerError.notRecording
+        }
+
+        let duration: TimeInterval = 90
+        let draft = try store.stopSession(
+            session,
+            endedAt: startedAt.addingTimeInterval(duration),
+            duration: duration,
+            status: .needsTagging,
+            shortRecordingThresholdSeconds: TaggingStatus.shortRecordingThresholdSeconds
+        )
+
+        self.session = nil
+        self.store = nil
+        self.startedAt = nil
+
+        return RecordingControllerUpdate(
+            status: .idle,
+            micStatus: .idle,
+            systemAudioStatus: .idle,
+            duration: duration,
+            postCallDraft: draft
+        )
     }
 }

@@ -19,7 +19,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 - Local settings stored on the Mac.
 - Settings screen for preferred microphone, recording toggles, auto-start rules, storage root, hotkey placeholders, and local privacy controls.
 - `metadata.json` stored next to every recording.
-- Compact post-call tagging after recording stops.
+- Manual Library tagging after recording stops.
 - MVP tags saved to `metadata.json` and `db/app.sqlite`.
 - Tag dialog supports quick tags, custom tags, and status selection without permanent tag controls on the main screen.
 - Local recordings list with filters by date, status, source app, title, and tag.
@@ -159,7 +159,7 @@ Older recordings can be reprocessed for balanced audio from `Library -> More -> 
 
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkeys, Dock/menu-bar behavior, and local privacy controls. Unimplemented controls are disabled in the UI.
 
-Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. T-Orbit Recorder is menu-bar-first by default; `Option+R` shows the app window globally when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
+Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. T-Orbit Recorder is menu-bar-first by default; use the menu bar icon to show the app window when the Dock icon is hidden. Global Show Window hotkeys are disabled for now to avoid conflicts with other apps. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
 Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path.
 
@@ -229,9 +229,9 @@ macOS often requires a process restart after this permission changes. The app no
 
 If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in the system-audio section once, then restart `/Applications/TOrbitRecorder.app`.
 
-On first launch, use `Fix Permissions` before recording. It requests microphone access and then runs a lightweight Core Audio system-audio permission probe, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created.
+On first launch, use `Fix Permissions` before recording. It requests microphone access and then runs a lightweight Core Audio system-audio permission probe, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created. This flow stays on the main window when the checks finish and no longer opens Diagnostics automatically.
 
-After the Core Audio probe succeeds, T-Orbit Recorder remembers that system-audio capture is available for this installed bundle. This avoids a false `Not determined` state on later refreshes when macOS does not expose the separate system-audio-only TCC state through the older screen-capture preflight API. A real recorder permission failure clears this remembered state and sends the user back to onboarding.
+After the Core Audio probe succeeds, T-Orbit Recorder remembers that system-audio capture is available for the current installed build. This avoids a false `Not determined` state on later refreshes when macOS does not expose the separate system-audio-only TCC state through the older screen-capture preflight API. Rebuilt ad-hoc packages must probe again so an older approved binary cannot make a new build look granted before macOS accepts it. A real recorder permission failure clears this remembered state and sends the user back to onboarding.
 
 Grant permissions in:
 
@@ -281,13 +281,13 @@ The menu bar app provides Show Window, Start Recording or Stop Recording, Play L
 
 Detailed manual validation lives in `MANUAL_TESTING.md`.
 
-Before the first recording, click `Fix Permissions` in the app. The onboarding flow should request all required permissions before recording starts:
+Before the first recording, click `Fix Permissions` in the app. The onboarding flow should request all required permissions before recording starts and stays on the main window when checks finish:
 
 - Microphone
 - Screen & System Audio Recording
 - If shown separately: Screen & System Audio Recording -> Only System Audio Recording
 
-If a permission is already denied, the app opens the matching System Settings pane so you can enable `TOrbitRecorder`, then restart the same app bundle.
+If a permission is already denied, the app opens the matching System Settings pane so you can enable `TOrbitRecorder`, then restart the same app bundle if the UI shows `Restart required`.
 
 Manual full recording pass:
 
@@ -295,7 +295,7 @@ Manual full recording pass:
 2. Open Settings and confirm Recording has `Preferred microphone` set to `Auto, recommended`, system audio enabled, and mixed preview enabled.
 3. Click Start Recording from the menu bar item or main panel.
 4. Speak into the microphone and play audible audio from another macOS app.
-5. Record for longer than the short-recording threshold. The MVP default is 60 seconds; use at least 65 seconds for the normal post-call tagging path.
+5. Record for longer than the short-recording threshold. The MVP default is 60 seconds; use at least 65 seconds for a normal saved recording.
 6. Click Stop Recording.
 7. Confirm the session folder contains:
 
@@ -307,12 +307,11 @@ metadata.json
 ```
 
 8. Confirm `metadata.json` contains audio health and processing fields.
-10. Confirm the post-call tagging panel opens.
-11. Add title, participant text, and tags, then save.
-12. Open Library and confirm the recording appears in the recent recordings list.
-13. Select the recording and confirm its details panel shows Markers.
-14. Filter by a saved tag.
-15. Click Open in Finder on the recording row and confirm the recording folder opens.
+9. Open Library and confirm the recording appears in the recent recordings list.
+10. Use More -> Tag or details -> Edit / Tag to add title, participant text, and tags, then save.
+11. Select the recording and confirm its details panel shows Markers.
+12. Filter by a saved tag.
+13. Click Open in Finder on the recording row and confirm the recording folder opens.
 
 Short recording check:
 

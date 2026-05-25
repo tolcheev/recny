@@ -3,8 +3,14 @@ import Foundation
 
 @MainActor
 public final class AppState: ObservableObject {
-    private static let systemAudioPermissionProbeSucceededKey =
+    private static let legacySystemAudioPermissionProbeSucceededKey =
         "com.torbit.recorder.systemAudioPermissionProbeSucceeded"
+    private static var systemAudioPermissionProbeSucceededKey: String {
+        let fingerprint = "\(BuildInfo.appVersion).\(BuildInfo.gitCommit)"
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "/", with: "_")
+        return "\(legacySystemAudioPermissionProbeSucceededKey).\(fingerprint)"
+    }
     private static let autoStopSignalLostGracePeriodSeconds: TimeInterval = 30
 
     @Published public private(set) var status: RecordingStatus
@@ -172,6 +178,7 @@ public final class AppState: ObservableObject {
         self.isStoppingRecording = false
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
+        UserDefaults.standard.removeObject(forKey: Self.legacySystemAudioPermissionProbeSucceededKey)
         self.systemAudioPermissionProbeSucceeded = UserDefaults.standard.bool(
             forKey: Self.systemAudioPermissionProbeSucceededKey
         )
@@ -291,7 +298,7 @@ public final class AppState: ObservableObject {
                 activeMarkers = []
             }
             mixedPreviewPath = mixedPreviewPath(for: draft)
-            isPostCallPanelPresented = draft.status != .shortRecording && draft.status != .failed
+            isPostCallPanelPresented = false
             currentRecordingSource = nil
             autoStopSignalLostAt = nil
             lastRecordingStoppedAt = Date()
@@ -302,7 +309,7 @@ public final class AppState: ObservableObject {
             if draft.status == .shortRecording {
                 AppLogger.recording.info("Recording stopped as short_recording; post-call tagging skipped for \(draft.id, privacy: .public)")
             } else {
-                AppLogger.recording.info("Recording stopped; post-call tagging required for \(draft.id, privacy: .public)")
+                AppLogger.recording.info("Recording stopped; tagging is available from Library for \(draft.id, privacy: .public)")
             }
             AppLogger.file(.info, category: "recording", "recording stop id=\(draft.id) status=\(draft.status.rawValue) folder=\(draft.sessionFolderURL.path(percentEncoded: false)) mixed=\(mixedPreviewPath ?? "missing")")
         } catch {
@@ -842,7 +849,7 @@ public final class AppState: ObservableObject {
             let draft = try await RecordingRecoveryController(store: recordingStore).recover(summary)
             postCallDraft = draft
             mixedPreviewPath = mixedPreviewPath(for: draft)
-            isPostCallPanelPresented = draft.status != .failed
+            isPostCallPanelPresented = false
             try reloadRecordings()
             try reloadLastRecording()
             try reloadRecoverableRecordings()

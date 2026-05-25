@@ -23,8 +23,8 @@ public enum KeyboardShortcutCatalog {
     public static let showWindowGlobal = KeyboardShortcutDefinition(
         id: "show_window_global",
         title: "Show window",
-        keyEquivalent: "r",
-        displayText: "Option+R"
+        keyEquivalent: "",
+        displayText: "Menu bar"
     )
 
     public static let toggleRecording = KeyboardShortcutDefinition(
@@ -70,7 +70,6 @@ public enum KeyboardShortcutCatalog {
     ]
 
     public static let appActiveShortcuts: [KeyboardShortcutDefinition] = [
-        showWindowGlobal,
         toggleRecording,
         openLatestRecordingFolder,
         openLibrary,
