@@ -52,6 +52,36 @@ struct AutoStartEngineTests {
     }
 
     @Test
+    func zoomStartsFromSystemAudioWhenMicrophoneActivityDetectorIsFalse() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 20
+        )
+        let activeApp = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.reason == .startRecording)
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom")
+        #expect(decision.recordingSource?.confidence == "high")
+        #expect(decision.recordingSource?.reason == "Zoom active with system audio activity.")
+    }
+
+    @Test
     func browserCallTitleStartsAfterMinimumDetectionDuration() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(

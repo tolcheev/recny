@@ -47,11 +47,9 @@ V2 starts only when all required guards pass:
 
 ```text
 IF active_app in call_whitelist
-AND microphone_active
 AND not_blacklisted
 AND not_already_recording
 AND cooldown_passed
-AND min_detection_duration_passed
 AND app_specific_call_signal_passed
 THEN start_recording()
 ```
@@ -75,11 +73,18 @@ Auto-start modes:
 
 Default dev/MVP mode is `Auto`.
 
-Known direct call apps can start confidently from active app + microphone activity:
+Known direct call apps can start confidently from active app + call audio activity:
 
 - Zoom
 - Telegram
 - Discord
+
+For Zoom and other known call apps, the MVP accepts either:
+
+- microphone activity, with the configured minimum detection duration
+- system audio activity, immediately
+
+The system-audio path exists because macOS/CoreAudio can report the default input device as inactive while Zoom is already using another microphone path or while the user is muted. Browser rules remain stricter.
 
 Browser heuristic v2:
 
@@ -136,6 +141,7 @@ Rules:
 - Do not start multiple sessions for the same continuous call signal.
 - Keep a 3 minute default cooldown after stop before a new automatic start can occur.
 - Keep the call signal stable for the configured minimum detection duration before starting.
+- Known direct call apps with system audio activity can bypass the minimum detection duration because they are already high-confidence call surfaces.
 - If a recording is below the short-session threshold, classify it under `Inbox/Short/`.
 - Short sessions must still keep metadata so false positives can be debugged.
 - V1 short-session threshold defaults to 60 seconds and is configurable from Settings.
@@ -169,13 +175,13 @@ V2 logs both start and non-start decisions. Repeated identical non-start decisio
 
 ## Known False Positive Cases
 
-- A whitelisted direct call app is foreground and has microphone activity, but the user is not in a real call.
+- A whitelisted direct call app is foreground and has microphone or system audio activity, but the user is not in a real call.
 - A browser is foreground while another tab or app creates microphone and system audio activity.
 - A browser call title is unavailable, forcing fallback to microphone + system audio activity.
 - A non-call browser page contains words such as `Call` or `Interview` in the title.
 - System audio activity can be coarse because CoreAudio reports device activity, not a semantic "call audio" classification.
 - Telegram or Discord voice/video areas can trigger without enough context to know whether the conversation should be recorded.
-- Quick app switches during a call can reset the minimum detection duration and delay start.
+- Quick app switches during a browser call can reset the minimum detection duration and delay start.
 
 ## Not In MVP
 

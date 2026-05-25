@@ -250,12 +250,12 @@ public struct AutoStartEngine: Sendable {
             }
         }
 
-        guard context.audioActivity.microphoneActive else {
-            let title = activeApplication.windowTitle.map { " title=\($0)" } ?? ""
-            return ignore(.microphoneInactive, "Microphone activity is not detected.\(title)")
-        }
-
         guard let signal = startSignal(for: activeApplication, audioActivity: context.audioActivity) else {
+            if !context.audioActivity.microphoneActive {
+                let title = activeApplication.windowTitle.map { " title=\($0)" } ?? ""
+                return ignore(.microphoneInactive, "Microphone activity is not detected.\(title)")
+            }
+
             if isBrowser(activeApplication), let title = activeApplication.windowTitle, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return ignore(.browserTitleNotCall, "Browser title does not look like a call: \(title)")
             }
@@ -263,20 +263,22 @@ public struct AutoStartEngine: Sendable {
             return ignore(.systemAudioInactive, "System audio activity is not detected")
         }
 
-        let key = candidateKey(for: activeApplication)
-        if candidate?.key != key {
-            candidate = Candidate(key: key, observedAt: context.now)
-        }
+        if !signal.startsImmediately {
+            let key = candidateKey(for: activeApplication)
+            if candidate?.key != key {
+                candidate = Candidate(key: key, observedAt: context.now)
+            }
 
-        let observedAt = candidate?.observedAt ?? context.now
-        let detectionDuration = context.now.timeIntervalSince(observedAt)
-        guard detectionDuration >= settings.minDetectionDurationSeconds else {
-            return AutoStartDecision(
-                action: .wait,
-                reason: .waitingForMinDetectionDuration,
-                message: "Call signal observed for \(Int(detectionDuration)) seconds",
-                confidence: signal.confidence
-            )
+            let observedAt = candidate?.observedAt ?? context.now
+            let detectionDuration = context.now.timeIntervalSince(observedAt)
+            guard detectionDuration >= settings.minDetectionDurationSeconds else {
+                return AutoStartDecision(
+                    action: .wait,
+                    reason: .waitingForMinDetectionDuration,
+                    message: "Call signal observed for \(Int(detectionDuration)) seconds",
+                    confidence: signal.confidence
+                )
+            }
         }
 
         candidate = nil
@@ -307,6 +309,21 @@ public struct AutoStartEngine: Sendable {
         audioActivity: AudioActivitySnapshot
     ) -> AutoStartSignal? {
         if isKnownCallApp(app) {
+            if audioActivity.systemAudioActive {
+                return AutoStartSignal(
+                    ruleID: isZoom(app) ? "autostart.v2.zoom" : "autostart.v2.known_call_app",
+                    confidence: "high",
+                    reason: isZoom(app)
+                        ? "Zoom active with system audio activity."
+                        : "\(app.name) active with system audio activity.",
+                    startsImmediately: true
+                )
+            }
+
+            guard audioActivity.microphoneActive else {
+                return nil
+            }
+
             return AutoStartSignal(
                 ruleID: isZoom(app) ? "autostart.v2.zoom" : "autostart.v2.known_call_app",
                 confidence: "high",
@@ -317,6 +334,10 @@ public struct AutoStartEngine: Sendable {
         }
 
         if isBrowser(app) {
+            guard audioActivity.microphoneActive else {
+                return nil
+            }
+
             guard audioActivity.systemAudioActive else {
                 return nil
             }
@@ -339,6 +360,10 @@ public struct AutoStartEngine: Sendable {
                 confidence: "medium",
                 reason: "Browser call inferred from microphone and system audio activity."
             )
+        }
+
+        guard audioActivity.microphoneActive else {
+            return nil
         }
 
         guard audioActivity.systemAudioActive else {
@@ -440,6 +465,7 @@ public struct AutoStartEngine: Sendable {
         let ruleID: String
         let confidence: String
         let reason: String
+        var startsImmediately = false
     }
 }
 
