@@ -121,12 +121,16 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             clearActiveRecordingState()
         }
 
+        AppLogger.file(.info, category: "recording", "stop pipeline begin id=\(activeSession.id)")
         microphoneRecorder.stop()
+        AppLogger.file(.info, category: "recording", "microphone writer stopped id=\(activeSession.id)")
 
         let systemResult: Result<SystemAudioRecordingResult, Error>?
         if let systemAudioRecorder {
+            AppLogger.file(.info, category: "recording", "system audio stop begin id=\(activeSession.id)")
             do {
                 systemResult = .success(try await systemAudioRecorder.stop())
+                AppLogger.file(.info, category: "recording", "system audio stop finished id=\(activeSession.id)")
             } catch {
                 AppLogger.recording.error("System audio stop failed: \(String(describing: error), privacy: .public)")
                 AppLogger.file(.error, category: "recording", "system audio stop failed error=\(String(describing: error))")
@@ -145,10 +149,12 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         let micSegmentURL = activeSession.segmentsURL.appendingPathComponent("mic-0001.m4a")
         let systemSegmentURL = activeSession.segmentsURL.appendingPathComponent("system-0001.m4a")
 
+        AppLogger.file(.info, category: "recording", "segment finalization begin id=\(activeSession.id)")
         try finalizeSegmentIfPresent(from: micSegmentURL, to: micURL)
         if runtimeSettings.systemAudioEnabled {
             try finalizeSegmentIfPresent(from: systemSegmentURL, to: systemURL)
         }
+        AppLogger.file(.info, category: "recording", "segment finalization finished id=\(activeSession.id)")
 
         var audioTracks: [AudioTrackMetadata] = []
         audioTracks.append(
@@ -214,6 +220,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             )
         } else {
             do {
+                AppLogger.file(.info, category: "recording", "mixed preview begin id=\(activeSession.id)")
                 let mixedResult = try await mixedAudioPreviewGenerator.createPreview(
                     micURL: micURL,
                     systemURL: systemURL,
@@ -221,6 +228,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                     qualityPreset: runtimeSettings.audioQualityPreset
                 )
                 audioTracks.append(mixedResult.track)
+                AppLogger.file(.info, category: "recording", "mixed preview finished id=\(activeSession.id)")
                 sessionStatus = TaggingStatus.finalizedStatus(
                     forDuration: duration,
                     preferredStatus: .needsTagging,
@@ -264,6 +272,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             }
         }
 
+        AppLogger.file(.info, category: "recording", "audio leveling begin id=\(activeSession.id)")
         let audioMetadata = await createBalancedAudioProcessing(
             session: activeSession,
             micURL: micURL,
@@ -271,6 +280,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             balancedMixedURL: balancedMixedURL,
             audioTracks: &audioTracks
         )
+        AppLogger.file(.info, category: "recording", "audio leveling finished id=\(activeSession.id) status=\(audioMetadata.processing.balancedMixStatus.rawValue)")
         let finalization = RecordingFinalizationPolicy.finalize(
             duration: duration,
             preferredStatus: sessionStatus,
@@ -294,6 +304,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             error: recoveryError
         )
 
+        AppLogger.file(.info, category: "recording", "metadata finalization begin id=\(activeSession.id)")
         let draft = try store.stopSession(
             activeSession,
             endedAt: endedAt,
@@ -303,6 +314,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             audio: audioMetadata,
             shortRecordingThresholdSeconds: runtimeSettings.shortRecordingThresholdSeconds
         )
+        AppLogger.file(.info, category: "recording", "metadata finalization finished id=\(activeSession.id)")
 
         AppLogger.recording.info("Microphone and system audio recording stopped after \(duration, privacy: .public) seconds")
         AppLogger.file(.info, category: "recording", "recording files finalized duration=\(duration) mic=\(micURL.path(percentEncoded: false)) system=\(systemURL.path(percentEncoded: false)) mixed=\(mixedURL.path(percentEncoded: false))")

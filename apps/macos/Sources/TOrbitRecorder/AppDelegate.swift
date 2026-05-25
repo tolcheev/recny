@@ -169,6 +169,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        appState.$isStoppingRecording
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.refreshMenuState()
+                }
+            }
+            .store(in: &cancellables)
+
         appState.$privacySettings
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -235,11 +244,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showRecordingIndicator: appState.privacySettings.showRecordingIndicator
         )
 
-        recordingToggleItem?.title = displayState.recordingToggleTitle
+        recordingToggleItem?.title = appState.isStoppingRecording ? "Stopping..." : displayState.recordingToggleTitle
         recordingToggleItem?.action = displayState.recordingToggleAction == .stop
             ? #selector(stopRecording)
             : #selector(startRecording)
-        recordingToggleItem?.isEnabled = true
+        recordingToggleItem?.isEnabled = !appState.isStoppingRecording
         playLastItem?.isEnabled = displayState.canPlayLastRecording
         openLastFolderItem?.isEnabled = true
         statusItem.button?.image = menuBarImage(
@@ -390,6 +399,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func stopRecording() {
+        AppLogger.file(.info, category: "recording", "stop requested source=menu")
         Task {
             do {
                 try await appState.stopRecording()
@@ -435,6 +445,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func toggleRecordingFromShortcut() {
         AppLogger.file(.info, category: "app", "keyboard shortcut \(KeyboardShortcutCatalog.toggleRecording.displayText)")
+        guard !appState.isStoppingRecording else {
+            AppLogger.file(.info, category: "recording", "ignored stop/start shortcut while stop is in progress")
+            return
+        }
+
         if appState.status == .recording {
             stopRecording()
         } else {

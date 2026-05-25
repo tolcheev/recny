@@ -28,6 +28,34 @@ struct AppStateTests {
     }
 
     @Test
+    func stopRecordingShowsStoppingStateAndIgnoresDuplicateStop() async throws {
+        let controller = DelayedStopRecordingController(stopDelay: .milliseconds(150))
+        let appState = AppState(
+            recordingController: controller,
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+
+        try await appState.startRecording()
+
+        let firstStop = Task {
+            try await appState.stopRecording()
+        }
+
+        try await Task.sleep(for: .milliseconds(20))
+
+        #expect(appState.isStoppingRecording)
+
+        try await appState.stopRecording()
+        #expect(controller.stopCallCount == 1)
+
+        try await firstStop.value
+
+        #expect(appState.isStoppingRecording == false)
+        #expect(appState.status == .idle)
+    }
+
+    @Test
     func refusesDuplicateStart() async throws {
         let controller = StubRecordingController()
         let appState = AppState(
@@ -513,5 +541,33 @@ private final class FailingRecordingController: RecordingController {
 
     func stopRecording() async throws -> RecordingControllerUpdate {
         throw error
+    }
+}
+
+private final class DelayedStopRecordingController: RecordingController {
+    private let wrapped = StubRecordingController()
+    private let stopDelay: Duration
+    private(set) var stopCallCount = 0
+
+    init(stopDelay: Duration) {
+        self.stopDelay = stopDelay
+    }
+
+    func startRecording(
+        outputFolder: URL,
+        source: RecordingSource,
+        settings: RecordingRuntimeSettings
+    ) async throws -> RecordingControllerUpdate {
+        try await wrapped.startRecording(
+            outputFolder: outputFolder,
+            source: source,
+            settings: settings
+        )
+    }
+
+    func stopRecording() async throws -> RecordingControllerUpdate {
+        stopCallCount += 1
+        try await Task.sleep(for: stopDelay)
+        return try await wrapped.stopRecording()
     }
 }

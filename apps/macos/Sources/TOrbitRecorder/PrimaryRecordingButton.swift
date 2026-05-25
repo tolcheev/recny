@@ -3,6 +3,7 @@ import TOrbitRecorderCore
 
 struct PrimaryRecordingButton: View {
     let status: RecordingStatus
+    var isBusy = false
     let action: () -> Void
 
     var body: some View {
@@ -14,20 +15,33 @@ struct PrimaryRecordingButton: View {
         }
         .buttonStyle(.borderedProminent)
         .tint(status == .recording ? .red : .accentColor)
+        .disabled(isBusy)
         .accessibilityLabel(title)
         .accessibilityHint(accessibilityHint)
     }
 
     private var title: String {
-        status == .recording ? "Stop Recording" : "Start Recording"
+        if status == .recording, isBusy {
+            return "Stopping..."
+        }
+
+        return status == .recording ? "Stop Recording" : "Start Recording"
     }
 
     private var iconName: String {
-        status == .recording ? "stop.fill" : "record.circle"
+        if status == .recording, isBusy {
+            return "hourglass"
+        }
+
+        return status == .recording ? "stop.fill" : "record.circle"
     }
 
     private var accessibilityHint: String {
-        status == .recording
+        if status == .recording, isBusy {
+            return "Finalizing the current audio recording."
+        }
+
+        return status == .recording
             ? "Stops the current audio recording."
             : "Starts a new microphone and system audio recording."
     }

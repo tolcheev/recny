@@ -7,9 +7,10 @@ struct TOrbitRecorderCommands: Commands {
 
     var body: some Commands {
         CommandMenu("T-Orbit Recorder") {
-            Button(appState.status == .recording ? "Stop Recording" : "Start Recording") {
+            Button(recordingToggleTitle) {
                 appDelegate.toggleRecordingFromShortcut()
             }
+            .disabled(appState.isStoppingRecording)
             .keyboardShortcut(
                 KeyEquivalent(Character(KeyboardShortcutCatalog.toggleRecording.keyEquivalent)),
                 modifiers: [.command, .shift]
@@ -39,5 +40,13 @@ struct TOrbitRecorderCommands: Commands {
                 modifiers: [.command, .shift]
             )
         }
+    }
+
+    private var recordingToggleTitle: String {
+        if appState.isStoppingRecording {
+            return "Stopping..."
+        }
+
+        return appState.status == .recording ? "Stop Recording" : "Start Recording"
     }
 }

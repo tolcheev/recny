@@ -40,6 +40,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var audioReprocessProgress: AudioReprocessProgress?
     @Published public private(set) var audioReprocessLastSummary: AudioReprocessBatchSummary?
     @Published public private(set) var launchAtLoginLastErrorMessage: String?
+    @Published public private(set) var isStoppingRecording: Bool
 
     private let recordingController: RecordingController
     private let permissionChecker: RecordingPermissionChecking
@@ -78,6 +79,7 @@ public final class AppState: ObservableObject {
 
     public var isRecordingStartAllowed: Bool {
         status != .recording
+            && !isStoppingRecording
             && selectedMicrophoneName != "No input device"
             && RecordingPermissionDisplay.canStartRecording(
                 permissionSnapshot,
@@ -167,6 +169,7 @@ public final class AppState: ObservableObject {
         self.audioReprocessProgress = nil
         self.audioReprocessLastSummary = nil
         self.launchAtLoginLastErrorMessage = nil
+        self.isStoppingRecording = false
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
         self.systemAudioPermissionProbeSucceeded = UserDefaults.standard.bool(
@@ -198,7 +201,7 @@ public final class AppState: ObservableObject {
     }
 
     public func startRecording(source: RecordingSource) async throws {
-        guard status != .recording else {
+        guard status != .recording, !isStoppingRecording else {
             throw RecordingControllerError.alreadyRecording
         }
 
@@ -247,6 +250,30 @@ public final class AppState: ObservableObject {
     }
 
     public func stopRecording() async throws {
+        guard status == .recording else {
+            throw RecordingControllerError.notRecording
+        }
+
+        guard !isStoppingRecording else {
+            AppLogger.file(.info, category: "recording", "ignored duplicate stop request")
+            return
+        }
+
+        isStoppingRecording = true
+        let stopRequestedAt = Date()
+        AppLogger.recording.info("Recording stop requested")
+        AppLogger.file(
+            .info,
+            category: "recording",
+            "recording stop requested elapsed_seconds=\(Int(currentRecordingDuration.rounded(.down)))"
+        )
+
+        defer {
+            let elapsed = Date().timeIntervalSince(stopRequestedAt)
+            AppLogger.file(.info, category: "recording", "recording stop request finished elapsed_ms=\(Int((elapsed * 1000).rounded()))")
+            isStoppingRecording = false
+        }
+
         do {
             let update = try await recordingController.stopRecording()
             apply(update)

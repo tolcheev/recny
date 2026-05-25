@@ -147,7 +147,9 @@ plutil -p metadata.json
 ## 5. UI
 
 - [ ] Start button starts recording.
-- [ ] Stop button stops recording.
+- [ ] Stop button immediately changes to `Stopping...` while files are finalized.
+- [ ] Duplicate Stop clicks during `Stopping...` do not start a second stop transaction.
+- [ ] Stop completes and returns the app to Ready.
 - [ ] Timer updates during recording.
 - [ ] Marker buttons are visible while recording.
 - [ ] Marker controls are not shown on the default recording screen.
@@ -279,3 +281,21 @@ Local file logs:
 tail -n 100 ~/Recordings/TOrbitRecorder/logs/app.log
 ls -lh ~/Recordings/TOrbitRecorder/logs/app.log ~/Recordings/TOrbitRecorder/logs/app.1.log 2>/dev/null
 ```
+
+Stop debugging:
+
+```sh
+tail -n 200 ~/Recordings/TOrbitRecorder/logs/app.log | grep -E "stop requested|stop pipeline|writer stopped|system audio stop|mixed preview|audio leveling|metadata finalization|stop request finished"
+```
+
+Expected healthy stop sequence:
+
+- `recording stop requested`
+- `stop pipeline begin`
+- `microphone writer stopped`
+- `system audio stop finished`
+- `segment finalization finished`
+- `mixed preview finished`
+- `audio leveling finished`
+- `metadata finalization finished`
+- `recording stop request finished`

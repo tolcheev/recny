@@ -64,18 +64,27 @@ struct RecordingStatusCard: View {
                 .frame(maxWidth: .infinity, alignment: .center)
                 .accessibilityLabel("Current recording duration \(appState.formattedDuration)")
 
-            PrimaryRecordingButton(status: appState.status) {
+            PrimaryRecordingButton(status: appState.status, isBusy: appState.isStoppingRecording) {
                 stopRecording()
             }
 
             VStack(spacing: 5) {
-                Text("Recording mic + system audio")
+                Text(appState.isStoppingRecording ? "Finalizing audio files" : "Recording mic + system audio")
                     .font(.callout.weight(.medium))
 
-                Label("All system audio is being recorded", systemImage: "speaker.wave.2")
+                Label(
+                    appState.isStoppingRecording
+                        ? "Please keep the app open until saving finishes"
+                        : "All system audio is being recorded",
+                    systemImage: appState.isStoppingRecording ? "hourglass" : "speaker.wave.2"
+                )
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel("All system audio is being recorded")
+                    .accessibilityLabel(
+                        appState.isStoppingRecording
+                            ? "Please keep the app open until saving finishes"
+                            : "All system audio is being recorded"
+                    )
             }
 
             VStack(spacing: 8) {
@@ -195,6 +204,7 @@ struct RecordingStatusCard: View {
     }
 
     private func stopRecording() {
+        AppLogger.file(.info, category: "recording", "stop requested source=main_window")
         Task {
             do {
                 try await appState.stopRecording()

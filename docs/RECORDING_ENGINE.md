@@ -112,25 +112,39 @@ The guard logs:
 
 ## Stop Flow
 
-1. Stop accepting new audio buffers.
-2. Close segment writers.
-3. Copy present segment files into final source files:
+When Stop is requested from the main window, menu bar, shortcut, or auto-stop guard, the UI immediately enters a `Stopping...` state and disables duplicate stop requests. The app writes a local file log before awaiting recorder finalization so Diagnostics can distinguish a missed click from a slow or failed stop transaction.
+
+1. Log `recording stop requested`.
+2. Stop accepting new audio buffers.
+3. Close segment writers.
+4. Copy present segment files into final source files:
    `source/segments/mic-0001.m4a` -> `source/mic.m4a`;
    `source/segments/system-0001.m4a` -> `source/system.m4a`.
-4. Mark `recovery.json` as `completed`.
-5. Validate source files with existence and size checks.
-6. Create `export/mixed.m4a` from the available source tracks.
-7. Create `export/mixed_balanced.m4a` when Audio Leveling is enabled.
-8. Compute duration and file sizes where possible.
-9. Analyze completed source tracks for basic signal metadata: signal presence, approximate silence ratio, and clipping.
-10. Validate required outputs. A required source or mixed file that is missing, failed, or 0 bytes makes the recording status `failed` with reason `Empty audio file` or `Missing audio file`.
-11. Classify short sessions when below the configured short-recording threshold.
-12. Write final `metadata.json`.
-13. Update the SQLite index.
-14. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
+5. Mark `recovery.json` as `completed`.
+6. Validate source files with existence and size checks.
+7. Create `export/mixed.m4a` from the available source tracks.
+8. Create `export/mixed_balanced.m4a` when Audio Leveling is enabled.
+9. Compute duration and file sizes where possible.
+10. Analyze completed source tracks for basic signal metadata: signal presence, approximate silence ratio, and clipping.
+11. Validate required outputs. A required source or mixed file that is missing, failed, or 0 bytes makes the recording status `failed` with reason `Empty audio file` or `Missing audio file`.
+12. Classify short sessions when below the configured short-recording threshold.
+13. Write final `metadata.json`.
+14. Update the SQLite index.
+15. Move the session into `Library/YYYY/MM/...`, `Inbox/Short/`, or `Inbox/Failed/`.
 
 Recordings shorter than the configured short-recording threshold are finalized with metadata status `short_recording`, moved under `Inbox/Short/`, and kept indexed for review. The MVP default threshold is 60 seconds and can be changed from Settings. Failed finalization uses `failed` and `Inbox/Failed/` when metadata can be written.
-15. Emit a final lifecycle log event.
+16. Emit a final lifecycle log event.
+
+Stop finalization logs each major phase:
+
+- stop pipeline begin
+- microphone writer stopped
+- system audio stop begin/finished
+- segment finalization begin/finished
+- mixed preview begin/finished
+- audio leveling begin/finished
+- metadata finalization begin/finished
+- recording stop request finished
 
 ## Crash Recovery
 
