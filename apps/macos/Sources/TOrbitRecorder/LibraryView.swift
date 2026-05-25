@@ -17,6 +17,7 @@ struct LibraryView: View {
     @State private var reprocessingRecordingIDs: Set<String> = []
     @State private var actionError: String?
     @State private var actionMessage: String?
+    @State private var inlinePlayback: RecordingInlinePlaybackRequest?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -66,6 +67,7 @@ struct LibraryView: View {
         }
         .onChange(of: appState.recordings) { _, _ in
             ensureSelectionVisible()
+            ensureInlinePlaybackVisible()
         }
         .sheet(item: $tagDraft) { draft in
             TagEditorView(draft: draft) { updatedDraft in
@@ -304,6 +306,7 @@ struct LibraryView: View {
                                 audioSummary: audioSummary(for: recording, metadata: metadata),
                                 playbackState: playbackState(for: recording, metadata: metadata),
                                 audioHealth: metadata?.audio.health ?? .good,
+                                inlinePlayback: inlinePlayback?.recordingID == recording.id ? inlinePlayback : nil,
                                 isSelected: recording.id == selectedRecordingID,
                                 onSelect: {
                                     selectedRecordingID = recording.id
@@ -317,14 +320,19 @@ struct LibraryView: View {
                                 onPlayBalanced: {
                                     playIfExists(
                                         recording.balancedMixedAudioURL,
-                                        title: "\(recording.title) - Balanced"
+                                        kind: .balanced,
+                                        recording: recording
                                     )
                                 },
                                 onPlayOriginal: {
                                     playIfExists(
                                         recording.originalMixedAudioURL,
-                                        title: "\(recording.title) - Original"
+                                        kind: .original,
+                                        recording: recording
                                     )
+                                },
+                                onClosePlayback: {
+                                    inlinePlayback = nil
                                 },
                                 onShowAnalysis: {
                                     revealIfExists(recording.audioAnalysisURL)
@@ -473,6 +481,15 @@ struct LibraryView: View {
         }
     }
 
+    private func ensureInlinePlaybackVisible() {
+        guard let inlinePlayback,
+              displayedRecordings.contains(where: { $0.id == inlinePlayback.recordingID })
+        else {
+            self.inlinePlayback = nil
+            return
+        }
+    }
+
     private func metadata(for recording: RecordingSummary) -> RecordingMetadata? {
         try? FileSystemRecordingStore(rootURL: appState.outputFolderURL)
             .readMetadata(at: recording.metadataURL)
@@ -522,11 +539,7 @@ struct LibraryView: View {
             return
         }
 
-        AppWindows.openAudioPlayer(
-            url: playback.url,
-            title: "\(recording.title) - \(playback.kind.displayName)"
-        )
-        actionError = nil
+        startInlinePlayback(for: recording, candidate: playback)
     }
 
     private func playbackState(
@@ -539,15 +552,37 @@ struct LibraryView: View {
         )
     }
 
-    private func playIfExists(_ url: URL, title: String) {
-        guard RecordingPlaybackResolver.nonEmptyFileSize(at: url) != nil else {
+    private func playIfExists(
+        _ url: URL,
+        kind: RecordingPlaybackKind,
+        recording: RecordingSummary
+    ) {
+        guard let size = RecordingPlaybackResolver.nonEmptyFileSize(at: url) else {
             actionError = "\(url.lastPathComponent) is missing"
             actionMessage = nil
             return
         }
 
-        AppWindows.openAudioPlayer(url: url, title: title)
+        startInlinePlayback(
+            for: recording,
+            candidate: RecordingPlaybackCandidate(kind: kind, url: url, fileSizeBytes: size)
+        )
+    }
+
+    private func startInlinePlayback(
+        for recording: RecordingSummary,
+        candidate: RecordingPlaybackCandidate
+    ) {
+        AppWindows.closeAudioPlayer()
+        selectedRecordingID = recording.id
+        inlinePlayback = RecordingInlinePlaybackRequest(
+            recordingID: recording.id,
+            recordingTitle: recording.title,
+            candidate: candidate
+        )
         actionError = nil
+        actionMessage = nil
+        AppLogger.file(.info, category: "playback", "open inline library player recording=\(recording.id) path=\(candidate.url.path(percentEncoded: false))")
     }
 
     private func revealIfExists(_ url: URL) {
@@ -640,12 +675,14 @@ private struct LibraryRecordingRow: View {
     let audioSummary: String
     let playbackState: RecordingPlaybackDisplayState
     let audioHealth: AudioHealthMetadata
+    let inlinePlayback: RecordingInlinePlaybackRequest?
     let isSelected: Bool
     let onSelect: () -> Void
     let onPlay: () -> Void
     let onOpen: () -> Void
     let onPlayBalanced: () -> Void
     let onPlayOriginal: () -> Void
+    let onClosePlayback: () -> Void
     let onShowAnalysis: () -> Void
     let onReprocess: () -> Void
     let isReprocessing: Bool
@@ -653,98 +690,116 @@ private struct LibraryRecordingRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(recording.title)
-                        .font(.callout.weight(.semibold))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(recording.title)
+                            .font(.callout.weight(.semibold))
+                            .lineLimit(1)
+
+                        StatusBadge(
+                            text: RecordingDisplayFormatter.statusText(recording.status),
+                            tone: tone(for: recording.status)
+                        )
+
+                        StatusBadge(
+                            text: playbackBadgeText,
+                            tone: playbackBadgeTone
+                        )
+
+                        if audioHealth.status != .good {
+                            StatusBadge(
+                                text: RecordingDisplayFormatter.audioHealthBadgeText(audioHealth.status),
+                                tone: audioHealth.status == .failed ? .danger : .warning
+                            )
+                        }
+                    }
+
+                    Text("\(displayDate(recording.startedAt)) · \(RecordingDisplayFormatter.duration(recording.durationSec)) · \(recording.sourceApp) · \(audioSummary)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
 
-                    StatusBadge(
-                        text: RecordingDisplayFormatter.statusText(recording.status),
-                        tone: tone(for: recording.status)
-                    )
-
-                    StatusBadge(
-                        text: playbackBadgeText,
-                        tone: playbackBadgeTone
-                    )
-
-                    if audioHealth.status != .good {
-                        StatusBadge(
-                            text: RecordingDisplayFormatter.audioHealthBadgeText(audioHealth.status),
-                            tone: audioHealth.status == .failed ? .danger : .warning
-                        )
-                    }
+                    CompactTagsView(participant: recording.participant, tags: recording.tags)
                 }
 
-                Text("\(displayDate(recording.startedAt)) · \(RecordingDisplayFormatter.duration(recording.durationSec)) · \(recording.sourceApp) · \(audioSummary)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                Spacer(minLength: 10)
 
-                CompactTagsView(participant: recording.participant, tags: recording.tags)
-            }
-
-            Spacer(minLength: 10)
-
-            HStack(spacing: 6) {
-                Button(action: onPlay) {
-                    Label("Play", systemImage: "play.fill")
-                }
-                .disabled(playbackState == .missing)
-                .accessibilityLabel("Play recording")
-
-                Button(action: onOpen) {
-                    Label("Open", systemImage: "folder")
-                }
-                .accessibilityLabel("Open recording folder")
-
-                Menu {
-                    Button(action: onPlayBalanced) {
-                        Label("Play Balanced", systemImage: "slider.horizontal.3")
+                HStack(spacing: 6) {
+                    if inlinePlayback == nil {
+                        Button(action: onPlay) {
+                            Label("Play", systemImage: "play.fill")
+                        }
+                        .disabled(playbackState == .missing)
+                        .accessibilityLabel("Play recording")
+                    } else {
+                        Button(action: onClosePlayback) {
+                            Label("Close Player", systemImage: "xmark")
+                        }
+                        .accessibilityLabel("Close inline player")
                     }
-                    .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.balancedMixedAudioURL) == nil)
-
-                    Button(action: onPlayOriginal) {
-                        Label("Play Original", systemImage: "waveform")
-                    }
-                    .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.originalMixedAudioURL) == nil)
 
                     Button(action: onOpen) {
-                        Label("Open Folder", systemImage: "folder")
+                        Label("Open", systemImage: "folder")
                     }
+                    .accessibilityLabel("Open recording folder")
 
-                    Button(action: onShowAnalysis) {
-                        Label("Reveal Audio Analysis", systemImage: "doc.text.magnifyingglass")
+                    Menu {
+                        Button(action: onPlayBalanced) {
+                            Label("Play Balanced", systemImage: "slider.horizontal.3")
+                        }
+                        .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.balancedMixedAudioURL) == nil)
+
+                        Button(action: onPlayOriginal) {
+                            Label("Play Original", systemImage: "waveform")
+                        }
+                        .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.originalMixedAudioURL) == nil)
+
+                        Button(action: onOpen) {
+                            Label("Open Folder", systemImage: "folder")
+                        }
+
+                        Button(action: onShowAnalysis) {
+                            Label("Reveal Audio Analysis", systemImage: "doc.text.magnifyingglass")
+                        }
+                        .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
+
+                        Button(action: onReprocess) {
+                            Label("Reprocess Audio", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .disabled(isReprocessing)
+
+                        Divider()
+
+                        Button(action: onEdit) {
+                            Label("Edit Note / Tags", systemImage: "tag")
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive, action: onDelete) {
+                            Label("Delete Local Recording", systemImage: "trash")
+                        }
+                    } label: {
+                        Label("More", systemImage: "ellipsis.circle")
+                            .labelStyle(.iconOnly)
                     }
-                    .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
-
-                    Button(action: onReprocess) {
-                        Label("Reprocess Audio", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .disabled(isReprocessing)
-
-                    Divider()
-
-                    Button(action: onEdit) {
-                        Label("Edit Note / Tags", systemImage: "tag")
-                    }
-
-                    Divider()
-
-                    Button(role: .destructive, action: onDelete) {
-                        Label("Delete Local Recording", systemImage: "trash")
-                    }
-                } label: {
-                    Label("More", systemImage: "ellipsis.circle")
-                        .labelStyle(.iconOnly)
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                    .accessibilityLabel("More actions")
                 }
-                .menuStyle(.borderlessButton)
                 .fixedSize()
-                .accessibilityLabel("More actions")
             }
-            .fixedSize()
+
+            if let inlinePlayback {
+                InlineAudioPlayerView(
+                    url: inlinePlayback.url,
+                    title: inlinePlayback.title,
+                    autoplays: true
+                )
+                .id(inlinePlayback.id)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 11)

@@ -114,6 +114,7 @@ Library is a separate window opened from the main footer or menu bar. It default
 - collapsed filters for status, date range, source app, tags, and audio health
 - recording rows with title, started time, duration, source app, audio summary, audio health badge, human status badge, and compact tags
 - compact row actions: Play, Open, and an icon-only More menu
+- Play expands an inline mini-player inside the selected recording row instead of opening a separate playback window
 - a details panel for the selected recording with files, audio analysis summary, metadata summary, tags, markers, and actions
 - an `Open Library Folder` action for jumping to local storage
 - More actions: Edit Note / Tags, Reprocess Audio, Reveal Audio Analysis, and Delete Local Recording

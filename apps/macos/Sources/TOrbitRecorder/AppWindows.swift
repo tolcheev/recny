@@ -55,6 +55,11 @@ enum AppWindows {
         present(window)
     }
 
+    static func closeAudioPlayer() {
+        audioPlayerWindow?.close()
+        audioPlayerWindow = nil
+    }
+
     static func openRecordingsFolder(appState: AppState) {
         let recordingsURL = StoragePathBuilder(rootURL: appState.outputFolderURL).libraryURL
         do {

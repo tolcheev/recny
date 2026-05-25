@@ -326,7 +326,7 @@ YouTube plus voice check:
 2. Start recording in T-Orbit Recorder.
 3. Speak into the selected microphone while the YouTube audio is playing.
 4. Stop recording, open Library, and use Play on the new row.
-5. Confirm playback opens the built-in T-Orbit Recorder player and prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.
+5. Confirm playback expands the inline Library player and prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.
 6. Confirm the mixed preview contains both your voice and the YouTube audio.
 
 Permission error check:

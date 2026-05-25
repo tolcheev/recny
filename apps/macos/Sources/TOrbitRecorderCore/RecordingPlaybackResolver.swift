@@ -32,6 +32,30 @@ public struct RecordingPlaybackCandidate: Equatable, Sendable {
     }
 }
 
+public struct RecordingInlinePlaybackRequest: Equatable, Identifiable, Sendable {
+    public let recordingID: String
+    public let url: URL
+    public let title: String
+    public let kind: RecordingPlaybackKind
+
+    public var id: String {
+        "\(recordingID)|\(url.path(percentEncoded: false))"
+    }
+
+    public init(
+        recordingID: String,
+        recordingTitle: String,
+        candidate: RecordingPlaybackCandidate
+    ) {
+        self.recordingID = recordingID
+        self.url = candidate.url
+        self.kind = candidate.kind
+        let trimmedTitle = recordingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseTitle = trimmedTitle.isEmpty ? "Untitled recording" : trimmedTitle
+        self.title = "\(baseTitle) - \(candidate.kind.displayName)"
+    }
+}
+
 public enum RecordingPlaybackDisplayState: Equatable, Sendable {
     case balancedReady
     case originalOnly

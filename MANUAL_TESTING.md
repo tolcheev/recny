@@ -106,6 +106,16 @@ Manual check:
 
 Marker shortcuts and marker buttons are hidden from the default UI for now. Existing recordings can still display marker metadata in Library details if metadata contains markers.
 
+## Library Playback
+
+1. Open Library.
+2. Select a recording with playable audio.
+3. Click Play on the recording row.
+4. Confirm the row expands with an inline player, not a separate player window.
+5. Confirm playback starts automatically, the timeline moves, and Pause/Play works.
+6. Open More -> Play Original or More -> Play Balanced and confirm the same row switches to that playback source.
+7. Click Close Player and confirm the row collapses.
+
 ## Launch At Login
 
 Launch at Login is on by default. The app first uses the modern macOS login item API through `SMAppService.mainApp`; development/ad-hoc builds can fall back to a local user LaunchAgent if macOS reports that the main login item service is unavailable.

@@ -87,6 +87,26 @@ struct RecordingPlaybackResolverTests {
         #expect(playback.kind == .original)
     }
 
+    @Test
+    func inlinePlaybackRequestUsesReadableTitleAndStableIdentity() throws {
+        let folder = try makeRecordingFolder()
+        let url = folder.appendingPathComponent("export/mixed_balanced.m4a")
+        try write(bytes: 20, to: url)
+        let candidate = RecordingPlaybackCandidate(kind: .balanced, url: url, fileSizeBytes: 20)
+
+        let request = RecordingInlinePlaybackRequest(
+            recordingID: "rec_123",
+            recordingTitle: "Screening call",
+            candidate: candidate
+        )
+
+        #expect(request.id == "rec_123|\(url.path(percentEncoded: false))")
+        #expect(request.recordingID == "rec_123")
+        #expect(request.title == "Screening call - Balanced")
+        #expect(request.kind == .balanced)
+        #expect(request.url == url)
+    }
+
     private func makeRecordingFolder() throws -> URL {
         let folder = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

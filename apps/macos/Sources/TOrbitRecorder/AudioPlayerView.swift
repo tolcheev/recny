@@ -15,22 +15,33 @@ final class AudioPlayerViewModel: ObservableObject {
     private let player: AVPlayer
     private var timeObserver: Any?
 
-    init(url: URL, title: String) {
+    init(url: URL, title: String, autoplays: Bool = false) {
         self.url = url
         self.title = title.isEmpty ? url.lastPathComponent : title
         self.player = AVPlayer(url: url)
         configureDuration()
         addTimeObserver()
+        if autoplays {
+            play()
+        }
     }
 
     func togglePlayback() {
         if isPlaying {
-            player.pause()
-            isPlaying = false
+            pause()
         } else {
-            player.play()
-            isPlaying = true
+            play()
         }
+    }
+
+    func play() {
+        player.play()
+        isPlaying = true
+    }
+
+    func pause() {
+        player.pause()
+        isPlaying = false
     }
 
     func seek(to seconds: TimeInterval) {
@@ -145,5 +156,66 @@ struct AudioPlayerView: View {
         .padding(20)
         .frame(minWidth: 460, idealWidth: 520, minHeight: 160)
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+}
+
+struct InlineAudioPlayerView: View {
+    @StateObject private var viewModel: AudioPlayerViewModel
+
+    init(url: URL, title: String, autoplays: Bool = true) {
+        _viewModel = StateObject(wrappedValue: AudioPlayerViewModel(url: url, title: title, autoplays: autoplays))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Button {
+                    viewModel.togglePlayback()
+                } label: {
+                    Label(
+                        viewModel.isPlaying ? "Pause" : "Play",
+                        systemImage: viewModel.isPlaying ? "pause.fill" : "play.fill"
+                    )
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel(viewModel.isPlaying ? "Pause inline playback" : "Play inline playback")
+
+                Text(RecordingDisplayFormatter.duration(viewModel.currentTime))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, alignment: .trailing)
+
+                Slider(
+                    value: Binding(
+                        get: { viewModel.currentTime },
+                        set: { viewModel.seek(to: $0) }
+                    ),
+                    in: 0...max(viewModel.duration, 1)
+                )
+                .accessibilityLabel("Inline playback position")
+
+                Text(RecordingDisplayFormatter.duration(viewModel.duration))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, alignment: .leading)
+
+                Button {
+                    viewModel.revealInFinder()
+                } label: {
+                    Image(systemName: "doc.badge.magnifyingglass")
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .help("Reveal audio file")
+                .accessibilityLabel("Reveal playback file in Finder")
+            }
+
+            if let errorMessage = viewModel.errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(.top, 4)
     }
 }
