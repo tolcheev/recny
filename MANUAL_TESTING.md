@@ -626,6 +626,8 @@ Fix:
 
 The CLI smoke test uses the current terminal process. It needs separate microphone permission for that terminal/Codex process.
 
+CLI smoke tests write logs under their `--root` folder. Regular unit tests write file logs under the system temporary directory, so test runs should not pollute `~/Recordings/TOrbitRecorder/logs/app.log`.
+
 ### System Audio Permission
 
 Symptom:

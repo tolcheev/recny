@@ -354,3 +354,5 @@ swift run --package-path apps/macos TOrbitRecorderSystemAudioSmokeTest --duratio
 ```
 
 Play audio from another macOS app while this command runs. The command writes `source/system.m4a` and fails explicitly if the Core Audio process tap cannot start or if no samples are captured.
+
+CLI smoke tests write their file logs under the provided `--root` folder. Unit tests write file logs under the system temporary directory, so running tests should not add test-only entries to `~/Recordings/TOrbitRecorder/logs/app.log`.

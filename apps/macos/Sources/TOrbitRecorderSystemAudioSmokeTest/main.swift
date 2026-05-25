@@ -13,6 +13,7 @@ enum TOrbitRecorderSystemAudioSmokeTest {
 
             try FileManager.default.removeItemIfExists(at: root)
             try FileManager.default.createDirectory(at: sourceURL, withIntermediateDirectories: true)
+            AppLogger.configureFileLogging(rootURL: root)
 
             let recorder = ScreenCaptureKitSystemAudioRecorder()
             try await recorder.start(outputURL: outputURL)

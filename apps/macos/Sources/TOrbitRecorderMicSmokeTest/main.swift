@@ -9,6 +9,7 @@ enum TOrbitRecorderMicSmokeTest {
         let duration = parseDuration()
         let rootURL = parseRootURL()
         let authorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        AppLogger.configureFileLogging(rootURL: rootURL)
 
         guard authorizationStatus == .authorized else {
             print("Microphone smoke test skipped.")

@@ -137,7 +137,7 @@ public enum AppLogger {
     public static let recording = Logger(subsystem: subsystem, category: "recording")
     public static let storage = Logger(subsystem: subsystem, category: "storage")
     private static let fileLogStoreLock = NSLock()
-    private nonisolated(unsafe) static var currentFileLogStore = FileLogStore()
+    private nonisolated(unsafe) static var currentFileLogStore = makeDefaultFileLogStore()
 
     public static var fileLogStore: FileLogStore {
         fileLogStoreLock.lock()
@@ -165,6 +165,26 @@ public enum AppLogger {
             try fileLogStore.write(level: level, category: category, message: message())
         } catch {
             app.error("Failed to write local file log: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    private static func makeDefaultFileLogStore() -> FileLogStore {
+        guard isRunningTests else {
+            return FileLogStore()
+        }
+
+        let testLogsDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("TOrbitRecorderTestLogs-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+        return FileLogStore(logsDirectoryURL: testLogsDirectory)
+    }
+
+    private static var isRunningTests: Bool {
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            return true
+        }
+
+        return CommandLine.arguments.contains { argument in
+            argument.contains(".xctest") || argument.contains("TOrbitRecorderPackageTests")
         }
     }
 }

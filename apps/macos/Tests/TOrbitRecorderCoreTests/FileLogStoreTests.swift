@@ -4,6 +4,14 @@ import Testing
 
 struct FileLogStoreTests {
     @Test
+    func appLoggerDefaultFileStoreAvoidsUserRecordingLogsDuringTests() {
+        let defaultPath = AppLogger.fileLogStore.logDirectoryURL.path(percentEncoded: false)
+
+        #expect(defaultPath.contains(FileManager.default.temporaryDirectory.path(percentEncoded: false)))
+        #expect(!defaultPath.contains("/Recordings/TOrbitRecorder/logs"))
+    }
+
+    @Test
     func defaultStoreUsesMVPLogPathAndRotationLimit() {
         let store = FileLogStore()
 
