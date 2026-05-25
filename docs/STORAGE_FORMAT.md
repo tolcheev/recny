@@ -10,6 +10,8 @@ The MVP stores all recordings locally. The recording folder plus `metadata.json`
 
 The default root can be changed from Settings and is persisted locally. Reset to default returns the app to `~/Recordings/TOrbitRecorder/`.
 
+The root contains both user recordings and app internals. In normal use, the app opens `Library/` from the `Open Recordings` button so the user does not need to browse `db/`, `logs/`, or internal `Inbox/` staging folders.
+
 ## Directory Layout
 
 ```text
@@ -46,15 +48,15 @@ On a normal Stop, finalized non-failed recordings remove these recovery artifact
 
 ## Inbox
 
-`Inbox/` is for recordings that are not ready for the main library.
+`Inbox/` is an internal workflow area for recordings that are not ready for the main library. It is intentionally visible on disk for recovery and debugging, but it is not the normal user-facing folder.
 
-- `Inbox/Unsorted/`: valid recordings without a final category.
-- `Inbox/Short/`: recordings below the short-session threshold.
+- `Inbox/Unsorted/`: in-progress staging and crash-recovery candidates.
+- `Inbox/Short/`: recordings below the short-session threshold. These are not errors.
 - `Inbox/Failed/`: sessions where required capture, writing, or export failed.
 
 ## Library
 
-`Library/YYYY/MM/` stores completed recordings.
+`Library/YYYY/MM/` is the user-facing recordings folder and stores completed normal recordings.
 
 Session directory format:
 

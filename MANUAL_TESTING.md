@@ -20,7 +20,7 @@ scripts/package_macos.sh
 open -n dist/TOrbitRecorder.app
 ```
 
-The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings Folder, Open Library, Settings, Diagnostics, and Quit.
+The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings, Open Library, Settings, Diagnostics, and Quit.
 
 Settings, Library, and Diagnostics open as separate app windows. If a window is behind other apps, use the menu bar item again; the app should activate and bring that window forward.
 
@@ -42,7 +42,7 @@ Expected menu items:
 - `Show Window`
 - `Start Recording` when idle, `Stop Recording` while recording
 - `Play Last Recording`
-- `Open Recordings Folder`
+- `Open Recordings`
 - `Open Library`
 - `Settings`
 - `Diagnostics`
@@ -77,7 +77,7 @@ Dock behavior:
 
 - Settings -> Behavior -> Show Dock icon defaults off for MVP.
 - With the Dock icon hidden, the app stays in the macOS menu bar.
-- Use the menu bar item or `Ctrl+Option+Cmd+R` to reopen the main window.
+- Use the menu bar item or `Option+R` to reopen the main window.
 
 ## Keyboard Shortcuts
 
@@ -85,20 +85,20 @@ The Show Window shortcut is global. Other shortcuts are app-active only in the M
 
 Expected shortcuts:
 
-- `Ctrl+Option+Cmd+R`: Show Window, including when the Dock icon is hidden.
+- `Option+R`: Show Window, including when the Dock icon is hidden.
 - `Cmd+Shift+R`: Start Recording when idle, Stop Recording when recording.
-- `Cmd+Shift+O`: Open Recordings Folder.
+- `Cmd+Shift+O`: Open Recordings.
 - `Cmd+Shift+L`: Open Library.
 - `Cmd+Shift+D`: Open Diagnostics.
 
 Manual check:
 
 1. Open TOrbitRecorder from `/Applications` or `dist/`.
-2. Confirm Show Dock icon is off in Settings -> Behavior, switch to another app, then press `Ctrl+Option+Cmd+R`.
+2. Confirm Show Dock icon is off in Settings -> Behavior, switch to another app, then press `Option+R`.
 3. Confirm T-Orbit Recorder comes to front.
 4. Press `Cmd+Shift+L` and confirm Library opens.
 5. Press `Cmd+Shift+D` and confirm Diagnostics opens.
-6. Press `Cmd+Shift+O` and confirm Finder opens the root recordings folder.
+6. Press `Cmd+Shift+O` and confirm Finder opens the user-facing `Library/` recordings folder.
 7. Press `Cmd+Shift+R` while idle and confirm recording starts.
 8. Press `Cmd+Shift+R` while recording and confirm recording stops.
 9. Open Settings -> Hotkeys and confirm the same shortcuts are listed.
@@ -538,8 +538,11 @@ With default settings, the short recording threshold is 60 seconds.
 6. Speak into the microphone.
 7. Wait for the configured detection duration, default 20 seconds.
 8. Confirm recording starts automatically.
-9. Stop recording.
-10. Confirm metadata:
+9. Switch to another app during the call and confirm the recording continues.
+10. End the Zoom call or close Zoom.
+11. Wait up to 35 seconds after microphone and system-audio activity stop.
+12. Confirm the app stops recording automatically and the row appears in Library.
+13. Confirm metadata:
 
 ```text
 source.app_name = Zoom
@@ -551,6 +554,8 @@ source.reason = Zoom active with microphone activity.
 ```
 
 Known caveat: V2 treats Zoom as a known call app, so system audio activity is not required for the direct-call-app shortcut.
+
+Auto-stop caveat: auto-stop only applies to recordings that started from auto-start. Manual recordings must still be stopped manually.
 
 ## Auto-Start: Browser Heuristic
 

@@ -113,7 +113,7 @@ struct MainRecorderView: View {
             } label: {
                 Label("Open Recordings", systemImage: "folder")
             }
-            .accessibilityLabel("Open recordings folder")
+            .accessibilityLabel("Open recordings")
 
             Button {
                 AppWindows.openSettings(appState: appState)

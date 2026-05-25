@@ -56,14 +56,15 @@ enum AppWindows {
     }
 
     static func openRecordingsFolder(appState: AppState) {
+        let recordingsURL = StoragePathBuilder(rootURL: appState.outputFolderURL).libraryURL
         do {
             try FileManager.default.createDirectory(
-                at: appState.outputFolderURL,
+                at: recordingsURL,
                 withIntermediateDirectories: true
             )
-            NSWorkspace.shared.open(appState.outputFolderURL)
+            NSWorkspace.shared.open(recordingsURL)
         } catch {
-            AppLogger.file(.error, category: "storage", "open recordings folder failed path=\(appState.outputFolderPath) error=\(String(describing: error))")
+            AppLogger.file(.error, category: "storage", "open recordings folder failed path=\(recordingsURL.path(percentEncoded: false)) error=\(String(describing: error))")
         }
     }
 

@@ -8,14 +8,14 @@ struct KeyboardShortcutCatalogTests {
 
         #expect(shortcuts.count == 5)
         #expect(shortcuts.map(\.displayText) == [
-            "Ctrl+Option+Cmd+R",
+            "Option+R",
             "Cmd+Shift+R",
             "Cmd+Shift+O",
             "Cmd+Shift+L",
             "Cmd+Shift+D"
         ])
         #expect(shortcuts.map(\.keyEquivalent) == ["r", "r", "o", "l", "d"])
-        #expect(KeyboardShortcutCatalog.openLatestRecordingFolder.title == "Open recordings folder")
+        #expect(KeyboardShortcutCatalog.openLatestRecordingFolder.title == "Open recordings")
     }
 
     @Test

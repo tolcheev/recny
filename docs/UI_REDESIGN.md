@@ -29,7 +29,7 @@ T-Orbit Recorder is controlled primarily from the macOS menu bar. The menu expos
 - Show Window
 - Start Recording / Stop Recording
 - Play Last Recording
-- Open Recordings Folder
+- Open Recordings
 - Open Library
 - Settings
 - Diagnostics
@@ -45,15 +45,19 @@ The menu bar icon reflects recorder state:
 
 If Quit is selected while recording is active, the app asks for confirmation before stopping the recording and quitting.
 
+`Open Recordings` opens the user-facing `Library/` folder. The storage root still contains internal folders such as `Inbox`, `db`, and `logs`, but those are not the default Finder destination for normal use.
+
 App-active keyboard shortcuts mirror the primary menu actions:
 
-- `Ctrl+Option+Cmd+R`: Show Window globally, including when the Dock icon is hidden
+- `Option+R`: Show Window globally, including when the Dock icon is hidden
 - `Cmd+Shift+R`: Start/Stop Recording
-- `Cmd+Shift+O`: Open Recordings Folder
+- `Cmd+Shift+O`: Open Recordings
 - `Cmd+Shift+L`: Open Library
 - `Cmd+Shift+D`: Open Diagnostics
 
 Marker shortcuts are hidden from the default UI until the marker workflow is useful enough for daily use.
+
+Auto-started recordings use an auto-stop guard: after both microphone and system-audio activity disappear for 30 seconds, the app stops the recording and saves it. Manual recordings never auto-stop.
 
 ## Main Window States
 
@@ -179,5 +183,5 @@ The design keeps native macOS styling, supports light/dark mode through system c
 - Library has local search and collapsed filters; advanced saved views are out of scope.
 - Diagnostics test recording requires local macOS microphone and system audio permissions.
 - macOS may require quitting and reopening the exact app bundle after enabling system audio permission, especially when switching between `.build`, `dist`, and `/Applications` builds.
-- `Show Dock icon` defaults off for MVP. The app is menu-bar-first by default; use the menu bar icon or `Ctrl+Option+Cmd+R` to bring windows back.
+- `Show Dock icon` defaults off for MVP. The app is menu-bar-first by default; use the menu bar icon or `Option+R` to bring windows back.
 - `Launch at Login` defaults on so the menu bar recorder is available after macOS login. Diagnostics shows whether this is backed by `SMAppService` or the local LaunchAgent fallback used by some development/ad-hoc bundles.

@@ -325,7 +325,7 @@ struct SettingsView: View {
                 )
             )
 
-            Text("Off by default. T-Orbit Recorder stays in the menu bar; use the menu bar item or Ctrl+Option+Cmd+R to show the window again.")
+            Text("Off by default. T-Orbit Recorder stays in the menu bar; use the menu bar item or Option+R to show the window again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

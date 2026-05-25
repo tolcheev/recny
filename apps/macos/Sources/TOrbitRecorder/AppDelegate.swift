@@ -74,7 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyEquivalent: KeyboardShortcutCatalog.showWindowGlobal.keyEquivalent
         )
         showWindowItem.target = self
-        showWindowItem.keyEquivalentModifierMask = [.command, .option, .control]
+        showWindowItem.keyEquivalentModifierMask = [.option]
         menu.addItem(showWindowItem)
 
         menu.addItem(.separator())
@@ -101,7 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.playLastItem = playLastItem
 
         let openLastFolderItem = NSMenuItem(
-            title: "Open Recordings Folder",
+            title: "Open Recordings",
             action: #selector(openLastRecordingFolder),
             keyEquivalent: KeyboardShortcutCatalog.openLatestRecordingFolder.keyEquivalent
         )

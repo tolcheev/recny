@@ -149,6 +149,28 @@ Rules:
 - V1 short-session threshold defaults to 60 seconds and is configurable from Settings.
 - Short sessions use `status: "short_recording"` and do not open the post-call tagging panel automatically.
 
+## Auto-Stop
+
+Auto-started recordings also need a clear stop rule. A Zoom call often remains in the background while the user switches between browser, IDE, notes, and slides, so foreground app loss alone must not stop recording.
+
+MVP stop rule:
+
+```text
+IF recording was started by autostart
+AND microphone_active == false
+AND system_audio_active == false
+AND signal has been lost for at least 30 seconds
+THEN stop_recording()
+```
+
+Rules:
+
+- Manual recordings never auto-stop.
+- App focus changes do not stop an auto-started recording.
+- Any restored microphone or system-audio activity cancels the pending auto-stop timer.
+- After auto-stop succeeds, the normal cooldown applies before another automatic start.
+- The app logs when signal loss starts, when signal is restored, and when auto-stop runs.
+
 ## Permission Guardrails
 
 - Never mark a recording as successful if microphone capture did not start.

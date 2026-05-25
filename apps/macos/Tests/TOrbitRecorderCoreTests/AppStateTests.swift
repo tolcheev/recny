@@ -171,6 +171,75 @@ struct AppStateTests {
     }
 
     @Test
+    func autoStartedZoomRecordingStopsAfterCallSignalIsLost() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let zoom = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoom,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: nil,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: false),
+            now: startedAt.addingTimeInterval(20)
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: nil,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: false),
+            now: startedAt.addingTimeInterval(55)
+        )
+
+        #expect(appState.status == .idle)
+        #expect(appState.autoStartNotificationMessage == "Recording stopped: call ended")
+        #expect(appState.postCallDraft != nil)
+    }
+
+    @Test
+    func manualRecordingDoesNotAutoStopWhenAudioActivityIsSilent() async throws {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+
+        try await appState.startRecording()
+
+        await appState.evaluateAutoStart(
+            activeApplication: nil,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: false),
+            now: Date(timeIntervalSince1970: 1_716_468_000)
+        )
+
+        await appState.evaluateAutoStart(
+            activeApplication: nil,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: false),
+            now: Date(timeIntervalSince1970: 1_716_468_100)
+        )
+
+        #expect(appState.status == .recording)
+        try await appState.stopRecording()
+    }
+
+    @Test
     func launchAtLoginPreferenceUpdatesSettingsStateAndDiagnosticsError() {
         let appState = AppState(
             recordingController: StubRecordingController(),

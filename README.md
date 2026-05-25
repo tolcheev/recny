@@ -51,6 +51,14 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 
 `db/app.sqlite` stores the local recordings index for list filtering and quick library actions. The recording folder and `metadata.json` remain the canonical record.
 
+For daily use, use the app `Library` window or the `Open Recordings` action. Internal folders under `Inbox/` are workflow buckets:
+
+- `Inbox/Unsorted/`: in-progress staging and crash-recovery candidates.
+- `Inbox/Short/`: short recordings below the configured threshold.
+- `Inbox/Failed/`: failed sessions kept for diagnostics.
+
+The app should not make you browse these internal folders during normal testing.
+
 ## Repository Layout
 
 ```text
@@ -151,7 +159,7 @@ Older recordings can be reprocessed for balanced audio from `Library -> More -> 
 
 Settings currently cover preferred microphone selection, recording toggles, auto-start rules, storage actions, hotkeys, Dock/menu-bar behavior, and local privacy controls. Unimplemented controls are disabled in the UI.
 
-Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. T-Orbit Recorder is menu-bar-first by default; `Ctrl+Option+Cmd+R` shows the app window globally when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
+Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, system audio and mixed preview enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. T-Orbit Recorder is menu-bar-first by default; `Option+R` shows the app window globally when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
 Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path.
 
@@ -171,6 +179,12 @@ open /Applications/TOrbitRecorder.app
 ```
 
 If macOS reports that approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder. Diagnostics shows the current login item status, the running bundle path, and the last Launch at Login error if registration fails. For development builds, avoid switching between `.build/app`, `dist/`, and `/Applications` while testing Launch at Login because macOS tracks login items by app bundle identity and path.
+
+## Auto-Start And Auto-Stop
+
+Auto-started Zoom recordings are not tied to Zoom being the foreground window. You can switch to browser, notes, IDE, or slides during a call and the app keeps the recording active.
+
+When an auto-started recording loses both microphone and system-audio activity for 30 seconds, the app stops it automatically and saves the recording. Manual recordings do not auto-stop; they only stop from the Stop button, menu item, or app-active shortcut.
 
 ## Uninstall
 
@@ -252,7 +266,7 @@ scripts/build_macos.sh
 open -n apps/macos/.build/app/TOrbitRecorder.app
 ```
 
-The app runs as a menu bar app. Use the menu bar icon for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings Folder, Open Library, Settings, Diagnostics, and Quit.
+The app runs as a menu bar app. Use the menu bar icon for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings, Open Library, Settings, Diagnostics, and Quit. `Open Recordings` opens the user-facing `Library/` folder, not the internal root with `db`, `logs`, and `Inbox`.
 
 For normal dev usage prefer:
 
@@ -261,7 +275,7 @@ For normal dev usage prefer:
 open /Applications/TOrbitRecorder.app
 ```
 
-The menu bar app provides Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings Folder, Open Library, Settings, Diagnostics, and Quit.
+The menu bar app provides Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings, Open Library, Settings, Diagnostics, and Quit.
 
 ## Manual MVP End-To-End Check
 
@@ -304,7 +318,7 @@ Short recording check:
 
 1. Start a new recording.
 2. Stop before 60 seconds with default settings.
-3. Confirm Last Recording shows `Short recording`, the session is under `Inbox/Short/`, and post-call tagging is not opened automatically.
+3. Confirm Library shows `Short recording`. Internally, the session is under `Inbox/Short/`, and post-call tagging is not opened automatically.
 
 YouTube plus voice check:
 

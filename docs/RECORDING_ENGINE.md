@@ -97,6 +97,19 @@ State transitions must be logged with timestamps and session id.
 
 If preflight fails, the app must not create a recording folder or recoverable session. If writer startup fails after staging has begun, empty staged folders are discarded; only staged sessions with usable audio files or segments are left for recovery.
 
+## Auto-Started Stop Guard
+
+Auto-started recordings are allowed to continue while the user switches away from Zoom or another call app. Foreground app changes are not a reliable signal that the call ended.
+
+The app stops an auto-started recording only after both microphone and system-audio activity have been absent for 30 seconds. If either signal returns during that grace period, the pending auto-stop is cancelled. Manual recordings do not use this guard and must be stopped by the user.
+
+The guard logs:
+
+- signal loss start
+- signal restored
+- auto-stop execution
+- auto-stop failure, if finalization fails
+
 ## Stop Flow
 
 1. Stop accepting new audio buffers.

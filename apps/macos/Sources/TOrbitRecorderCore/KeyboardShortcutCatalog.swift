@@ -24,7 +24,7 @@ public enum KeyboardShortcutCatalog {
         id: "show_window_global",
         title: "Show window",
         keyEquivalent: "r",
-        displayText: "Ctrl+Option+Cmd+R"
+        displayText: "Option+R"
     )
 
     public static let toggleRecording = KeyboardShortcutDefinition(
@@ -36,7 +36,7 @@ public enum KeyboardShortcutCatalog {
 
     public static let openLatestRecordingFolder = KeyboardShortcutDefinition(
         id: "open_latest_recording_folder",
-        title: "Open recordings folder",
+        title: "Open recordings",
         keyEquivalent: "o",
         displayText: "Cmd+Shift+O"
     )

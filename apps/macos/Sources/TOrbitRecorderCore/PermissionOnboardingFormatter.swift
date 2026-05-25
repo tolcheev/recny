@@ -81,7 +81,7 @@ public enum PermissionOnboardingFormatter {
                 return "Open System Audio Settings"
             }
         case .storage:
-            return "Open Recordings Folder"
+            return "Open Recordings"
         }
     }
 

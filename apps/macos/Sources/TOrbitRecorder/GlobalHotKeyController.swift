@@ -78,7 +78,7 @@ final class GlobalHotKeyController {
         let hotKeyID = Self.hotKeyID
         let registerStatus = RegisterEventHotKey(
             UInt32(kVK_ANSI_R),
-            UInt32(cmdKey | optionKey | controlKey),
+            UInt32(optionKey),
             hotKeyID,
             GetApplicationEventTarget(),
             0,

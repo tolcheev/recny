@@ -5,6 +5,7 @@ import Foundation
 public final class AppState: ObservableObject {
     private static let systemAudioPermissionProbeSucceededKey =
         "com.torbit.recorder.systemAudioPermissionProbeSucceeded"
+    private static let autoStopSignalLostGracePeriodSeconds: TimeInterval = 30
 
     @Published public private(set) var status: RecordingStatus
     @Published public private(set) var currentRecordingDuration: TimeInterval
@@ -53,6 +54,8 @@ public final class AppState: ObservableObject {
     private var microphoneDeviceTask: Task<Void, Never>?
     private var autoStartEngine: AutoStartEngine
     private var lastRecordingStoppedAt: Date?
+    private var currentRecordingSource: RecordingSource?
+    private var autoStopSignalLostAt: Date?
     private var lastAutoStartDecisionLogKey: String?
     private var lastLoggedSelectedMicrophoneName: String?
     private var screenSystemAudioSettingsOpened = false
@@ -212,6 +215,8 @@ public final class AppState: ObservableObject {
             )
             apply(update)
             recordingStartedAt = update.startedAt ?? Date()
+            currentRecordingSource = source
+            autoStopSignalLostAt = nil
             currentRecordingDuration = 0
             activeMarkers = []
             mixedPreviewPath = nil
@@ -220,6 +225,8 @@ public final class AppState: ObservableObject {
             AppLogger.recording.info("Recording state changed to recording. trigger=\(source.trigger, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), rule_id=\(source.ruleID, privacy: .public)")
             AppLogger.file(.info, category: "recording", "recording start trigger=\(source.trigger) app=\(source.appName) bundle_id=\(source.bundleID) rule_id=\(source.ruleID) output_root=\(outputFolderPath) selected_mic=\(selectedMicrophoneName)")
         } catch let error as RecordingControllerError {
+            currentRecordingSource = nil
+            autoStopSignalLostAt = nil
             applyError(error)
             if case .preflightFailed(let message) = error {
                 AppLogger.recording.error("Recording preflight failed before session creation: \(message, privacy: .public)")
@@ -230,6 +237,8 @@ public final class AppState: ObservableObject {
             }
             throw error
         } catch {
+            currentRecordingSource = nil
+            autoStopSignalLostAt = nil
             applyError(error)
             AppLogger.recording.error("Failed to start recording: \(String(describing: error), privacy: .public)")
             AppLogger.file(.error, category: "recording", "recording failure during start error=\(String(describing: error))")
@@ -256,6 +265,8 @@ public final class AppState: ObservableObject {
             }
             mixedPreviewPath = mixedPreviewPath(for: draft)
             isPostCallPanelPresented = draft.status != .shortRecording && draft.status != .failed
+            currentRecordingSource = nil
+            autoStopSignalLostAt = nil
             lastRecordingStoppedAt = Date()
             try reloadRecordings()
             try reloadLastRecording()
@@ -268,6 +279,8 @@ public final class AppState: ObservableObject {
             }
             AppLogger.file(.info, category: "recording", "recording stop id=\(draft.id) status=\(draft.status.rawValue) folder=\(draft.sessionFolderURL.path(percentEncoded: false)) mixed=\(mixedPreviewPath ?? "missing")")
         } catch {
+            currentRecordingSource = nil
+            autoStopSignalLostAt = nil
             applyError(error)
             AppLogger.recording.error("Failed to stop recording: \(String(describing: error), privacy: .public)")
             AppLogger.file(.error, category: "recording", "recording failure during stop error=\(String(describing: error))")
@@ -681,6 +694,15 @@ public final class AppState: ObservableObject {
         audioActivity: AudioActivitySnapshot,
         now: Date
     ) async {
+        if status == .recording {
+            await evaluateAutoStop(
+                activeApplication: activeApplication,
+                audioActivity: audioActivity,
+                now: now
+            )
+            return
+        }
+
         let decision = autoStartEngine.evaluate(
             AutoStartEvaluationContext(
                 activeApplication: activeApplication,
@@ -715,6 +737,59 @@ public final class AppState: ObservableObject {
             applyError(error)
             AppLogger.recording.error("Auto-start failed: reason=\(decision.reason.rawValue, privacy: .public), confidence=\(decision.confidence, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), error=\(String(describing: error), privacy: .public)")
             AppLogger.file(.error, category: "autostart", "auto-start failed reason=\(decision.reason.rawValue) confidence=\(decision.confidence) app=\(source.appName) bundle_id=\(source.bundleID) error=\(String(describing: error))")
+        }
+    }
+
+    private func evaluateAutoStop(
+        activeApplication: ActiveApplicationSnapshot?,
+        audioActivity: AudioActivitySnapshot,
+        now: Date
+    ) async {
+        guard currentRecordingSource?.trigger == "autostart" else {
+            return
+        }
+
+        if audioActivity.microphoneActive || audioActivity.systemAudioActive {
+            if autoStopSignalLostAt != nil {
+                AppLogger.file(
+                    .info,
+                    category: "autostart",
+                    "auto-stop cancelled signal_restored active_app=\(activeApplication?.name ?? "none") mic_active=\(audioActivity.microphoneActive) system_active=\(audioActivity.systemAudioActive)"
+                )
+            }
+            autoStopSignalLostAt = nil
+            return
+        }
+
+        if autoStopSignalLostAt == nil {
+            autoStopSignalLostAt = now
+            AppLogger.file(
+                .info,
+                category: "autostart",
+                "auto-stop waiting signal_lost grace_seconds=\(Int(Self.autoStopSignalLostGracePeriodSeconds)) active_app=\(activeApplication?.name ?? "none")"
+            )
+            return
+        }
+
+        let signalLostAt = autoStopSignalLostAt ?? now
+        let elapsed = now.timeIntervalSince(signalLostAt)
+        guard elapsed >= Self.autoStopSignalLostGracePeriodSeconds else {
+            return
+        }
+
+        let source = currentRecordingSource
+        do {
+            AppLogger.file(
+                .info,
+                category: "autostart",
+                "auto-stop recording signal_lost_elapsed=\(Int(elapsed.rounded(.down))) source_app=\(source?.appName ?? "unknown")"
+            )
+            try await stopRecording()
+            publishAutoStartNotification("Recording stopped: call ended")
+        } catch {
+            applyError(error)
+            AppLogger.recording.error("Auto-stop failed: \(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "autostart", "auto-stop failed error=\(String(describing: error))")
         }
     }
 
