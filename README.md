@@ -217,6 +217,8 @@ If you approved an older unsigned/hash-signed dev build before this fix, toggle 
 
 On first launch, use `Fix Permissions` before recording. It requests microphone access and then runs a lightweight Core Audio system-audio permission probe, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created.
 
+After the Core Audio probe succeeds, T-Orbit Recorder remembers that system-audio capture is available for this installed bundle. This avoids a false `Not determined` state on later refreshes when macOS does not expose the separate system-audio-only TCC state through the older screen-capture preflight API. A real recorder permission failure clears this remembered state and sends the user back to onboarding.
+
 Grant permissions in:
 
 - System Settings -> Privacy & Security -> Microphone

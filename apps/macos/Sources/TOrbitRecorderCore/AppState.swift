@@ -3,6 +3,9 @@ import Foundation
 
 @MainActor
 public final class AppState: ObservableObject {
+    private static let systemAudioPermissionProbeSucceededKey =
+        "com.torbit.recorder.systemAudioPermissionProbeSucceeded"
+
     @Published public private(set) var status: RecordingStatus
     @Published public private(set) var currentRecordingDuration: TimeInterval
     @Published public private(set) var micStatus: CaptureStatus
@@ -53,6 +56,7 @@ public final class AppState: ObservableObject {
     private var lastAutoStartDecisionLogKey: String?
     private var lastLoggedSelectedMicrophoneName: String?
     private var screenSystemAudioSettingsOpened = false
+    private var systemAudioPermissionProbeSucceeded = false
 
     public var outputFolderPath: String {
         outputFolderURL.path(percentEncoded: false)
@@ -162,6 +166,9 @@ public final class AppState: ObservableObject {
         self.launchAtLoginLastErrorMessage = nil
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
+        self.systemAudioPermissionProbeSucceeded = UserDefaults.standard.bool(
+            forKey: Self.systemAudioPermissionProbeSucceededKey
+        )
         AppLogger.configureFileLogging(rootURL: resolvedSettings.storage.rootFolderURL)
         refreshPermissionSnapshot()
         reloadRecordingsSilently()
@@ -518,11 +525,17 @@ public final class AppState: ObservableObject {
     }
 
     public func refreshPermissionSnapshot() {
-        permissionSnapshot = permissionChecker.snapshot(
+        var snapshot = permissionChecker.snapshot(
             outputFolderURL: outputFolderURL,
             screenSystemAudioSettingsOpened: screenSystemAudioSettingsOpened,
             lastErrorMessage: errorMessage
         )
+        if systemAudioPermissionProbeSucceeded,
+           snapshot.screenSystemAudio != .denied,
+           snapshot.screenSystemAudio != .restartRequired {
+            snapshot.screenSystemAudio = .granted
+        }
+        permissionSnapshot = snapshot
     }
 
     public func markScreenSystemAudioSettingsOpened() {
@@ -531,6 +544,7 @@ public final class AppState: ObservableObject {
     }
 
     public func noteSystemAudioPermissionRequestSucceeded() {
+        setSystemAudioPermissionProbeSucceeded(true)
         if let errorMessage,
            errorMessage.localizedCaseInsensitiveContains("system audio") {
             self.errorMessage = nil
@@ -543,6 +557,7 @@ public final class AppState: ObservableObject {
     }
 
     public func noteSystemAudioPermissionRequestFailed(_ error: Error) {
+        setSystemAudioPermissionProbeSucceeded(false)
         errorMessage = String(describing: error)
         systemAudioStatus = .permissionDenied
         refreshPermissionSnapshot()
@@ -815,11 +830,19 @@ public final class AppState: ObservableObject {
         status = .error
         micStatus = Self.captureStatus(for: error)
         systemAudioStatus = Self.systemAudioStatus(for: error)
+        if Self.systemAudioStatus(for: error) == .permissionDenied {
+            setSystemAudioPermissionProbeSucceeded(false)
+        }
         microphoneLevel = 0
         systemAudioLevel = 0
         errorMessage = String(describing: error)
         refreshPermissionSnapshot()
         stopDurationClock()
+    }
+
+    private func setSystemAudioPermissionProbeSucceeded(_ isSucceeded: Bool) {
+        systemAudioPermissionProbeSucceeded = isSucceeded
+        UserDefaults.standard.set(isSucceeded, forKey: Self.systemAudioPermissionProbeSucceededKey)
     }
 
     private static func captureStatus(for error: Error) -> CaptureStatus {

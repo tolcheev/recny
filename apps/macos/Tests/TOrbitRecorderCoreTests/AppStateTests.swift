@@ -281,6 +281,28 @@ struct AppStateTests {
     }
 
     @Test
+    func successfulSystemAudioProbeOverridesStaticNotDeterminedSnapshot() {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+
+        appState.noteSystemAudioPermissionRequestSucceeded()
+        appState.refreshPermissionSnapshot()
+
+        #expect(appState.permissionSnapshot.screenSystemAudio == .granted)
+        #expect(!appState.shouldShowPermissionsOnboarding)
+        #expect(appState.isRecordingStartAllowed)
+    }
+
+    @Test
     func preflightBlocksStartWhenStorageIsNotWritable() async {
         let appState = AppState(
             recordingController: StubRecordingController(),

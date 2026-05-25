@@ -220,6 +220,8 @@ If Microphone is `Not determined`, use the onboarding button to trigger the macO
 
 If System audio is `Not determined` or `Missing`, click `Request System Audio Access` or the main `Fix Permissions` button. The app runs a lightweight Core Audio permission probe that should show the macOS system-audio prompt before any recording folder is created. `Start Recording` should remain unavailable until this permission is granted.
 
+After that probe succeeds, the app persists a local "system audio probe succeeded" state for the installed bundle. This is intentional: on macOS Sequoia, the Core Audio system-audio permission can be granted even when the older screen-capture preflight API still reports `false`. If a real recording start later fails with a system-audio permission error, the app clears the persisted state and returns to onboarding.
+
 Expected first-launch flow:
 
 1. Click `Fix Permissions`.
@@ -635,7 +637,7 @@ Fix:
 4. Play audible audio from another app.
 5. Retry recording.
 
-If System Settings already shows `TOrbitRecorder` enabled but the app still reports a system audio permission error, quit the app completely and reopen it. If you installed or opened another build path, approve that build too.
+If System Settings already shows `TOrbitRecorder` enabled but the app still reports a system audio permission error, click `Request System Audio Access` once in onboarding. If the probe succeeds, the app should switch to `Granted` immediately and stay granted after restart. If it fails, quit the app completely, reopen the same `/Applications/TOrbitRecorder.app` bundle, and approve that bundle in System Settings.
 
 Developer reset if TCC gets stuck:
 
