@@ -189,6 +189,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Self.deliverNotification(message)
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: AppWindowRequest.showMainWindowNotificationName)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.showMainWindow()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     private nonisolated static func requestNotificationAuthorization() {

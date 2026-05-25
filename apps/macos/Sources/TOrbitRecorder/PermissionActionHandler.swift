@@ -109,10 +109,14 @@ enum PermissionActionHandler {
             return appState.permissionSnapshot.microphone == .granted
         }
 
-        _ = await AVCaptureDevice.requestAccess(for: .audio)
+        AppLogger.file(.info, category: "permissions", "microphone permission request started from onboarding")
+        let granted = await AVCaptureDevice.requestAccess(for: .audio)
+        AppLogger.file(.info, category: "permissions", "microphone permission request finished granted=\(granted)")
         appState.refreshPermissionSnapshot()
         if appState.permissionSnapshot.microphone != .granted {
             openMicrophoneSettings(appState: appState)
+        } else {
+            refocusMainWindowAfterPermissionPrompt()
         }
 
         return appState.permissionSnapshot.microphone == .granted
@@ -128,9 +132,11 @@ enum PermissionActionHandler {
                 AppLogger.file(.info, category: "permissions", "system audio permission request started from onboarding")
                 try await ScreenCaptureKitSystemAudioRecorder.requestSystemAudioAccess()
                 appState.noteSystemAudioPermissionRequestSucceeded()
+                refocusMainWindowAfterPermissionPrompt()
             } catch {
                 AppLogger.file(.error, category: "permissions", "system audio permission request failed error=\(String(describing: error))")
                 appState.noteSystemAudioPermissionRequestFailed(error)
+                refocusMainWindowAfterPermissionPrompt()
             }
             return appState.permissionSnapshot.screenSystemAudio == .granted
         case .denied, .restartRequired, .unknown:
@@ -141,5 +147,13 @@ enum PermissionActionHandler {
 
     private static func shellQuoted(_ value: String) -> String {
         "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
+    }
+
+    private static func refocusMainWindowAfterPermissionPrompt() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            AppLogger.file(.info, category: "permissions", "requesting main window focus after permission prompt")
+            AppWindowRequest.postShowMainWindow(reason: .permissionPromptCompleted)
+        }
     }
 }

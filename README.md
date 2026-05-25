@@ -229,7 +229,7 @@ macOS often requires a process restart after this permission changes. The app no
 
 If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in the system-audio section once, then restart `/Applications/TOrbitRecorder.app`.
 
-On first launch, use `Fix Permissions` before recording. It requests microphone access and then runs a lightweight Core Audio system-audio permission probe, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created. This flow stays on the main window when the checks finish and no longer opens Diagnostics automatically.
+On first launch, use `Fix Permissions` before recording. It requests microphone access and then runs a lightweight Core Audio system-audio permission probe, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created. After each macOS permission prompt closes, the app requests focus for the existing main window again. This flow stays on the main window when the checks finish and no longer opens Diagnostics automatically.
 
 After the Core Audio probe succeeds, T-Orbit Recorder remembers that system-audio capture is available for the current installed build. This avoids a false `Not determined` state on later refreshes when macOS does not expose the separate system-audio-only TCC state through the older screen-capture preflight API. Rebuilt ad-hoc packages must probe again so an older approved binary cannot make a new build look granted before macOS accepts it. A real recorder permission failure clears this remembered state and sends the user back to onboarding.
 
