@@ -14,7 +14,8 @@ struct KeyboardShortcutCatalogTests {
             "Cmd+Shift+D"
         ])
         #expect(shortcuts.map(\.keyEquivalent) == ["r", "o", "l", "d"])
-        #expect(KeyboardShortcutCatalog.openLatestRecordingFolder.title == "Open recordings")
+        #expect(KeyboardShortcutCatalog.openLatestRecordingFolder.title == "Open Library")
+        #expect(KeyboardShortcutCatalog.openLibrary.title == "Open Records")
     }
 
     @Test

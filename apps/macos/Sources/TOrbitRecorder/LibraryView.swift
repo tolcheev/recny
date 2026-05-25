@@ -127,7 +127,7 @@ struct LibraryView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("Library")
+                Text("Records")
                     .font(.title2.weight(.semibold))
                 Text(librarySubtitle)
                     .font(.callout)

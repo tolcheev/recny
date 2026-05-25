@@ -29,8 +29,8 @@ T-Orbit Recorder is controlled primarily from the macOS menu bar. The menu expos
 - Show Window
 - Start Recording / Stop Recording
 - Play Last Recording
-- Open Recordings
 - Open Library
+- Open Records
 - Settings
 - Diagnostics
 - Quit
@@ -45,13 +45,13 @@ The menu bar icon reflects recorder state:
 
 If Quit is selected while recording is active, the app asks for confirmation before stopping the recording and quitting.
 
-`Open Recordings` opens the user-facing `Library/` folder. The storage root still contains internal folders such as `Inbox`, `db`, and `logs`, but those are not the default Finder destination for normal use.
+`Open Library` opens the user-facing `Library/` folder in Finder. `Open Records` opens the in-app searchable records list. The storage root still contains internal folders such as `Inbox`, `db`, and `logs`, but those are not the default Finder destination for normal use.
 
 App-active keyboard shortcuts mirror the primary menu actions:
 
 - `Cmd+Shift+R`: Start/Stop Recording
-- `Cmd+Shift+O`: Open Recordings
-- `Cmd+Shift+L`: Open Library
+- `Cmd+Shift+O`: Open Library
+- `Cmd+Shift+L`: Open Records
 - `Cmd+Shift+D`: Open Diagnostics
 
 Show Window is opened from the menu bar item. The previous global `Option+R` shortcut is disabled because it conflicted with other apps.
@@ -66,7 +66,7 @@ UI v3 keeps the main window as a compact recorder surface instead of a library d
 
 - Header: compact auto-start badge and a small Ready/Recording/Error status dot; the app name stays in the window title/menu bar
 - Center recording area: the only primary daily action, either `Start Recording` or `Stop Recording`
-- Footer: Library, Open Recordings, Settings, and Diagnostics entry points
+- Footer: Records, Library, Settings, and Diagnostics entry points
 
 The main screen no longer shows file sizes, folder names, raw metadata, recoverable sessions, filters, or a recording list. Those details remain in Library and Diagnostics.
 
@@ -124,7 +124,7 @@ Title, participant, context note, and tags are edited through the Tag dialog ins
 
 ## Tag Dialog Behavior
 
-The Tag dialog opens from a Library row/details action. It includes:
+The Tag dialog opens from a Records row/details action. It includes:
 
 - optional title
 - optional participant

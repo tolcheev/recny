@@ -150,11 +150,11 @@ plutil -p metadata.json
 - [ ] Latest Play opens `mixed.m4a`.
 - [ ] Latest Open opens the recording folder.
 - [ ] Latest Tag opens Tag dialog.
-- [ ] Library opens as a separate window.
-- [ ] Library shows recent recordings.
-- [ ] Library search works.
-- [ ] Library filters are collapsed by default.
-- [ ] Library details show files, metadata, tags, and markers if present.
+- [ ] Records opens as a separate window.
+- [ ] Records shows recent recordings.
+- [ ] Records search works.
+- [ ] Records filters are collapsed by default.
+- [ ] Records details show files, metadata, tags, and markers if present.
 - [ ] Settings opens.
 - [ ] Settings shows Recording, Auto-start, Storage, Hotkeys, Behavior, and About sections.
 - [ ] Diagnostics opens.
@@ -164,8 +164,8 @@ plutil -p metadata.json
 - [ ] Menu bar `Show Window` brings the main window to front.
 - [ ] Menu bar Start/Stop works.
 - [ ] Menu bar Play Last Recording works when latest mixed preview exists.
-- [ ] Menu bar Open Last Recording Folder works.
-- [ ] Menu bar Open Library, Settings, Diagnostics, and Quit work.
+- [ ] Menu bar Open Library opens the user-facing recordings folder.
+- [ ] Menu bar Open Records, Settings, Diagnostics, and Quit work.
 
 ## 6. Auto-Start
 

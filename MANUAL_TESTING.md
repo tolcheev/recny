@@ -20,7 +20,7 @@ scripts/package_macos.sh
 open -n dist/TOrbitRecorder.app
 ```
 
-The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings, Open Library, Settings, Diagnostics, and Quit.
+The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Library, Open Records, Settings, Diagnostics, and Quit.
 
 Settings, Library, and Diagnostics open as separate app windows. If a window is behind other apps, use the menu bar item again; the app should activate and bring that window forward.
 
@@ -42,8 +42,8 @@ Expected menu items:
 - `Show Window`
 - `Start Recording` when idle, `Stop Recording` while recording
 - `Play Last Recording`
-- `Open Recordings`
 - `Open Library`
+- `Open Records`
 - `Settings`
 - `Diagnostics`
 - `Quit`
@@ -86,8 +86,8 @@ Shortcuts are app-active only in the MVP. Use the menu bar icon for Show Window 
 Expected shortcuts:
 
 - `Cmd+Shift+R`: Start Recording when idle, Stop Recording when recording.
-- `Cmd+Shift+O`: Open Recordings.
-- `Cmd+Shift+L`: Open Library.
+- `Cmd+Shift+O`: Open Library.
+- `Cmd+Shift+L`: Open Records.
 - `Cmd+Shift+D`: Open Diagnostics.
 
 Manual check:
@@ -95,7 +95,7 @@ Manual check:
 1. Open TOrbitRecorder from `/Applications` or `dist/`.
 2. Confirm Show Dock icon is off in Settings -> Behavior, then use the menu bar item -> Show Window.
 3. Confirm T-Orbit Recorder comes to front.
-4. Press `Cmd+Shift+L` and confirm Library opens.
+4. Press `Cmd+Shift+L` and confirm Records opens.
 5. Press `Cmd+Shift+D` and confirm Diagnostics opens.
 6. Press `Cmd+Shift+O` and confirm Finder opens the user-facing `Library/` recordings folder.
 7. Press `Cmd+Shift+R` while idle and confirm recording starts.
@@ -103,11 +103,11 @@ Manual check:
 9. Open Settings -> Hotkeys and confirm the same shortcuts are listed.
 10. Open a text field in Settings or Tag dialog and confirm normal typing still works.
 
-Marker shortcuts and marker buttons are hidden from the default UI for now. Existing recordings can still display marker metadata in Library details if metadata contains markers.
+Marker shortcuts and marker buttons are hidden from the default UI for now. Existing recordings can still display marker metadata in Records details if metadata contains markers.
 
-## Library Playback
+## Records Playback
 
-1. Open Library.
+1. Open Records.
 2. Select a recording with playable audio.
 3. Click Play on the recording row.
 4. Confirm the row expands with an inline player, not a separate player window.
@@ -227,7 +227,7 @@ Grant permissions in macOS System Settings:
 
 If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
 
-If System audio is `Not determined` or `Missing`, click `Request System Audio Access` or the main `Fix Permissions` button. The app runs a lightweight Core Audio permission probe that should show the macOS system-audio prompt before any recording folder is created. `Start Recording` should remain unavailable until this permission is granted.
+If System audio is `Not determined` or `Missing`, click the main `Fix Permissions` button. The app runs a lightweight Core Audio permission probe that should show the macOS system-audio prompt before any recording folder is created. `Start Recording` should remain unavailable until this permission is granted.
 
 After either macOS permission prompt closes, T-Orbit Recorder should bring the existing main window back to the front. If the window is still behind another app, use the menu bar icon -> `Show Window`; the process should not quit and Diagnostics should not open automatically.
 
@@ -292,14 +292,14 @@ Use this path for the normal MVP success case.
 5. Click Stop Recording.
 6. Confirm the UI returns to Idle.
 7. Confirm no tag dialog opens automatically.
-8. Open Library, choose More -> Tag or details -> Edit / Tag, then fill:
+8. Open Records, choose More -> Tag or details -> Edit / Tag, then fill:
    - title
    - participant free text
    - one of the MVP quick tags: `#лид`, `#скрининг`, `#интервью`, `#важное`
 9. Save the tag dialog.
-10. Open Library and confirm the recording appears in recent recordings.
+10. Open Records and confirm the recording appears in recent recordings.
 11. Select the recording and confirm the details panel shows audio analysis and tags.
-12. Expand Library filters and filter the list by the saved tag.
+12. Expand Records filters and filter the list by the saved tag.
 13. Click Open in Finder on the recording row.
 14. Confirm Finder opens the recording folder.
 
@@ -375,28 +375,28 @@ Expected behavior:
   - `export/mixed_balanced.m4a`
 - Analysis is saved:
   - `analysis/audio_analysis.json`
-- Library rows show `Balanced` plus `Audio OK`, `Audio warning`, or `Audio failed`.
+- Records rows show `Balanced` plus `Audio OK`, `Audio warning`, or `Audio failed`.
 - Play opens the built-in T-Orbit Recorder player and uses `mixed_balanced.m4a` by default when it exists.
 - Diagnostics -> Audio Processing can play Current and Original.
-- Library row -> More can play Balanced, play Original, open the folder, reveal `audio_analysis.json`, reprocess audio, or edit note/tags.
-- Library details show audio health when audio health is warning/failed.
-- Library rows show a compact `Balanced` badge when balanced playback is ready, or `Audio warning` when leveling failed.
-- Library rows also show a compact audio warning badge for problematic recordings.
-- Library details show original mixed size, balanced mixed size, mic gain, system gain, audio health, and audio warnings.
+- Records row -> More can play Balanced, play Original, open the folder, reveal `audio_analysis.json`, reprocess audio, or edit note/tags.
+- Records details show audio health when audio health is warning/failed.
+- Records rows show a compact `Balanced` badge when balanced playback is ready, or `Audio warning` when leveling failed.
+- Records rows also show a compact audio warning badge for problematic recordings.
+- Records details show original mixed size, balanced mixed size, mic gain, system gain, audio health, and audio warnings.
 
 Reprocess one old recording:
 
-1. Open Library.
+1. Open Records.
 2. Pick a recording that has `export/mixed.m4a` but no `export/mixed_balanced.m4a`.
 3. Open row `More`.
 4. Click `Reprocess Audio`.
 5. Confirm `export/mixed_balanced.m4a` and `analysis/audio_analysis.json` are created.
 6. Confirm `metadata.json` now has `audio.processing.balanced_mix_status` and `audio.health.status`.
-7. Confirm the Library row updates to show balanced/audio health state.
+7. Confirm the Records row updates to show balanced/audio health state.
 
 Overwrite existing balanced audio:
 
-1. Open Library on a recording that already has `export/mixed_balanced.m4a`.
+1. Open Records on a recording that already has `export/mixed_balanced.m4a`.
 2. Open row `More`.
 3. Click `Reprocess Audio`.
 4. Confirm the overwrite/skip prompt appears.
@@ -410,7 +410,7 @@ Reprocess all old recordings:
 2. In `Audio Processing`, click `Reprocess Missing Balanced Audio`.
 3. Confirm progress text shows the current recording and total count.
 4. Confirm the final summary shows processed/skipped/failed counts.
-5. Open Library and verify old recordings now have balanced playback where source files were usable.
+5. Open Records and verify old recordings now have balanced playback where source files were usable.
 
 Manual balance check: loud YouTube + quiet voice
 
@@ -453,8 +453,8 @@ Silent microphone check:
 
 1. Start a short manual recording with the microphone muted or without speaking.
 2. Stop the recording.
-3. Confirm the Library row shows `Audio warning`.
-4. Open Library details and confirm the copy includes `Microphone track is silent`.
+3. Confirm the Records row shows `Audio warning`.
+4. Open Records details and confirm the copy includes `Microphone track is silent`.
 5. Open `metadata.json` and confirm `audio.health.warnings` contains `mic_silent`.
 6. Confirm the microphone track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
 
@@ -462,8 +462,8 @@ Silent system audio check:
 
 1. Start a short manual recording with no system audio playing.
 2. Stop the recording.
-3. Confirm the Library row shows `Audio warning`.
-4. Open Library details and confirm the copy includes `System audio track is silent`.
+3. Confirm the Records row shows `Audio warning`.
+4. Open Records details and confirm the copy includes `System audio track is silent`.
 5. Open `metadata.json` and confirm `audio.health.warnings` contains `system_silent`.
 6. Confirm the system track has `signal.had_signal: false` or a high `approximate_silence_ratio`.
 
@@ -472,7 +472,7 @@ Clipping check:
 1. Record very loud microphone input.
 2. Confirm `metadata.json` sets microphone `signal.clipping_detected: true`.
 3. Confirm `metadata.json` includes `audio.health.warnings: ["clipping_detected"]` or contains that code among other warnings.
-4. Confirm Library details show `Clipping detected`.
+4. Confirm Records details show `Clipping detected`.
 
 Balanced mix failure check:
 
@@ -486,16 +486,16 @@ Balanced mix failure check:
 1. Stop a recording longer than the short threshold.
 2. Confirm the post-call tagging panel does not appear automatically.
 3. Confirm the metadata status remains `needs_tagging` until the recording is tagged.
-4. Open Library.
+4. Open Records.
 5. Click More -> Tag on the recording row and edit title, participant, quick tags, custom tags, and status.
 6. Confirm the quick tags are `#лид`, `#скрининг`, `#интервью`, and `#важное`.
 7. Confirm Enter saves from text fields, Cmd+Enter saves, and Escape closes without saving.
 8. Save edits.
 9. Confirm `metadata.json` and the SQLite list reflect the changed title/tags/status.
 
-## Library
+## Records
 
-Open Library from the main footer or menu bar. Confirm it opens as a separate window with a recent recordings list and a details panel for the selected recording.
+Open Records from the main footer or menu bar. Confirm it opens as a separate window with a recent recordings list and a details panel for the selected recording.
 
 Check search:
 
@@ -538,7 +538,7 @@ With default settings, the short recording threshold is 60 seconds.
 ```
 
 6. Confirm post-call tagging does not open automatically.
-7. Open Library and confirm the row shows `Short recording`, Play/Open/Edit work, and metadata still exists for false-positive review.
+7. Open Records and confirm the row shows `Short recording`, Play/Open/Edit work, and metadata still exists for false-positive review.
 
 ## Auto-Start: Zoom
 
@@ -548,24 +548,26 @@ With default settings, the short recording threshold is 60 seconds.
 4. Confirm Zoom is not in the blacklist.
 5. Open Zoom and join or start a call.
 6. Speak into the microphone.
-7. Wait for the configured detection duration, default 20 seconds.
+7. Wait for the configured detection duration, default 20 seconds. Running Zoom with simultaneous microphone and system-audio activity can start sooner as a high-confidence signal.
 8. Confirm recording starts automatically.
-9. Switch to another app during the call and confirm the recording continues.
+9. Switch to another app during the call and confirm the recording continues. Auto-start should still work if Zoom is running in the background and both microphone and system-audio activity are present.
 10. End the Zoom call or close Zoom.
 11. Wait up to 35 seconds after microphone and system-audio activity stop.
 12. Confirm the app stops recording automatically and the row appears in Library.
 13. Confirm metadata:
 
 ```text
-source.app_name = Zoom
+source.app_name = Zoom or zoom.us
 source.bundle_id = us.zoom.xos
 source.trigger = autostart
 source.rule_id = autostart.v2.zoom
 source.confidence = high
 source.reason = Zoom active with microphone activity.
+or
+source.reason = Zoom call detected with microphone and system audio activity.
 ```
 
-Known caveat: V2 treats Zoom as a known call app, so system audio activity is not required for the direct-call-app shortcut.
+Known caveat: V2 treats Zoom as a known call app. Active Zoom can start from microphone activity after detection duration, or from Zoom/system-audio activity immediately. Background Zoom needs both microphone and system-audio activity.
 
 Auto-stop caveat: auto-stop only applies to recordings that started from auto-start. Manual recordings must still be stopped manually.
 

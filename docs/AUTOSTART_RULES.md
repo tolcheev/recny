@@ -11,6 +11,7 @@ Autostart is local-only. It must not depend on cloud services, AI classification
 Allowed local inputs:
 
 - Foreground active app.
+- Running app list for known call apps.
 - Source app bundle id.
 - User-enabled app allowlist and blocklist.
 - Microphone activity signal.
@@ -86,7 +87,13 @@ For Zoom and other known call apps, the MVP accepts either:
 
 The Zoom system-audio path exists because macOS/CoreAudio can report the default input device as inactive while Zoom is already using another microphone path or while the user is muted. Browser, Telegram, and Discord rules remain stricter.
 
-Zoom can also continue as a recent call candidate after the user switches to another window. If Zoom was recently foregrounded and system audio activity appears within the continuation window, the app can start with `autostart.v2.zoom` even while another app is frontmost. This matches real call behavior where the user opens Zoom, joins a call, and then works in a browser, IDE, notes, or slides.
+Zoom can also start or continue after the user switches to another window. The engine checks both the foreground app and running Zoom processes:
+
+- If Zoom is running in the background and both microphone and system-audio activity are present, the app can start immediately with `autostart.v2.zoom`.
+- This high-confidence Zoom signal can bypass the normal post-stop cooldown so a real call is not missed after a short manual test recording.
+- If Zoom was recently foregrounded and system audio activity appears within the continuation window, the app can still start with `autostart.v2.zoom` even while another app is frontmost.
+
+This matches real call behavior where the user opens Zoom, joins a call, and then works in a browser, IDE, notes, or slides.
 
 Browser heuristic v2:
 
@@ -142,6 +149,7 @@ Rules:
 
 - Do not start multiple sessions for the same continuous call signal.
 - Keep a 3 minute default cooldown after stop before a new automatic start can occur.
+- Zoom with simultaneous microphone and system-audio activity can bypass cooldown because it is treated as a high-confidence active call.
 - Keep the call signal stable for the configured minimum detection duration before starting.
 - Zoom with system audio activity can bypass the minimum detection duration because it is a high-confidence call surface.
 - If a recording is below the short-session threshold, classify it under `Inbox/Short/`.
@@ -201,6 +209,7 @@ V2 logs both start and non-start decisions. Repeated identical non-start decisio
 
 - A whitelisted direct call app is foreground and has microphone or system audio activity, but the user is not in a real call.
 - Zoom remains open after a call and another app produces system audio within the continuation window.
+- A running Zoom process plus broad system/microphone activity can start if macOS reports both devices active even after a meeting ended.
 - A browser is foreground while another tab or app creates microphone and system audio activity.
 - A browser call title is unavailable, forcing fallback to microphone + system audio activity.
 - A non-call browser page contains words such as `Call` or `Interview` in the title.

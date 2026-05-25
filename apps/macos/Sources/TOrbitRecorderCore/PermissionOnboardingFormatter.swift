@@ -47,7 +47,7 @@ public enum PermissionOnboardingFormatter {
         case (.screenSystemAudio, .missing):
             return "Required for source/system.m4a and mixed preview. Request access before recording."
         case (.screenSystemAudio, .notDetermined):
-            return "Click Request System Audio Access to show the macOS prompt before recording."
+            return "Use Fix Permissions to request system audio access before recording."
         case (.screenSystemAudio, .unknown):
             return "T-Orbit Recorder cannot determine system audio permission."
 
@@ -81,7 +81,25 @@ public enum PermissionOnboardingFormatter {
                 return "Open System Audio Settings"
             }
         case .storage:
-            return "Open Recordings"
+            return "Open Library"
+        }
+    }
+
+    public static func inlineActionTitle(
+        for requirement: PermissionRequirement,
+        state: RecorderPermissionState
+    ) -> String? {
+        guard state != .granted else {
+            return nil
+        }
+
+        switch (requirement, state) {
+        case (.microphone, .notDetermined),
+             (.screenSystemAudio, .notDetermined),
+             (.storage, .notDetermined):
+            return nil
+        default:
+            return actionTitle(for: requirement, state: state)
         }
     }
 

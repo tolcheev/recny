@@ -100,36 +100,59 @@ struct MainRecorderView: View {
     }
 
     private var footerActions: some View {
-        HStack(spacing: 12) {
-            Button {
-                AppWindows.openLibrary(appState: appState)
-            } label: {
-                Label("Library", systemImage: "tray.full")
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                recordsButton
+                libraryFolderButton
+                settingsButton
+                Spacer(minLength: 12)
+                diagnosticsButton
             }
-            .accessibilityLabel("Open Library")
 
-            Button {
-                AppWindows.openRecordingsFolder(appState: appState)
-            } label: {
-                Label("Open Recordings", systemImage: "folder")
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    recordsButton
+                    libraryFolderButton
+                    settingsButton
+                }
+                diagnosticsButton
             }
-            .accessibilityLabel("Open recordings")
-
-            Button {
-                AppWindows.openSettings(appState: appState)
-            } label: {
-                Label("Settings", systemImage: "gearshape")
-            }
-            .accessibilityLabel("Open Settings")
-
-            Spacer()
-
-            Button("Diagnostics") {
-                AppWindows.openDiagnostics(appState: appState)
-            }
-            .buttonStyle(.link)
-            .accessibilityLabel("Open Diagnostics")
         }
         .padding(.top, 2)
+    }
+
+    private var recordsButton: some View {
+        Button {
+            AppWindows.openLibrary(appState: appState)
+        } label: {
+            Label("Records", systemImage: "tray.full")
+        }
+        .accessibilityLabel("Open records")
+    }
+
+    private var libraryFolderButton: some View {
+        Button {
+            AppWindows.openRecordingsFolder(appState: appState)
+        } label: {
+            Label("Library", systemImage: "folder")
+        }
+        .accessibilityLabel("Open local recording library folder")
+    }
+
+    private var settingsButton: some View {
+        Button {
+            AppWindows.openSettings(appState: appState)
+        } label: {
+            Label("Settings", systemImage: "gearshape")
+        }
+        .accessibilityLabel("Open Settings")
+    }
+
+    private var diagnosticsButton: some View {
+        Button("Diagnostics") {
+            AppWindows.openDiagnostics(appState: appState)
+        }
+        .buttonStyle(.link)
+        .accessibilityLabel("Open Diagnostics")
     }
 }

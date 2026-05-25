@@ -206,6 +206,100 @@ struct AutoStartEngineTests {
     }
 
     @Test
+    func runningZoomStartsAfterUserSwitchesToAnotherWindow() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 20
+        )
+        let zoom = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: codex,
+                runningApplications: [zoom],
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.reason == .startRecording)
+        #expect(decision.recordingSource?.appName == "zoom.us")
+        #expect(decision.recordingSource?.bundleID == "us.zoom.xos")
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom")
+        #expect(decision.recordingSource?.reason == "Zoom call detected with microphone and system audio activity.")
+    }
+
+    @Test
+    func runningZoomBypassesCooldownWhenCallSignalIsStrong() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 20
+        )
+        let zoom = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let stoppedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: codex,
+                runningApplications: [zoom],
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: stoppedAt,
+                now: stoppedAt.addingTimeInterval(45)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.reason == .startRecording)
+        #expect(decision.recordingSource?.appName == "zoom.us")
+        #expect(decision.recordingSource?.confidence == "high")
+    }
+
+    @Test
+    func runningZoomDoesNotStartFromSystemAudioOnlyInBackground() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 20
+        )
+        let zoom = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: codex,
+                runningApplications: [zoom],
+                audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .appNotWhitelisted)
+    }
+
+    @Test
     func telegramSystemAudioOnlyDoesNotStartWithoutMicrophoneActivity() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(
@@ -571,8 +665,9 @@ struct AutoStartEngineTests {
             ),
             settings: cooldownSettings
         )
-        #expect(cooldown.action == .ignore)
-        #expect(cooldown.reason == .cooldownActive)
+        #expect(cooldown.action == .start)
+        #expect(cooldown.reason == .startRecording)
+        #expect(cooldown.recordingSource?.reason == "Zoom call detected with microphone and system audio activity.")
 
         let alreadyRecording = engine.evaluate(
             AutoStartEvaluationContext(

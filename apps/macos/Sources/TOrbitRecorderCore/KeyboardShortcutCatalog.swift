@@ -36,14 +36,14 @@ public enum KeyboardShortcutCatalog {
 
     public static let openLatestRecordingFolder = KeyboardShortcutDefinition(
         id: "open_latest_recording_folder",
-        title: "Open recordings",
+        title: "Open Library",
         keyEquivalent: "o",
         displayText: "Cmd+Shift+O"
     )
 
     public static let openLibrary = KeyboardShortcutDefinition(
         id: "open_library",
-        title: "Open Library",
+        title: "Open Records",
         keyEquivalent: "l",
         displayText: "Cmd+Shift+L"
     )

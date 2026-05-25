@@ -54,6 +54,7 @@ public final class AppState: ObservableObject {
     private let microphoneDeviceProvider: () -> [MicrophoneInputDevice]
     private var recordingStore: FileSystemRecordingStore
     private let activeApplicationDetector: ActiveApplicationDetecting
+    private let runningApplicationDetector: RunningApplicationDetecting
     private let audioActivityDetector: AudioActivityDetecting
     private var recordingStartedAt: Date?
     private var durationTask: Task<Void, Never>?
@@ -108,6 +109,7 @@ public final class AppState: ObservableObject {
         recordingController: RecordingController? = nil,
         outputFolderURL: URL? = nil,
         activeApplicationDetector: ActiveApplicationDetecting? = nil,
+        runningApplicationDetector: RunningApplicationDetecting? = nil,
         audioActivityDetector: AudioActivityDetecting? = nil,
         permissionChecker: RecordingPermissionChecking? = nil,
         microphoneDeviceProvider: @escaping () -> [MicrophoneInputDevice] = MicrophoneDeviceProvider.availableInputDevices,
@@ -128,6 +130,7 @@ public final class AppState: ObservableObject {
         self.preflightChecker = preflightChecker ?? DefaultRecordingPreflightChecker()
         self.outputFolderURL = resolvedSettings.storage.rootFolderURL
         self.activeApplicationDetector = activeApplicationDetector ?? WorkspaceActiveApplicationDetector()
+        self.runningApplicationDetector = runningApplicationDetector ?? WorkspaceRunningApplicationDetector()
         self.audioActivityDetector = audioActivityDetector ?? CoreAudioActivityDetector()
         self.microphoneDeviceProvider = microphoneDeviceProvider
         self.status = .idle
@@ -718,6 +721,7 @@ public final class AppState: ObservableObject {
     public func evaluateAutoStartNow(now: Date = Date()) async {
         await evaluateAutoStart(
             activeApplication: activeApplicationDetector.activeApplication(),
+            runningApplications: runningApplicationDetector.runningApplications(),
             audioActivity: audioActivityDetector.audioActivity(),
             now: now
         )
@@ -725,6 +729,7 @@ public final class AppState: ObservableObject {
 
     public func evaluateAutoStart(
         activeApplication: ActiveApplicationSnapshot?,
+        runningApplications: [ActiveApplicationSnapshot] = [],
         audioActivity: AudioActivitySnapshot,
         now: Date
     ) async {
@@ -740,6 +745,7 @@ public final class AppState: ObservableObject {
         let decision = autoStartEngine.evaluate(
             AutoStartEvaluationContext(
                 activeApplication: activeApplication,
+                runningApplications: runningApplications,
                 audioActivity: audioActivity,
                 isAlreadyRecording: status == .recording,
                 lastStoppedAt: lastRecordingStoppedAt,

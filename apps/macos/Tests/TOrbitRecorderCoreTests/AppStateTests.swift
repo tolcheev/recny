@@ -160,6 +160,43 @@ struct AppStateTests {
     }
 
     @Test
+    func autoStartUsesRunningZoomAsRecordingSourceWhenUserSwitchedWindows() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let zoom = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoom],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        try await appState.stopRecording()
+        let draft = try #require(appState.postCallDraft)
+        let metadata = try FileSystemRecordingStore(rootURL: outputFolder).readMetadata(at: draft.metadataURL)
+        #expect(metadata.source.appName == "zoom.us")
+        #expect(metadata.source.bundleID == "us.zoom.xos")
+        #expect(metadata.source.trigger == "autostart")
+        #expect(metadata.source.ruleID == "autostart.v2.zoom")
+        #expect(metadata.source.reason == "Zoom call detected with microphone and system audio activity.")
+    }
+
+    @Test
     func autoStartPublishesStartedNotificationForBrowserCall() async {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(

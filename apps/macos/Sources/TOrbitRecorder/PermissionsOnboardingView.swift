@@ -31,7 +31,7 @@ struct PermissionChecklistContent: View {
                     for: .microphone,
                     state: appState.permissionSnapshot.microphone
                 ),
-                actionTitle: PermissionOnboardingFormatter.actionTitle(
+                actionTitle: PermissionOnboardingFormatter.inlineActionTitle(
                     for: .microphone,
                     state: appState.permissionSnapshot.microphone
                 ),
@@ -47,7 +47,7 @@ struct PermissionChecklistContent: View {
                     for: .screenSystemAudio,
                     state: appState.permissionSnapshot.screenSystemAudio
                 ),
-                actionTitle: PermissionOnboardingFormatter.actionTitle(
+                actionTitle: PermissionOnboardingFormatter.inlineActionTitle(
                     for: .screenSystemAudio,
                     state: appState.permissionSnapshot.screenSystemAudio
                 ),
@@ -63,7 +63,7 @@ struct PermissionChecklistContent: View {
                     for: .storage,
                     state: appState.permissionSnapshot.storage
                 ),
-                actionTitle: PermissionOnboardingFormatter.actionTitle(
+                actionTitle: PermissionOnboardingFormatter.inlineActionTitle(
                     for: .storage,
                     state: appState.permissionSnapshot.storage
                 ),
@@ -113,7 +113,7 @@ private struct PermissionStatusRow: View {
     let title: String
     let state: RecorderPermissionState
     let explanation: String
-    let actionTitle: String
+    let actionTitle: String?
     let actionSystemImage: String
     let action: () -> Void
 
@@ -141,7 +141,7 @@ private struct PermissionStatusRow: View {
 
             Spacer(minLength: 12)
 
-            if state != .granted {
+            if let actionTitle {
                 Button {
                     action()
                 } label: {

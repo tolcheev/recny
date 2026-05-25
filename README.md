@@ -51,7 +51,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 
 `db/app.sqlite` stores the local recordings index for list filtering and quick library actions. The recording folder and `metadata.json` remain the canonical record.
 
-For daily use, use the app `Library` window or the `Open Recordings` action. Internal folders under `Inbox/` are workflow buckets:
+For daily use, use the app `Records` window or the `Library` Finder action. Internal folders under `Inbox/` are workflow buckets:
 
 - `Inbox/Unsorted/`: in-progress staging and crash-recovery candidates.
 - `Inbox/Short/`: short recordings below the configured threshold.
@@ -266,7 +266,7 @@ scripts/build_macos.sh
 open -n apps/macos/.build/app/TOrbitRecorder.app
 ```
 
-The app runs as a menu bar app. Use the menu bar icon for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings, Open Library, Settings, Diagnostics, and Quit. `Open Recordings` opens the user-facing `Library/` folder, not the internal root with `db`, `logs`, and `Inbox`.
+The app runs as a menu bar app. Use the menu bar icon for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Library, Open Records, Settings, Diagnostics, and Quit. `Open Library` opens the user-facing `Library/` folder, not the internal root with `db`, `logs`, and `Inbox`. `Open Records` opens the in-app searchable records list.
 
 For normal dev usage prefer:
 
@@ -275,7 +275,7 @@ For normal dev usage prefer:
 open /Applications/TOrbitRecorder.app
 ```
 
-The menu bar app provides Show Window, Start Recording or Stop Recording, Play Last Recording, Open Recordings, Open Library, Settings, Diagnostics, and Quit.
+The menu bar app provides Show Window, Start Recording or Stop Recording, Play Last Recording, Open Library, Open Records, Settings, Diagnostics, and Quit.
 
 ## Manual MVP End-To-End Check
 
@@ -307,7 +307,7 @@ metadata.json
 ```
 
 8. Confirm `metadata.json` contains audio health and processing fields.
-9. Open Library and confirm the recording appears in the recent recordings list.
+9. Open Records and confirm the recording appears in the recent recordings list.
 10. Use More -> Tag or details -> Edit / Tag to add title, participant text, and tags, then save.
 11. Select the recording and confirm its details panel shows Markers.
 12. Filter by a saved tag.
@@ -317,15 +317,15 @@ Short recording check:
 
 1. Start a new recording.
 2. Stop before 60 seconds with default settings.
-3. Confirm Library shows `Short recording`. Internally, the session is under `Inbox/Short/`, and post-call tagging is not opened automatically.
+3. Confirm Records shows `Short recording`. Internally, the session is under `Inbox/Short/`, and post-call tagging is not opened automatically.
 
 YouTube plus voice check:
 
 1. Open a YouTube video in a browser and keep the browser audible through the normal Mac output device.
 2. Start recording in T-Orbit Recorder.
 3. Speak into the selected microphone while the YouTube audio is playing.
-4. Stop recording, open Library, and use Play on the new row.
-5. Confirm playback expands the inline Library player and prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.
+4. Stop recording, open Records, and use Play on the new row.
+5. Confirm playback expands the inline Records player and prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.
 6. Confirm the mixed preview contains both your voice and the YouTube audio.
 
 Permission error check:

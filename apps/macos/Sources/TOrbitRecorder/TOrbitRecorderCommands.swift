@@ -16,7 +16,7 @@ struct TOrbitRecorderCommands: Commands {
                 modifiers: [.command, .shift]
             )
 
-            Button("Open Recordings") {
+            Button("Open Library") {
                 appDelegate.openLatestRecordingFolderFromShortcut()
             }
             .keyboardShortcut(
@@ -24,7 +24,7 @@ struct TOrbitRecorderCommands: Commands {
                 modifiers: [.command, .shift]
             )
 
-            Button("Open Library") {
+            Button("Open Records") {
                 appDelegate.openLibraryFromShortcut()
             }
             .keyboardShortcut(

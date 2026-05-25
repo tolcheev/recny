@@ -156,12 +156,12 @@ plutil -p metadata.json
 - [ ] Latest strip appears after a recording.
 - [ ] Latest strip does not show long absolute paths.
 - [ ] Play plays the mixed preview.
-- [ ] Open Folder opens the recording folder in Finder.
-- [ ] Library opens as a separate window.
-- [ ] Library shows recent recordings.
-- [ ] Library search works for title, participant, tags, and source app.
-- [ ] Library filters are collapsed by default.
-- [ ] Library filters include status, date range, source app, tags, and audio health.
+- [ ] Library opens the user-facing recordings folder in Finder.
+- [ ] Records opens as a separate window.
+- [ ] Records shows recent recordings.
+- [ ] Records search works for title, participant, tags, and source app.
+- [ ] Records filters are collapsed by default.
+- [ ] Records filters include status, date range, source app, tags, and audio health.
 - [ ] Settings opens.
 - [ ] Settings -> About shows version, build date, commit hash, and local storage path.
 - [ ] Diagnostics opens.
@@ -174,20 +174,22 @@ plutil -p metadata.json
 - [ ] Tag dialog opens from Library.
 - [ ] Tags save to `metadata.json`.
 - [ ] Tags save to SQLite and appear in Library.
-- [ ] Library details show marker timestamps and labels if older/imported metadata contains markers.
-- [ ] Library details show audio health, gain values, and audio analysis availability.
-- [ ] Library details can open `analysis/audio_analysis.json` when it exists.
+- [ ] Records details show marker timestamps and labels if older/imported metadata contains markers.
+- [ ] Records details show audio health, gain values, and audio analysis availability.
+- [ ] Records details can open `analysis/audio_analysis.json` when it exists.
 
 ## 6. Auto-Start
 
 ### Zoom
 
 - [ ] Auto-start mode is `Auto` or `Ask first`.
-- [ ] Cooldown has passed.
+- [ ] Cooldown has passed, or Zoom has a strong mic + system-audio signal.
 - [ ] Open Zoom desktop app.
 - [ ] Join or simulate a call with microphone active.
+- [ ] Switch to another app while Zoom keeps running.
 - [ ] Recording starts automatically, or Ask first prompt appears.
-- [ ] Metadata source trigger is `auto`.
+- [ ] Metadata source app is `Zoom` or `zoom.us`, not `TOrbitRecorder`.
+- [ ] Metadata source trigger is `autostart`.
 - [ ] Metadata includes rule id, confidence, and human-readable reason.
 
 ### Browser Call

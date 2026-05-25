@@ -95,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.playLastItem = playLastItem
 
         let openLastFolderItem = NSMenuItem(
-            title: "Open Recordings",
+            title: "Open Library",
             action: #selector(openLastRecordingFolder),
             keyEquivalent: KeyboardShortcutCatalog.openLatestRecordingFolder.keyEquivalent
         )
@@ -105,7 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.openLastFolderItem = openLastFolderItem
 
         let openLibraryItem = NSMenuItem(
-            title: "Open Library",
+            title: "Open Records",
             action: #selector(openLibrary),
             keyEquivalent: KeyboardShortcutCatalog.openLibrary.keyEquivalent
         )

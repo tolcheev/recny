@@ -154,7 +154,25 @@ struct RecordingPermissionDisplayTests {
             PermissionOnboardingFormatter.explanation(
                 for: .screenSystemAudio,
                 state: .notDetermined
-            ) == "Click Request System Audio Access to show the macOS prompt before recording."
+            ) == "Use Fix Permissions to request system audio access before recording."
+        )
+        #expect(
+            PermissionOnboardingFormatter.inlineActionTitle(
+                for: .microphone,
+                state: .notDetermined
+            ) == nil
+        )
+        #expect(
+            PermissionOnboardingFormatter.inlineActionTitle(
+                for: .screenSystemAudio,
+                state: .notDetermined
+            ) == nil
+        )
+        #expect(
+            PermissionOnboardingFormatter.inlineActionTitle(
+                for: .screenSystemAudio,
+                state: .denied
+            ) == "Open System Audio Settings"
         )
     }
 

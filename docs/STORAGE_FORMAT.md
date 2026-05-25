@@ -10,7 +10,7 @@ The MVP stores all recordings locally. The recording folder plus `metadata.json`
 
 The default root can be changed from Settings and is persisted locally. Reset to default returns the app to `~/Recordings/TOrbitRecorder/`.
 
-The root contains both user recordings and app internals. In normal use, the app opens `Library/` from the `Open Recordings` button so the user does not need to browse `db/`, `logs/`, or internal `Inbox/` staging folders.
+The root contains both user recordings and app internals. In normal use, the app opens `Library/` from the `Library` button so the user does not need to browse `db/`, `logs/`, or internal `Inbox/` staging folders.
 
 ## Directory Layout
 

@@ -189,6 +189,7 @@ public struct AutoStartDecision: Equatable, Sendable {
 
 public struct AutoStartEvaluationContext: Equatable, Sendable {
     public let activeApplication: ActiveApplicationSnapshot?
+    public let runningApplications: [ActiveApplicationSnapshot]
     public let audioActivity: AudioActivitySnapshot
     public let isAlreadyRecording: Bool
     public let lastStoppedAt: Date?
@@ -196,12 +197,14 @@ public struct AutoStartEvaluationContext: Equatable, Sendable {
 
     public init(
         activeApplication: ActiveApplicationSnapshot?,
+        runningApplications: [ActiveApplicationSnapshot] = [],
         audioActivity: AudioActivitySnapshot,
         isAlreadyRecording: Bool,
         lastStoppedAt: Date?,
         now: Date
     ) {
         self.activeApplication = activeApplication
+        self.runningApplications = runningApplications
         self.audioActivity = audioActivity
         self.isAlreadyRecording = isAlreadyRecording
         self.lastStoppedAt = lastStoppedAt
@@ -238,6 +241,10 @@ public struct AutoStartEngine: Sendable {
         if let lastStoppedAt = context.lastStoppedAt {
             let elapsed = context.now.timeIntervalSince(lastStoppedAt)
             guard elapsed >= settings.cooldownSeconds else {
+                if let decision = cooldownBypassDecision(context, settings: settings) {
+                    return decision
+                }
+
                 recentKnownCallApp = nil
                 let remaining = max(0, settings.cooldownSeconds - elapsed)
                 return ignore(.cooldownActive, "Cooldown active for \(Int(remaining.rounded(.up))) more seconds")
@@ -245,6 +252,9 @@ public struct AutoStartEngine: Sendable {
         }
 
         guard let activeApplication = context.activeApplication else {
+            if let runningDecision = runningKnownCallAppDecision(context, settings: settings) {
+                return runningDecision
+            }
             if let continuation = continuationDecision(context, settings: settings) {
                 return continuation
             }
@@ -254,6 +264,9 @@ public struct AutoStartEngine: Sendable {
         rememberKnownCallAppIfEligible(activeApplication, settings: settings, now: context.now)
 
         guard matches(activeApplication, entries: settings.whitelist) else {
+            if let runningDecision = runningKnownCallAppDecision(context, settings: settings) {
+                return runningDecision
+            }
             if let continuation = continuationDecision(context, settings: settings) {
                 return continuation
             }
@@ -373,9 +386,71 @@ public struct AutoStartEngine: Sendable {
         return startDecision(for: app, signal: signal, settings: settings)
     }
 
+    private mutating func runningKnownCallAppDecision(
+        _ context: AutoStartEvaluationContext,
+        settings: AutoStartSettings
+    ) -> AutoStartDecision? {
+        guard let app = preferredRunningKnownCallApp(context.runningApplications, settings: settings),
+              let signal = backgroundStartSignal(for: app, audioActivity: context.audioActivity)
+        else {
+            return nil
+        }
+
+        candidate = nil
+        recentKnownCallApp = nil
+        return startDecision(for: app, signal: signal, settings: settings)
+    }
+
+    private mutating func cooldownBypassDecision(
+        _ context: AutoStartEvaluationContext,
+        settings: AutoStartSettings
+    ) -> AutoStartDecision? {
+        let candidates = ([context.activeApplication].compactMap { $0 } + context.runningApplications)
+        guard let app = preferredRunningKnownCallApp(candidates, settings: settings),
+              let signal = backgroundStartSignal(for: app, audioActivity: context.audioActivity)
+        else {
+            return nil
+        }
+
+        candidate = nil
+        recentKnownCallApp = nil
+        return startDecision(for: app, signal: signal, settings: settings)
+    }
+
     private mutating func ignore(_ reason: AutoStartDecisionReason, _ message: String) -> AutoStartDecision {
         candidate = nil
         return AutoStartDecision(action: .ignore, reason: reason, message: message)
+    }
+
+    private func preferredRunningKnownCallApp(
+        _ apps: [ActiveApplicationSnapshot],
+        settings: AutoStartSettings
+    ) -> ActiveApplicationSnapshot? {
+        apps.first { app in
+            matches(app, entries: settings.whitelist)
+                && !matches(app, entries: settings.blacklist)
+                && isKnownCallApp(app)
+                && isZoom(app)
+        }
+    }
+
+    private func backgroundStartSignal(
+        for app: ActiveApplicationSnapshot,
+        audioActivity: AudioActivitySnapshot
+    ) -> AutoStartSignal? {
+        guard isZoom(app),
+              audioActivity.microphoneActive,
+              audioActivity.systemAudioActive
+        else {
+            return nil
+        }
+
+        return AutoStartSignal(
+            ruleID: "autostart.v2.zoom",
+            confidence: "high",
+            reason: "Zoom call detected with microphone and system audio activity.",
+            startsImmediately: true
+        )
     }
 
     private func startSignal(
@@ -551,6 +626,10 @@ public protocol ActiveApplicationDetecting {
     func activeApplication() -> ActiveApplicationSnapshot?
 }
 
+public protocol RunningApplicationDetecting {
+    func runningApplications() -> [ActiveApplicationSnapshot]
+}
+
 public protocol AudioActivityDetecting {
     func audioActivity() -> AudioActivitySnapshot
 }
@@ -589,6 +668,28 @@ public final class WorkspaceActiveApplicationDetector: ActiveApplicationDetectin
         #else
         return nil
         #endif
+    }
+}
+
+public final class WorkspaceRunningApplicationDetector: RunningApplicationDetecting {
+    public init() {}
+
+    public func runningApplications() -> [ActiveApplicationSnapshot] {
+        NSWorkspace.shared.runningApplications.compactMap { application in
+            guard !application.isTerminated else {
+                return nil
+            }
+
+            let name = application.localizedName ?? application.bundleIdentifier ?? ""
+            let bundleID = application.bundleIdentifier ?? ""
+            guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || !bundleID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else {
+                return nil
+            }
+
+            return ActiveApplicationSnapshot(name: name, bundleID: bundleID)
+        }
     }
 }
 #endif
