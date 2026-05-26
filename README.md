@@ -231,7 +231,7 @@ If you approved an older unsigned/hash-signed dev build before this fix, toggle 
 
 On first launch, use `Fix Permissions` before recording. It requests microphone access and then runs a lightweight Core Audio system-audio permission probe, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created. After each macOS permission prompt closes, the app requests focus for the existing main window again. This flow stays on the main window when the checks finish and no longer opens Diagnostics automatically.
 
-After the Core Audio probe succeeds, T-Orbit Recorder remembers that system-audio capture is available for the current installed build. The app intentionally does not treat `CGPreflightScreenCaptureAccess()` as proof that Core Audio system capture is ready, because that can make Start Recording available before the system-audio prompt has been shown. Rebuilt ad-hoc packages must probe again so an older approved binary cannot make a new build look granted before macOS accepts it. A real recorder permission failure clears this remembered state and sends the user back to onboarding.
+After the Core Audio probe succeeds, T-Orbit Recorder treats system-audio capture as ready only for the current app process. On a later launch it requires the lightweight probe again before enabling `Start Recording`, so a stale permission cache cannot make Start available and trigger the macOS system-audio prompt during recording. The app intentionally does not treat `CGPreflightScreenCaptureAccess()` as proof that Core Audio system capture is ready. A real recorder permission failure clears the remembered state and sends the user back to onboarding.
 
 Grant permissions in:
 

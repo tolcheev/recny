@@ -68,6 +68,7 @@ public final class AppState: ObservableObject {
     private var lastLoggedSelectedMicrophoneName: String?
     private var screenSystemAudioSettingsOpened = false
     private var systemAudioPermissionProbeSucceeded = false
+    private var systemAudioPermissionVerifiedThisRun = false
 
     public var outputFolderPath: String {
         outputFolderURL.path(percentEncoded: false)
@@ -580,7 +581,7 @@ public final class AppState: ObservableObject {
             screenSystemAudioSettingsOpened: screenSystemAudioSettingsOpened,
             lastErrorMessage: errorMessage
         )
-        if systemAudioPermissionProbeSucceeded,
+        if systemAudioPermissionVerifiedThisRun,
            snapshot.screenSystemAudio != .denied,
            snapshot.screenSystemAudio != .restartRequired {
             snapshot.screenSystemAudio = .granted
@@ -1032,6 +1033,7 @@ public final class AppState: ObservableObject {
 
     private func setSystemAudioPermissionProbeSucceeded(_ isSucceeded: Bool) {
         systemAudioPermissionProbeSucceeded = isSucceeded
+        systemAudioPermissionVerifiedThisRun = isSucceeded
         UserDefaults.standard.set(isSucceeded, forKey: Self.systemAudioPermissionProbeSucceededKey)
     }
 

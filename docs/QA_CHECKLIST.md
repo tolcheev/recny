@@ -66,6 +66,7 @@ open /Applications/TOrbitRecorder.app
   - Microphone prompt, if microphone is not determined
   - System audio prompt, if system audio is not determined
 - [ ] Main UI no longer shows Fix Permissions.
+- [ ] Clicking `Start Recording` does not show a macOS permission prompt. If a permission prompt appears on Start, the onboarding gate is broken.
 - [ ] Diagnostics shows Microphone as granted/authorized.
 - [ ] Diagnostics shows System audio as granted/available before recording starts.
 - [ ] Storage/output folder is writable.

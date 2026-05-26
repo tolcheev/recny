@@ -675,6 +675,45 @@ struct AppStateTests {
     }
 
     @Test
+    func cachedSystemAudioProbeDoesNotUnlockStartOnNewAppProcess() {
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
+        let firstAppState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+
+        firstAppState.noteSystemAudioPermissionRequestSucceeded()
+        #expect(firstAppState.permissionSnapshot.screenSystemAudio == .granted)
+        #expect(firstAppState.isRecordingStartAllowed)
+
+        let relaunchedAppState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+
+        #expect(relaunchedAppState.permissionSnapshot.screenSystemAudio == .notDetermined)
+        #expect(!relaunchedAppState.isRecordingStartAllowed)
+    }
+
+    @Test
     func preflightBlocksStartWhenStorageIsNotWritable() async {
         let appState = AppState(
             recordingController: StubRecordingController(),
