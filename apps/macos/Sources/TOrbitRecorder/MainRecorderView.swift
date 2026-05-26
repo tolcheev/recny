@@ -8,7 +8,7 @@ struct MainRecorderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
-            if appState.shouldShowPermissionsOnboarding {
+            if appState.shouldShowPermissionChecklist {
                 PermissionsOnboardingView(appState: appState)
             }
             RecordingStatusCard(appState: appState)
@@ -19,7 +19,7 @@ struct MainRecorderView: View {
             minWidth: 520,
             idealWidth: 560,
             maxWidth: 620,
-            minHeight: appState.shouldShowPermissionsOnboarding ? 540 : 360
+            minHeight: appState.shouldShowPermissionChecklist ? 540 : 360
         )
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {

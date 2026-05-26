@@ -75,31 +75,54 @@ enum PermissionActionHandler {
     }
 
     private static func requestMissingPermissions(appState: AppState) async {
+        appState.beginPermissionOnboarding(message: "Checking recording permissions...")
         appState.refreshMicrophoneDevices()
         appState.refreshPermissionSnapshot()
 
         if appState.permissionSnapshot.microphone != .granted {
+            appState.updatePermissionOnboardingMessage("Requesting microphone access...")
             let microphoneGranted = await requestMicrophoneAccessOrOpenSettings(appState: appState)
             guard microphoneGranted else {
+                appState.completePermissionOnboarding(
+                    message: "Microphone access is still required.",
+                    clearAfter: nil
+                )
                 return
             }
+            appState.updatePermissionOnboardingMessage("Microphone access granted. Requesting system audio access...")
+            await prepareForNextPermissionPrompt()
         }
 
         appState.refreshPermissionSnapshot()
         if appState.recordingSettings.systemAudioEnabled,
            appState.permissionSnapshot.screenSystemAudio != .granted {
-            _ = await requestSystemAudioAccessOrOpenSettings(appState: appState)
+            appState.updatePermissionOnboardingMessage("Requesting system audio access...")
+            let systemAudioGranted = await requestSystemAudioAccessOrOpenSettings(appState: appState)
             appState.refreshPermissionSnapshot()
-            guard appState.permissionSnapshot.screenSystemAudio == .granted else {
+            guard systemAudioGranted, appState.permissionSnapshot.screenSystemAudio == .granted else {
+                appState.completePermissionOnboarding(
+                    message: "System audio access is still required.",
+                    clearAfter: nil
+                )
                 return
             }
+            appState.updatePermissionOnboardingMessage("System audio access verified.")
+        } else if appState.recordingSettings.systemAudioEnabled {
+            appState.updatePermissionOnboardingMessage("System audio access already verified.")
         }
 
         if appState.permissionSnapshot.storage != .granted {
+            appState.completePermissionOnboarding(
+                message: "The recordings folder needs to be writable.",
+                clearAfter: nil
+            )
             openRecordingsFolder(appState: appState)
             return
         }
 
+        appState.completePermissionOnboarding(
+            message: "Microphone and system audio access are ready. macOS skips prompts that were already granted."
+        )
         AppLogger.file(.info, category: "permissions", "permission onboarding completed without opening diagnostics")
     }
 
@@ -166,6 +189,13 @@ enum PermissionActionHandler {
             AppLogger.file(.info, category: "permissions", "requesting main window focus after permission prompt")
             AppWindowRequest.postShowMainWindow(reason: .permissionPromptCompleted)
         }
+    }
+
+    private static func prepareForNextPermissionPrompt() async {
+        AppLogger.file(.info, category: "permissions", "waiting before next permission prompt")
+        NSApp.activate(ignoringOtherApps: true)
+        AppWindowRequest.postShowMainWindow(reason: .permissionPromptCompleted)
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
     }
 
     private static func waitForMicrophoneGrant(appState: AppState) async {

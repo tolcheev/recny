@@ -714,6 +714,43 @@ struct AppStateTests {
     }
 
     @Test
+    func permissionOnboardingFeedbackKeepsChecklistVisibleAfterSilentSystemAudioProbe() {
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+
+        #expect(appState.shouldShowPermissionsOnboarding)
+        appState.beginPermissionOnboarding(message: "Checking recording permissions...")
+        appState.noteSystemAudioPermissionRequestSucceeded()
+        appState.completePermissionOnboarding(
+            message: "Microphone and system audio access are ready.",
+            clearAfter: nil
+        )
+
+        #expect(!appState.shouldShowPermissionsOnboarding)
+        #expect(appState.shouldShowPermissionChecklist)
+        #expect(appState.permissionOnboardingMessage == "Microphone and system audio access are ready.")
+
+        appState.clearPermissionOnboardingFeedback()
+
+        #expect(!appState.shouldShowPermissionChecklist)
+        #expect(appState.permissionOnboardingMessage == nil)
+    }
+
+    @Test
     func preflightBlocksStartWhenStorageIsNotWritable() async {
         let appState = AppState(
             recordingController: StubRecordingController(),

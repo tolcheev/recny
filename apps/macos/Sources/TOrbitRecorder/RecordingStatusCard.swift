@@ -42,13 +42,17 @@ struct RecordingStatusCard: View {
                 Button {
                     PermissionActionHandler.handlePrimaryFixAction(appState: appState)
                 } label: {
-                    Label("Fix Permissions", systemImage: "lock.shield")
+                    Label(
+                        appState.isPermissionOnboardingInProgress ? "Checking Permissions" : "Fix Permissions",
+                        systemImage: appState.isPermissionOnboardingInProgress ? "hourglass" : "lock.shield"
+                    )
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
+                .disabled(appState.isPermissionOnboardingInProgress)
                 .accessibilityLabel("Fix Permissions")
             }
 

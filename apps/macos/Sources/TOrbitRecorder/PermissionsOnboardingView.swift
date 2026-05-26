@@ -72,6 +72,13 @@ struct PermissionChecklistContent: View {
                 PermissionActionHandler.openRecordingsFolder(appState: appState)
             }
 
+            if let message = appState.permissionOnboardingMessage {
+                PermissionOnboardingFeedback(
+                    message: message,
+                    isRunning: appState.isPermissionOnboardingInProgress
+                )
+            }
+
             if requiresRestart {
                 Divider()
 
@@ -106,6 +113,34 @@ struct PermissionChecklistContent: View {
 
     private var requiresRestart: Bool {
         PermissionOnboardingFormatter.requiresRestart(appState.permissionSnapshot)
+    }
+}
+
+private struct PermissionOnboardingFeedback: View {
+    let message: String
+    let isRunning: Bool
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            if isRunning {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("Checking permissions")
+            } else {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .accessibilityHidden(true)
+            }
+
+            Text(message)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(isRunning ? Color.secondary : Color.green)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 4)
+        .accessibilityElement(children: .combine)
     }
 }
 

@@ -43,6 +43,8 @@ public final class AppState: ObservableObject {
     @Published public private(set) var microphoneInputWarning: String?
     @Published public private(set) var microphoneSelectionReason: String
     @Published public private(set) var permissionSnapshot: RecorderPermissionSnapshot
+    @Published public private(set) var permissionOnboardingMessage: String?
+    @Published public private(set) var isPermissionOnboardingInProgress: Bool
     @Published public private(set) var audioReprocessProgress: AudioReprocessProgress?
     @Published public private(set) var audioReprocessLastSummary: AudioReprocessBatchSummary?
     @Published public private(set) var launchAtLoginLastErrorMessage: String?
@@ -60,6 +62,7 @@ public final class AppState: ObservableObject {
     private var durationTask: Task<Void, Never>?
     private var autoStartTask: Task<Void, Never>?
     private var microphoneDeviceTask: Task<Void, Never>?
+    private var permissionOnboardingFeedbackTask: Task<Void, Never>?
     private var autoStartEngine: AutoStartEngine
     private var lastRecordingStoppedAt: Date?
     private var currentRecordingSource: RecordingSource?
@@ -83,6 +86,12 @@ public final class AppState: ObservableObject {
             permissionSnapshot,
             systemAudioEnabled: recordingSettings.systemAudioEnabled
         )
+    }
+
+    public var shouldShowPermissionChecklist: Bool {
+        shouldShowPermissionsOnboarding
+            || isPermissionOnboardingInProgress
+            || permissionOnboardingMessage != nil
     }
 
     public var isRecordingStartAllowed: Bool {
@@ -176,6 +185,8 @@ public final class AppState: ObservableObject {
             preferredDeviceID: resolvedSettings.recording.microphoneDeviceID
         )
         self.permissionSnapshot = .unknown
+        self.permissionOnboardingMessage = nil
+        self.isPermissionOnboardingInProgress = false
         self.audioReprocessProgress = nil
         self.audioReprocessLastSummary = nil
         self.launchAtLoginLastErrorMessage = nil
@@ -198,6 +209,7 @@ public final class AppState: ObservableObject {
         durationTask?.cancel()
         autoStartTask?.cancel()
         microphoneDeviceTask?.cancel()
+        permissionOnboardingFeedbackTask?.cancel()
     }
 
     public func startRecording() async throws {
@@ -587,6 +599,48 @@ public final class AppState: ObservableObject {
             snapshot.screenSystemAudio = .granted
         }
         permissionSnapshot = snapshot
+    }
+
+    public func beginPermissionOnboarding(message: String) {
+        permissionOnboardingFeedbackTask?.cancel()
+        permissionOnboardingFeedbackTask = nil
+        isPermissionOnboardingInProgress = true
+        permissionOnboardingMessage = message
+    }
+
+    public func updatePermissionOnboardingMessage(_ message: String) {
+        permissionOnboardingFeedbackTask?.cancel()
+        permissionOnboardingFeedbackTask = nil
+        permissionOnboardingMessage = message
+    }
+
+    public func completePermissionOnboarding(message: String, clearAfter delay: TimeInterval? = 4) {
+        permissionOnboardingFeedbackTask?.cancel()
+        permissionOnboardingFeedbackTask = nil
+        isPermissionOnboardingInProgress = false
+        permissionOnboardingMessage = message
+
+        guard let delay else {
+            return
+        }
+
+        let clearDelay = UInt64(max(0, delay) * 1_000_000_000)
+        permissionOnboardingFeedbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: clearDelay)
+            guard !Task.isCancelled,
+                  self?.permissionOnboardingMessage == message else {
+                return
+            }
+            self?.permissionOnboardingMessage = nil
+            self?.permissionOnboardingFeedbackTask = nil
+        }
+    }
+
+    public func clearPermissionOnboardingFeedback() {
+        permissionOnboardingFeedbackTask?.cancel()
+        permissionOnboardingFeedbackTask = nil
+        isPermissionOnboardingInProgress = false
+        permissionOnboardingMessage = nil
     }
 
     public func markScreenSystemAudioSettingsOpened() {
