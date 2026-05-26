@@ -675,7 +675,9 @@ public final class WorkspaceRunningApplicationDetector: RunningApplicationDetect
     public init() {}
 
     public func runningApplications() -> [ActiveApplicationSnapshot] {
-        NSWorkspace.shared.runningApplications.compactMap { application in
+        let windowTitlesByProcessID = Self.windowTitlesByProcessID()
+
+        return NSWorkspace.shared.runningApplications.compactMap { application -> ActiveApplicationSnapshot? in
             guard !application.isTerminated else {
                 return nil
             }
@@ -688,8 +690,43 @@ public final class WorkspaceRunningApplicationDetector: RunningApplicationDetect
                 return nil
             }
 
-            return ActiveApplicationSnapshot(name: name, bundleID: bundleID)
+            return ActiveApplicationSnapshot(
+                name: name,
+                bundleID: bundleID,
+                windowTitle: windowTitlesByProcessID[application.processIdentifier]?.joined(separator: " | ")
+            )
         }
+    }
+
+    private static func windowTitlesByProcessID() -> [pid_t: [String]] {
+        #if canImport(CoreGraphics)
+        guard let windows = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements],
+            kCGNullWindowID
+        ) as? [[String: Any]] else {
+            return [:]
+        }
+
+        var titlesByProcessID: [pid_t: [String]] = [:]
+        for window in windows {
+            guard let ownerPID = window[kCGWindowOwnerPID as String] as? Int,
+                  let title = window[kCGWindowName as String] as? String
+            else {
+                continue
+            }
+
+            let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedTitle.isEmpty else {
+                continue
+            }
+
+            titlesByProcessID[pid_t(ownerPID), default: []].append(trimmedTitle)
+        }
+
+        return titlesByProcessID
+        #else
+        return [:]
+        #endif
     }
 }
 #endif

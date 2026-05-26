@@ -191,6 +191,8 @@ plutil -p metadata.json
 - [ ] Metadata source app is `Zoom` or `zoom.us`, not `TOrbitRecorder`.
 - [ ] Metadata source trigger is `autostart`.
 - [ ] Metadata includes rule id, confidence, and human-readable reason.
+- [ ] End the Zoom conference while leaving the Zoom app open.
+- [ ] Recording auto-stops after the grace period when Zoom returns to its home/workplace window.
 
 ### Browser Call
 

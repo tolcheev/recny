@@ -279,6 +279,101 @@ struct AppStateTests {
     }
 
     @Test
+    func autoStartedZoomRecordingStopsWhenZoomReturnsToHomeWindowEvenIfRecorderAudioIsActive() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let zoomMeeting = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let zoomHome = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "zoom Workplace"
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomMeeting,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomHome],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(20)
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomHome],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(55)
+        )
+
+        #expect(appState.status == .idle)
+        #expect(appState.autoStartNotificationMessage == "Recording stopped: call ended")
+    }
+
+    @Test
+    func autoStartedZoomRecordingKeepsRunningWhileMeetingWindowExists() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let zoomMeeting = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomMeeting,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomMeeting],
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: false),
+            now: startedAt.addingTimeInterval(55)
+        )
+
+        #expect(appState.status == .recording)
+        try await appState.stopRecording()
+    }
+
+    @Test
     func manualRecordingDoesNotAutoStopWhenAudioActivityIsSilent() async throws {
         let appState = AppState(
             recordingController: StubRecordingController(),

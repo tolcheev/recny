@@ -165,8 +165,7 @@ MVP stop rule:
 
 ```text
 IF recording was started by autostart
-AND microphone_active == false
-AND system_audio_active == false
+AND call signal is no longer present
 AND signal has been lost for at least 30 seconds
 THEN stop_recording()
 ```
@@ -175,7 +174,9 @@ Rules:
 
 - Manual recordings never auto-stop.
 - App focus changes do not stop an auto-started recording.
-- Any restored microphone or system-audio activity cancels the pending auto-stop timer.
+- Zoom recordings inspect running Zoom window titles when macOS exposes them. A meeting/conference-like Zoom window keeps the recording active even if another app is foreground.
+- If Zoom is still running but only the main `zoom Workplace`/home window is visible, the call signal is treated as ended even if Core Audio still reports microphone or system-audio activity from the recorder pipeline.
+- If Zoom window titles are unavailable, the app falls back to microphone/system-audio activity. Any restored activity cancels the pending auto-stop timer in that fallback path.
 - After auto-stop succeeds, the normal cooldown applies before another automatic start.
 - The app logs when signal loss starts, when signal is restored, and when auto-stop runs.
 
@@ -208,8 +209,7 @@ V2 logs both start and non-start decisions. Repeated identical non-start decisio
 ## Known False Positive Cases
 
 - A whitelisted direct call app is foreground and has microphone or system audio activity, but the user is not in a real call.
-- Zoom remains open after a call and another app produces system audio within the continuation window.
-- A running Zoom process plus broad system/microphone activity can start if macOS reports both devices active even after a meeting ended.
+- Zoom remains open after a call and macOS does not expose window titles; the app falls back to broad audio activity.
 - A browser is foreground while another tab or app creates microphone and system audio activity.
 - A browser call title is unavailable, forcing fallback to microphone + system audio activity.
 - A non-call browser page contains words such as `Call` or `Interview` in the title.

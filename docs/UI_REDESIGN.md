@@ -58,7 +58,7 @@ Show Window is opened from the menu bar item. The previous global `Option+R` sho
 
 Marker shortcuts are hidden from the default UI until the marker workflow is useful enough for daily use.
 
-Auto-started recordings use an auto-stop guard: after both microphone and system-audio activity disappear for 30 seconds, the app stops the recording and saves it. Manual recordings never auto-stop.
+Auto-started recordings use an auto-stop guard. Zoom recordings prefer Zoom window state: a meeting/conference window keeps recording active, while the main Zoom home window starts the 30 second stop timer. If macOS does not expose Zoom window titles, the app falls back to microphone/system-audio activity. Manual recordings never auto-stop.
 
 ## Main Window States
 

@@ -110,6 +110,7 @@ enum PermissionActionHandler {
         }
 
         AppLogger.file(.info, category: "permissions", "microphone permission request started from onboarding")
+        await focusMainWindowBeforePermissionPrompt()
         let granted = await AVCaptureDevice.requestAccess(for: .audio)
         AppLogger.file(.info, category: "permissions", "microphone permission request finished granted=\(granted)")
         appState.refreshPermissionSnapshot()
@@ -130,6 +131,7 @@ enum PermissionActionHandler {
         case .notDetermined, .missing:
             do {
                 AppLogger.file(.info, category: "permissions", "system audio permission request started from onboarding")
+                await focusMainWindowBeforePermissionPrompt()
                 try await ScreenCaptureKitSystemAudioRecorder.requestSystemAudioAccess()
                 appState.noteSystemAudioPermissionRequestSucceeded()
                 refocusMainWindowAfterPermissionPrompt()
@@ -147,6 +149,13 @@ enum PermissionActionHandler {
 
     private static func shellQuoted(_ value: String) -> String {
         "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
+    }
+
+    private static func focusMainWindowBeforePermissionPrompt() async {
+        AppLogger.file(.info, category: "permissions", "requesting main window focus before permission prompt")
+        NSApp.activate(ignoringOtherApps: true)
+        AppWindowRequest.postShowMainWindow(reason: .permissionPromptCompleted)
+        try? await Task.sleep(nanoseconds: 200_000_000)
     }
 
     private static func refocusMainWindowAfterPermissionPrompt() {

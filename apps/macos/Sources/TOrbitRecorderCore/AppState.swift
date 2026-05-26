@@ -736,6 +736,7 @@ public final class AppState: ObservableObject {
         if status == .recording {
             await evaluateAutoStop(
                 activeApplication: activeApplication,
+                runningApplications: runningApplications,
                 audioActivity: audioActivity,
                 now: now
             )
@@ -782,14 +783,22 @@ public final class AppState: ObservableObject {
 
     private func evaluateAutoStop(
         activeApplication: ActiveApplicationSnapshot?,
+        runningApplications: [ActiveApplicationSnapshot],
         audioActivity: AudioActivitySnapshot,
         now: Date
     ) async {
-        guard currentRecordingSource?.trigger == "autostart" else {
+        guard let source = currentRecordingSource,
+              source.trigger == "autostart"
+        else {
             return
         }
 
-        if audioActivity.microphoneActive || audioActivity.systemAudioActive {
+        if autoStartedCallStillLooksActive(
+            source: source,
+            activeApplication: activeApplication,
+            runningApplications: runningApplications,
+            audioActivity: audioActivity
+        ) {
             if autoStopSignalLostAt != nil {
                 AppLogger.file(
                     .info,
@@ -806,7 +815,7 @@ public final class AppState: ObservableObject {
             AppLogger.file(
                 .info,
                 category: "autostart",
-                "auto-stop waiting signal_lost grace_seconds=\(Int(Self.autoStopSignalLostGracePeriodSeconds)) active_app=\(activeApplication?.name ?? "none")"
+                "auto-stop waiting signal_lost grace_seconds=\(Int(Self.autoStopSignalLostGracePeriodSeconds)) active_app=\(activeApplication?.name ?? "none") source_app=\(source.appName)"
             )
             return
         }
@@ -817,12 +826,11 @@ public final class AppState: ObservableObject {
             return
         }
 
-        let source = currentRecordingSource
         do {
             AppLogger.file(
                 .info,
                 category: "autostart",
-                "auto-stop recording signal_lost_elapsed=\(Int(elapsed.rounded(.down))) source_app=\(source?.appName ?? "unknown")"
+                "auto-stop recording signal_lost_elapsed=\(Int(elapsed.rounded(.down))) source_app=\(source.appName)"
             )
             try await stopRecording()
             publishAutoStartNotification("Recording stopped: call ended")
@@ -830,6 +838,71 @@ public final class AppState: ObservableObject {
             applyError(error)
             AppLogger.recording.error("Auto-stop failed: \(String(describing: error), privacy: .public)")
             AppLogger.file(.error, category: "autostart", "auto-stop failed error=\(String(describing: error))")
+        }
+    }
+
+    private func autoStartedCallStillLooksActive(
+        source: RecordingSource,
+        activeApplication: ActiveApplicationSnapshot?,
+        runningApplications: [ActiveApplicationSnapshot],
+        audioActivity: AudioActivitySnapshot
+    ) -> Bool {
+        if isZoomRecordingSource(source) {
+            let zoomSnapshots = ([activeApplication].compactMap { $0 } + runningApplications)
+                .filter(isZoomApplication)
+
+            guard !zoomSnapshots.isEmpty else {
+                return false
+            }
+
+            if let zoomMeetingWindowIsActive = zoomMeetingWindowLooksActive(zoomSnapshots) {
+                return zoomMeetingWindowIsActive
+            }
+        }
+
+        return audioActivity.microphoneActive || audioActivity.systemAudioActive
+    }
+
+    private func isZoomRecordingSource(_ source: RecordingSource) -> Bool {
+        isZoomToken(source.appName) || isZoomToken(source.bundleID)
+    }
+
+    private func isZoomApplication(_ application: ActiveApplicationSnapshot) -> Bool {
+        isZoomToken(application.name) || isZoomToken(application.bundleID)
+    }
+
+    private func isZoomToken(_ value: String) -> Bool {
+        let normalizedValue = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return normalizedValue == "zoom"
+            || normalizedValue == "zoom.us"
+            || normalizedValue == "us.zoom.xos"
+            || normalizedValue.contains("zoom workplace")
+    }
+
+    private func zoomMeetingWindowLooksActive(_ applications: [ActiveApplicationSnapshot]) -> Bool? {
+        let titles = applications
+            .compactMap(\.windowTitle)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !titles.isEmpty else {
+            return nil
+        }
+
+        return titles.contains { title in
+            let normalizedTitle = title.lowercased()
+            return normalizedTitle.contains("meeting")
+                || normalizedTitle.contains("conference")
+                || normalizedTitle.contains("конференц")
+                || normalizedTitle.contains("встреч")
+                || normalizedTitle.contains("waiting room")
+                || normalizedTitle.contains("зал ожидания")
+                || normalizedTitle.contains("participants")
+                || normalizedTitle.contains("участник")
+                || normalizedTitle.contains("share screen")
+                || normalizedTitle.contains("поделиться")
         }
     }
 

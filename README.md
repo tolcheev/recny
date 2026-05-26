@@ -84,7 +84,7 @@ tests/              Integration fixtures and test assets
 - `docs/BUG_REPORT_TEMPLATE.md`: copy/paste bug report format for fast handoff back to Codex.
 - `docs/DEVELOPMENT_WORKFLOW.md`: branch, PR, validation, and release workflow for post-MVP development.
 - `docs/ROADMAP.md`: staged future work.
-- `MANUAL_TESTING.md`: manual macOS MVP validation checklist and troubleshooting.
+- `docs/QA_CHECKLIST.md`: manual macOS MVP validation checklist and troubleshooting.
 
 ## Development Rules
 
@@ -184,7 +184,7 @@ If macOS reports that approval is required, open System Settings -> General -> L
 
 Auto-started Zoom recordings are not tied to Zoom being the foreground window. You can switch to browser, notes, IDE, or slides during a call and the app keeps the recording active.
 
-When an auto-started recording loses both microphone and system-audio activity for 30 seconds, the app stops it automatically and saves the recording. Manual recordings do not auto-stop; they only stop from the Stop button, menu item, or app-active shortcut.
+For Zoom, auto-stop now prefers Zoom window state. A meeting/conference window keeps recording active, while the main Zoom home/workplace window starts the 30 second stop timer. If macOS does not expose Zoom window titles, the app falls back to microphone/system-audio activity. Manual recordings do not auto-stop; they only stop from the Stop button, menu item, or app-active shortcut.
 
 ## Uninstall
 
@@ -279,7 +279,7 @@ The menu bar app provides Show Window, Start Recording or Stop Recording, Play L
 
 ## Manual MVP End-To-End Check
 
-Detailed manual validation lives in `MANUAL_TESTING.md`.
+Detailed manual validation lives in `docs/QA_CHECKLIST.md`.
 
 Before the first recording, click `Fix Permissions` in the app. The onboarding flow should request all required permissions before recording starts and stays on the main window when checks finish:
 
