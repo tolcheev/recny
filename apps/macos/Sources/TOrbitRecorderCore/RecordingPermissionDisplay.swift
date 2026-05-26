@@ -95,10 +95,11 @@ public enum RecordingPermissionDisplay {
             return .restartRequired
         }
 
-        guard !processGranted else {
-            return .granted
-        }
-
+        // CGPreflightScreenCaptureAccess can be true while Core Audio process-tap
+        // system audio permission has not been requested yet. Treat the raw
+        // preflight signal as advisory only; AppState promotes this state to
+        // granted after the explicit Core Audio permission probe succeeds.
+        _ = processGranted
         return .notDetermined
     }
 

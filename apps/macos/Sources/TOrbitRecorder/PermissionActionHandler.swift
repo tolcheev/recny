@@ -114,13 +114,15 @@ enum PermissionActionHandler {
         let granted = await AVCaptureDevice.requestAccess(for: .audio)
         AppLogger.file(.info, category: "permissions", "microphone permission request finished granted=\(granted)")
         appState.refreshPermissionSnapshot()
-        if appState.permissionSnapshot.microphone != .granted {
+        if !granted {
             openMicrophoneSettings(appState: appState)
+            return false
         } else {
+            await waitForMicrophoneGrant(appState: appState)
             refocusMainWindowAfterPermissionPrompt()
         }
 
-        return appState.permissionSnapshot.microphone == .granted
+        return true
     }
 
     private static func requestSystemAudioAccessOrOpenSettings(appState: AppState) async -> Bool {
@@ -164,5 +166,16 @@ enum PermissionActionHandler {
             AppLogger.file(.info, category: "permissions", "requesting main window focus after permission prompt")
             AppWindowRequest.postShowMainWindow(reason: .permissionPromptCompleted)
         }
+    }
+
+    private static func waitForMicrophoneGrant(appState: AppState) async {
+        for _ in 0..<5 {
+            appState.refreshPermissionSnapshot()
+            if appState.permissionSnapshot.microphone == .granted {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        appState.refreshPermissionSnapshot()
     }
 }

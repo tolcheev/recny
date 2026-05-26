@@ -43,6 +43,7 @@ git status --short --branch
 - [ ] Microphone permission is granted.
 - [ ] System audio permission is granted.
 - [ ] If macOS shows `Only System Audio Recording`, TOrbitRecorder is enabled there.
+- [ ] `Fix Permissions` requests microphone and system-audio access before Start Recording is enabled.
 - [ ] App is restarted after changing permissions in System Settings.
 - [ ] Main window opens from menu bar `Show Window`.
 - [ ] App remains running after closing the main window.

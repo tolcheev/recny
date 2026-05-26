@@ -62,9 +62,12 @@ osascript -e 'tell application "TOrbitRecorder" to quit' || true
 open /Applications/TOrbitRecorder.app
 ```
 
+- [ ] Click `Fix Permissions` and confirm both required macOS prompts are handled before Start is enabled:
+  - Microphone prompt, if microphone is not determined
+  - System audio prompt, if system audio is not determined
 - [ ] Main UI no longer shows Fix Permissions.
 - [ ] Diagnostics shows Microphone as granted/authorized.
-- [ ] Diagnostics shows System audio as granted/available or ready for first capture prompt.
+- [ ] Diagnostics shows System audio as granted/available before recording starts.
 - [ ] Storage/output folder is writable.
 
 ## 3. Manual Recording
