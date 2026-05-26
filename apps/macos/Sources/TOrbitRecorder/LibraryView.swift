@@ -41,14 +41,14 @@ struct LibraryView: View {
                     filtersDisclosure
                     recordingsList
                 }
-                .frame(minWidth: 520, idealWidth: 620, maxWidth: .infinity)
+                .frame(minWidth: 560, idealWidth: 680, maxWidth: .infinity)
 
                 detailsPanel
-                    .frame(width: 340)
+                    .frame(width: 390)
             }
         }
         .padding(20)
-        .frame(minWidth: 980, minHeight: 660)
+        .frame(minWidth: 1060, minHeight: 660)
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             reloadLibrary()
@@ -303,6 +303,8 @@ struct LibraryView: View {
                             let metadata = metadata(for: recording)
                             LibraryRecordingRow(
                                 recording: recording,
+                                displayTitle: displayTitle(for: recording),
+                                displaySource: displaySource(for: recording),
                                 audioSummary: audioSummary(for: recording, metadata: metadata),
                                 playbackState: playbackState(for: recording, metadata: metadata),
                                 audioHealth: metadata?.audio.health ?? .good,
@@ -361,6 +363,8 @@ struct LibraryView: View {
             if let selectedRecording {
                 LibraryRecordingDetailsPanel(
                     recording: selectedRecording,
+                    displayTitle: displayTitle(for: selectedRecording),
+                    displaySource: displaySource(for: selectedRecording),
                     metadata: metadata(for: selectedRecording),
                     onPlay: {
                         playMixedAudio(for: selectedRecording)
@@ -495,6 +499,33 @@ struct LibraryView: View {
             .readMetadata(at: recording.metadataURL)
     }
 
+    private func displayTitle(for recording: RecordingSummary) -> String {
+        RecordingDisplayFormatter.recordingTitle(
+            recording.title,
+            sequenceNumber: sequenceNumber(for: recording)
+        )
+    }
+
+    private func displaySource(for recording: RecordingSummary) -> String {
+        RecordingDisplayFormatter.sourceAppText(recording.sourceApp)
+    }
+
+    private func sequenceNumber(for recording: RecordingSummary) -> Int? {
+        let sorted = appState.recordings.sorted {
+            if $0.startedAt == $1.startedAt {
+                return $0.id < $1.id
+            }
+
+            return $0.startedAt < $1.startedAt
+        }
+
+        guard let index = sorted.firstIndex(where: { $0.id == recording.id }) else {
+            return nil
+        }
+
+        return index + 1
+    }
+
     private func audioSummary(
         for recording: RecordingSummary,
         metadata: RecordingMetadata?
@@ -577,7 +608,7 @@ struct LibraryView: View {
         selectedRecordingID = recording.id
         inlinePlayback = RecordingInlinePlaybackRequest(
             recordingID: recording.id,
-            recordingTitle: recording.title,
+            recordingTitle: displayTitle(for: recording),
             candidate: candidate
         )
         actionError = nil
@@ -672,6 +703,8 @@ struct LibraryView: View {
 
 private struct LibraryRecordingRow: View {
     let recording: RecordingSummary
+    let displayTitle: String
+    let displaySource: String
     let audioSummary: String
     let playbackState: RecordingPlaybackDisplayState
     let audioHealth: AudioHealthMetadata
@@ -691,13 +724,14 @@ private struct LibraryRecordingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(recording.title)
-                            .font(.callout.weight(.semibold))
-                            .lineLimit(1)
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(displayTitle)
+                        .font(.callout.weight(.semibold))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
+                    HStack(spacing: 6) {
                         StatusBadge(
                             text: RecordingDisplayFormatter.statusText(recording.status),
                             tone: tone(for: recording.status)
@@ -715,16 +749,19 @@ private struct LibraryRecordingRow: View {
                             )
                         }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
 
-                    Text("\(displayDate(recording.startedAt)) · \(RecordingDisplayFormatter.duration(recording.durationSec)) · \(recording.sourceApp) · \(audioSummary)")
+                    Text("\(displayDate(recording.startedAt)) · \(RecordingDisplayFormatter.duration(recording.durationSec)) · \(displaySource) · \(audioSummary)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     CompactTagsView(participant: recording.participant, tags: recording.tags)
                 }
+                .layoutPriority(1)
 
-                Spacer(minLength: 10)
+                Spacer(minLength: 8)
 
                 HStack(spacing: 6) {
                     if inlinePlayback == nil {
@@ -850,6 +887,8 @@ private struct LibraryRecordingRow: View {
 
 private struct LibraryRecordingDetailsPanel: View {
     let recording: RecordingSummary
+    let displayTitle: String
+    let displaySource: String
     let metadata: RecordingMetadata?
     let onPlay: () -> Void
     let onOpen: () -> Void
@@ -866,9 +905,10 @@ private struct LibraryRecordingDetailsPanel: View {
                         tone: tone(for: recording.status)
                     )
 
-                    Text(recording.title)
+                    Text(displayTitle)
                         .font(.headline)
                         .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Text(displayDate(recording.startedAt))
                         .font(.caption)
@@ -969,7 +1009,7 @@ private struct LibraryRecordingDetailsPanel: View {
     private var detailsGrid: some View {
         VStack(alignment: .leading, spacing: 8) {
             detailRow("Duration", RecordingDisplayFormatter.duration(recording.durationSec))
-            detailRow("Source", recording.sourceApp)
+            detailRow("Source", displaySource)
             detailRow("Started", displayDate(recording.startedAt))
             if let source = metadata?.source {
                 detailRow("Trigger", source.trigger)
@@ -1025,8 +1065,8 @@ private struct LibraryRecordingDetailsPanel: View {
         [
             FileRow(label: "Mic", value: fileDescription(kind: "microphone", fallback: "source/mic.m4a")),
             FileRow(label: "System", value: fileDescription(kind: "system", fallback: "source/system.m4a")),
-            FileRow(label: "Original mixed", value: fileDescription(kind: "mixed", fallback: "export/mixed.m4a")),
-            FileRow(label: "Balanced mixed", value: fileDescription(kind: "mixed_balanced", fallback: "export/mixed_balanced.m4a"))
+            FileRow(label: "Original", value: fileDescription(kind: "mixed", fallback: "export/mixed.m4a")),
+            FileRow(label: "Balanced", value: fileDescription(kind: "mixed_balanced", fallback: "export/mixed_balanced.m4a"))
         ]
     }
 
@@ -1093,16 +1133,19 @@ private struct LibraryRecordingDetailsPanel: View {
     }
 
     private func detailRow(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(alignment: .top, spacing: 10) {
             Text(label)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
-                .frame(width: 64, alignment: .leading)
+                .frame(width: 74, alignment: .leading)
+                .fixedSize(horizontal: true, vertical: false)
 
             Text(value)
                 .font(.caption)
-                .lineLimit(3)
+                .lineLimit(label == "Details" ? 5 : 4)
+                .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

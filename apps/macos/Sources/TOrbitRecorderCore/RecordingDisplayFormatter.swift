@@ -1,6 +1,33 @@
 import Foundation
 
 public enum RecordingDisplayFormatter {
+    public static func recordingTitle(_ rawTitle: String, sequenceNumber: Int?) -> String {
+        let title = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard title.isEmpty || title.localizedCaseInsensitiveCompare("Untitled recording") == .orderedSame else {
+            return title
+        }
+
+        guard let sequenceNumber else {
+            return title.isEmpty ? "Untitled recording" : title
+        }
+
+        return "Recording #\(sequenceNumber)"
+    }
+
+    public static func sourceAppText(_ rawSource: String) -> String {
+        let source = rawSource.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = source.lowercased()
+
+        if normalized == "zoom"
+            || normalized == "zoom.us"
+            || normalized == "us.zoom.xos"
+            || normalized.contains("zoom workplace") {
+            return "Zoom"
+        }
+
+        return source.isEmpty ? "Unknown" : source
+    }
+
     public static func statusText(_ status: TaggingStatus) -> String {
         switch status {
         case .needsTagging:

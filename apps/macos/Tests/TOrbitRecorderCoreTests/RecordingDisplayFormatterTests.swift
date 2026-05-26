@@ -11,6 +11,22 @@ struct RecordingDisplayFormatterTests {
     }
 
     @Test
+    func numbersDefaultRecordingTitles() {
+        #expect(RecordingDisplayFormatter.recordingTitle("Untitled recording", sequenceNumber: 14) == "Recording #14")
+        #expect(RecordingDisplayFormatter.recordingTitle("  ", sequenceNumber: 3) == "Recording #3")
+        #expect(RecordingDisplayFormatter.recordingTitle("Screening: ACME", sequenceNumber: 14) == "Screening: ACME")
+        #expect(RecordingDisplayFormatter.recordingTitle("Untitled recording", sequenceNumber: nil) == "Untitled recording")
+    }
+
+    @Test
+    func normalizesZoomSourceForUi() {
+        #expect(RecordingDisplayFormatter.sourceAppText("zoom.us") == "Zoom")
+        #expect(RecordingDisplayFormatter.sourceAppText("Zoom Workplace") == "Zoom")
+        #expect(RecordingDisplayFormatter.sourceAppText("us.zoom.xos") == "Zoom")
+        #expect(RecordingDisplayFormatter.sourceAppText("TOrbitRecorder") == "TOrbitRecorder")
+    }
+
+    @Test
     func formatsDurationForRecorderUi() {
         #expect(RecordingDisplayFormatter.duration(0) == "00:00")
         #expect(RecordingDisplayFormatter.duration(75) == "01:15")

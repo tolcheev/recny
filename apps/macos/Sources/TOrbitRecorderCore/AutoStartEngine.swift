@@ -323,7 +323,7 @@ public struct AutoStartEngine: Sendable {
         settings: AutoStartSettings
     ) -> AutoStartDecision {
         let source = RecordingSource(
-            appName: app.name,
+            appName: sourceAppName(for: app),
             bundleID: app.bundleID,
             trigger: "autostart",
             ruleID: signal.ruleID,
@@ -438,10 +438,20 @@ public struct AutoStartEngine: Sendable {
         for app: ActiveApplicationSnapshot,
         audioActivity: AudioActivitySnapshot
     ) -> AutoStartSignal? {
-        guard isZoom(app),
-              audioActivity.microphoneActive,
-              audioActivity.systemAudioActive
-        else {
+        guard isZoom(app), audioActivity.microphoneActive else {
+            return nil
+        }
+
+        if zoomMeetingWindowLooksActive(app) == true {
+            return AutoStartSignal(
+                ruleID: "autostart.v2.zoom",
+                confidence: "high",
+                reason: "Zoom meeting window detected with microphone activity.",
+                startsImmediately: true
+            )
+        }
+
+        guard audioActivity.systemAudioActive else {
             return nil
         }
 
@@ -592,6 +602,34 @@ public struct AutoStartEngine: Sendable {
 
     private func candidateKey(for app: ActiveApplicationSnapshot) -> String {
         "\(normalize(app.bundleID))|\(normalize(app.name))|\(normalize(app.windowTitle ?? ""))"
+    }
+
+    private func sourceAppName(for app: ActiveApplicationSnapshot) -> String {
+        if isZoom(app) {
+            return "Zoom"
+        }
+
+        return app.name
+    }
+
+    private func zoomMeetingWindowLooksActive(_ app: ActiveApplicationSnapshot) -> Bool? {
+        guard let title = app.windowTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !title.isEmpty
+        else {
+            return nil
+        }
+
+        let normalizedTitle = title.lowercased()
+        return normalizedTitle.contains("meeting")
+            || normalizedTitle.contains("conference")
+            || normalizedTitle.contains("конференц")
+            || normalizedTitle.contains("встреч")
+            || normalizedTitle.contains("waiting room")
+            || normalizedTitle.contains("зал ожидания")
+            || normalizedTitle.contains("participants")
+            || normalizedTitle.contains("участник")
+            || normalizedTitle.contains("share screen")
+            || normalizedTitle.contains("поделиться")
     }
 
     private func tokens(for app: ActiveApplicationSnapshot) -> [String] {

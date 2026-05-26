@@ -184,7 +184,7 @@ If macOS reports that approval is required, open System Settings -> General -> L
 
 Auto-started Zoom recordings are not tied to Zoom being the foreground window. You can switch to browser, notes, IDE, or slides during a call and the app keeps the recording active.
 
-For Zoom, auto-stop now prefers Zoom window state. A meeting/conference window keeps recording active, while the main Zoom home/workplace window starts the 30 second stop timer. If macOS does not expose Zoom window titles, the app falls back to microphone/system-audio activity. Manual recordings do not auto-stop; they only stop from the Stop button, menu item, or app-active shortcut.
+For Zoom, auto-stop now prefers Zoom window state. A meeting/conference window keeps recording active, while the main Zoom home/workplace window starts the 30 second stop timer. If macOS does not expose Zoom window titles, the Zoom fallback ignores microphone activity from T-Orbit Recorder itself and keeps recording only while system audio is still active. Manual recordings do not auto-stop; they only stop from the Stop button, menu item, or app-active shortcut.
 
 ## Uninstall
 
@@ -267,6 +267,8 @@ open -n apps/macos/.build/app/TOrbitRecorder.app
 ```
 
 The app runs as a menu bar app. Use the menu bar icon for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Library, Open Records, Settings, Diagnostics, and Quit. `Open Library` opens the user-facing `Library/` folder, not the internal root with `db`, `logs`, and `Inbox`. `Open Records` opens the in-app searchable records list.
+
+Records shows default untitled recordings as `Recording #N` so the list is scannable before a human title is added. Source app names are normalized for display, so auto-started Zoom calls appear as `Zoom` instead of raw bundle names like `zoom.us`.
 
 For normal dev usage prefer:
 

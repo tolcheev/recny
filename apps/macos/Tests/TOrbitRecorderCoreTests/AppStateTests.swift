@@ -189,11 +189,52 @@ struct AppStateTests {
         try await appState.stopRecording()
         let draft = try #require(appState.postCallDraft)
         let metadata = try FileSystemRecordingStore(rootURL: outputFolder).readMetadata(at: draft.metadataURL)
-        #expect(metadata.source.appName == "zoom.us")
+        #expect(metadata.source.appName == "Zoom")
         #expect(metadata.source.bundleID == "us.zoom.xos")
         #expect(metadata.source.trigger == "autostart")
         #expect(metadata.source.ruleID == "autostart.v2.zoom")
         #expect(metadata.source.reason == "Zoom call detected with microphone and system audio activity.")
+    }
+
+    @Test
+    func autoStartUsesZoomMeetingSourceWhenUserSwitchedWindowsBeforeSystemAudioSpeaks() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let zoom = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoom],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        try await appState.stopRecording()
+        let draft = try #require(appState.postCallDraft)
+        let metadata = try FileSystemRecordingStore(rootURL: outputFolder).readMetadata(at: draft.metadataURL)
+        #expect(metadata.source.appName == "Zoom")
+        #expect(metadata.source.bundleID == "us.zoom.xos")
+        #expect(metadata.source.trigger == "autostart")
+        #expect(metadata.source.ruleID == "autostart.v2.zoom")
+        #expect(metadata.source.reason == "Zoom meeting window detected with microphone activity.")
     }
 
     @Test
@@ -325,6 +366,60 @@ struct AppStateTests {
             activeApplication: codex,
             runningApplications: [zoomHome],
             audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(55)
+        )
+
+        #expect(appState.status == .idle)
+        #expect(appState.autoStartNotificationMessage == "Recording stopped: call ended")
+    }
+
+    @Test
+    func autoStartedZoomRecordingStopsWhenZoomHasNoMeetingWindowAndOnlyRecorderMicIsActive() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let zoomMeeting = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let zoomIdle = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: nil
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomMeeting,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomIdle],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+            now: startedAt.addingTimeInterval(20)
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomIdle],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
             now: startedAt.addingTimeInterval(55)
         )
 

@@ -162,6 +162,8 @@ plutil -p metadata.json
 - [ ] Library opens the user-facing recordings folder in Finder.
 - [ ] Records opens as a separate window.
 - [ ] Records shows recent recordings.
+- [ ] Default untitled rows are numbered as `Recording #N`.
+- [ ] Long badges/details wrap cleanly and do not hide row actions.
 - [ ] Records search works for title, participant, tags, and source app.
 - [ ] Records filters are collapsed by default.
 - [ ] Records filters include status, date range, source app, tags, and audio health.
@@ -191,11 +193,13 @@ plutil -p metadata.json
 - [ ] Join or simulate a call with microphone active.
 - [ ] Switch to another app while Zoom keeps running.
 - [ ] Recording starts automatically, or Ask first prompt appears.
-- [ ] Metadata source app is `Zoom` or `zoom.us`, not `TOrbitRecorder`.
+- [ ] Records source displays `Zoom`, not `TOrbitRecorder`.
+- [ ] New metadata source app is `Zoom`, not `TOrbitRecorder`.
 - [ ] Metadata source trigger is `autostart`.
 - [ ] Metadata includes rule id, confidence, and human-readable reason.
 - [ ] End the Zoom conference while leaving the Zoom app open.
 - [ ] Recording auto-stops after the grace period when Zoom returns to its home/workplace window.
+- [ ] If Zoom remains open but no meeting window is visible, recording auto-stops after the grace period even if TOrbitRecorder is still reading the microphone.
 
 ### Browser Call
 

@@ -121,7 +121,7 @@ struct AutoStartEngineTests {
 
         #expect(decision.action == .start)
         #expect(decision.reason == .startRecording)
-        #expect(decision.recordingSource?.appName == "zoom.us")
+        #expect(decision.recordingSource?.appName == "Zoom")
         #expect(decision.recordingSource?.bundleID == "us.zoom.xos")
         #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom")
         #expect(decision.recordingSource?.reason == "Zoom recently active with system audio activity.")
@@ -206,7 +206,7 @@ struct AutoStartEngineTests {
     }
 
     @Test
-    func runningZoomStartsAfterUserSwitchesToAnotherWindow() {
+    func runningZoomStartsAfterUserSwitchesToAnotherWindowWithSystemAudio() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(
             isEnabled: true,
@@ -232,10 +232,47 @@ struct AutoStartEngineTests {
 
         #expect(decision.action == .start)
         #expect(decision.reason == .startRecording)
-        #expect(decision.recordingSource?.appName == "zoom.us")
+        #expect(decision.recordingSource?.appName == "Zoom")
         #expect(decision.recordingSource?.bundleID == "us.zoom.xos")
         #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom")
         #expect(decision.recordingSource?.reason == "Zoom call detected with microphone and system audio activity.")
+    }
+
+    @Test
+    func runningZoomMeetingStartsAfterUserSwitchesWindowsEvenBeforeSystemAudioSpeaks() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 20
+        )
+        let zoom = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: codex,
+                runningApplications: [zoom],
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.reason == .startRecording)
+        #expect(decision.recordingSource?.appName == "Zoom")
+        #expect(decision.recordingSource?.bundleID == "us.zoom.xos")
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom")
+        #expect(decision.recordingSource?.reason == "Zoom meeting window detected with microphone activity.")
     }
 
     @Test
@@ -266,7 +303,7 @@ struct AutoStartEngineTests {
 
         #expect(decision.action == .start)
         #expect(decision.reason == .startRecording)
-        #expect(decision.recordingSource?.appName == "zoom.us")
+        #expect(decision.recordingSource?.appName == "Zoom")
         #expect(decision.recordingSource?.confidence == "high")
     }
 

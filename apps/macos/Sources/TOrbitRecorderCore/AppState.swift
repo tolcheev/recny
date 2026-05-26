@@ -858,6 +858,8 @@ public final class AppState: ObservableObject {
             if let zoomMeetingWindowIsActive = zoomMeetingWindowLooksActive(zoomSnapshots) {
                 return zoomMeetingWindowIsActive
             }
+
+            return audioActivity.systemAudioActive
         }
 
         return audioActivity.microphoneActive || audioActivity.systemAudioActive
