@@ -85,9 +85,13 @@ public enum RecordingPermissionDisplay {
         settingsOpened: Bool,
         lastErrorMessage: String?
     ) -> RecorderPermissionState {
+        if processGranted {
+            return .granted
+        }
+
         if let lastErrorMessage,
            isDeniedSystemAudioError(lastErrorMessage) {
-            return processGranted || settingsOpened ? .restartRequired : .denied
+            return settingsOpened ? .restartRequired : .denied
         }
 
         if let lastErrorMessage,
@@ -95,11 +99,6 @@ public enum RecordingPermissionDisplay {
             return .restartRequired
         }
 
-        // CGPreflightScreenCaptureAccess can be true while Core Audio process-tap
-        // system audio permission has not been requested yet. Treat the raw
-        // preflight signal as advisory only; AppState promotes this state to
-        // granted after the explicit Core Audio permission probe succeeds.
-        _ = processGranted
         return .notDetermined
     }
 

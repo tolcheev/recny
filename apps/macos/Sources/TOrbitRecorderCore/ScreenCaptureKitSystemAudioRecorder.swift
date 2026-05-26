@@ -22,7 +22,23 @@ public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sen
     }
 
     public static func requestSystemAudioAccess() async throws {
+        try await requestScreenCaptureKitAccess()
         try CoreAudioProcessTapSystemAudioRecorder.requestSystemAudioAccess()
+    }
+
+    private static func requestScreenCaptureKitAccess() async throws {
+        do {
+            AppLogger.file(.info, category: "permissions", "system audio permission request via ScreenCaptureKit started")
+            _ = try await SCShareableContent.excludingDesktopWindows(
+                false,
+                onScreenWindowsOnly: true
+            )
+            AppLogger.file(.info, category: "permissions", "system audio permission request via ScreenCaptureKit finished")
+        } catch {
+            throw RecordingControllerError.systemAudioPermissionDenied(
+                "Screen & System Audio Recording permission is unavailable: \(String(describing: error))"
+            )
+        }
     }
 
     public static var assetWriterAudioSettings: [String: Any] {

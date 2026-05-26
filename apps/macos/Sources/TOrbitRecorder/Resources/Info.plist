@@ -33,7 +33,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>T-Orbit Recorder needs microphone access to record your side of calls.</string>
 	<key>NSScreenCaptureUsageDescription</key>
-	<string>T-Orbit Recorder does not record screen video in the MVP. This permission is reserved for future explicit screen recording mode.</string>
+	<string>T-Orbit Recorder needs Screen &amp; System Audio Recording access to capture call audio played by macOS apps.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

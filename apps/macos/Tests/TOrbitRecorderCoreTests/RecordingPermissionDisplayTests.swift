@@ -35,14 +35,14 @@ struct RecordingPermissionDisplayTests {
     }
 
     @Test
-    func screenCapturePreflightAloneDoesNotGrantCoreAudioSystemAudio() {
+    func screenCapturePreflightGrantedMapsToGrantedSystemAudio() {
         let state = RecordingPermissionDisplay.screenSystemAudioState(
             processGranted: true,
             settingsOpened: false,
             lastErrorMessage: nil
         )
 
-        #expect(state == .notDetermined)
+        #expect(state == .granted)
     }
 
     @Test
@@ -57,14 +57,25 @@ struct RecordingPermissionDisplayTests {
     }
 
     @Test
-    func legacyScreenCaptureKitPermissionErrorDoesNotGrantCoreAudioSystemAudio() {
+    func grantedPreflightWinsOverStaleSystemAudioError() {
+        let state = RecordingPermissionDisplay.screenSystemAudioState(
+            processGranted: true,
+            settingsOpened: false,
+            lastErrorMessage: "Core Audio system audio access denied"
+        )
+
+        #expect(state == .granted)
+    }
+
+    @Test
+    func screenCaptureKitPermissionErrorDoesNotOverrideGrantedPreflight() {
         let state = RecordingPermissionDisplay.screenSystemAudioState(
             processGranted: true,
             settingsOpened: false,
             lastErrorMessage: "Screen & System Audio Recording permission is unavailable: Пользователь отклонил положения и условия захвата приложения, окна или дисплея (domain: com.apple.ScreenCaptureKit.SCStreamErrorDomain, code: -3801)"
         )
 
-        #expect(state == .notDetermined)
+        #expect(state == .granted)
     }
 
     @Test

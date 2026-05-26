@@ -227,11 +227,11 @@ Grant permissions in macOS System Settings:
 
 If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
 
-If System audio is `Not determined` or `Missing`, click the main `Fix Permissions` button. The app runs a lightweight Core Audio permission probe that should show the macOS system-audio prompt before any recording folder is created. `Start Recording` should remain unavailable until this permission is granted.
+If System audio is `Not determined` or `Missing`, click the main `Fix Permissions` button. The app requests Screen & System Audio Recording access through ScreenCaptureKit before any recording folder is created. `Start Recording` should remain unavailable until this permission is granted.
 
 After either macOS permission prompt closes, T-Orbit Recorder should bring the existing main window back to the front. If the window is still behind another app, use the menu bar icon -> `Show Window`; the process should not quit and Diagnostics should not open automatically.
 
-After that probe succeeds, the app persists a local "system audio probe succeeded" state for the current installed build. This is intentional: on macOS Sequoia, the Core Audio system-audio permission can be granted even when the older screen-capture preflight API still reports `false`. Rebuilt ad-hoc packages must probe again so an older approved binary cannot make a new build look granted before macOS accepts it. If a real recording start later fails with a system-audio permission error, the app clears the persisted state and returns to onboarding.
+After the ScreenCaptureKit request succeeds, or macOS preflight already reports the current bundle as approved, the app treats system audio as ready. If a real recording start later fails with a system-audio permission error, the app clears the persisted state and returns to onboarding.
 
 Expected first-launch flow:
 
