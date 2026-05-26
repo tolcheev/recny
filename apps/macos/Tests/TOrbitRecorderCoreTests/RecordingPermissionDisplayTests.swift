@@ -229,7 +229,7 @@ struct RecordingPermissionDisplayTests {
             )
         )
         #expect(
-            PermissionPromptSequencePolicy.shouldRefocusMainWindow(
+            !PermissionPromptSequencePolicy.shouldRefocusMainWindow(
                 after: .systemAudio,
                 next: nil
             )

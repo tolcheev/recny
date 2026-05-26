@@ -153,12 +153,7 @@ enum PermissionActionHandler {
             return false
         } else {
             await waitForMicrophoneGrant(appState: appState)
-            if PermissionPromptSequencePolicy.shouldRefocusMainWindow(
-                after: .microphone,
-                next: nextPrompt
-            ) {
-                refocusMainWindowAfterPermissionPrompt()
-            }
+            refocusMainWindowIfAllowed(after: .microphone, nextPrompt: nextPrompt)
         }
 
         return true
@@ -175,17 +170,32 @@ enum PermissionActionHandler {
                 await waitBeforeSystemAudioPermissionPrompt()
                 try await ScreenCaptureKitSystemAudioRecorder.requestSystemAudioAccess()
                 appState.noteSystemAudioPermissionRequestSucceeded()
-                refocusMainWindowAfterPermissionPrompt()
+                refocusMainWindowIfAllowed(after: .systemAudio)
             } catch {
                 AppLogger.file(.error, category: "permissions", "system audio permission request failed error=\(String(describing: error))")
                 appState.noteSystemAudioPermissionRequestFailed(error)
-                refocusMainWindowAfterPermissionPrompt()
+                refocusMainWindowIfAllowed(after: .systemAudio)
             }
             return appState.permissionSnapshot.screenSystemAudio == .granted
         case .denied, .restartRequired, .unknown:
             openScreenSystemAudioSettings(appState: appState)
             return false
         }
+    }
+
+    private static func refocusMainWindowIfAllowed(
+        after completedPrompt: PermissionPromptKind,
+        nextPrompt: PermissionPromptKind? = nil
+    ) {
+        guard PermissionPromptSequencePolicy.shouldRefocusMainWindow(
+            after: completedPrompt,
+            next: nextPrompt
+        ) else {
+            AppLogger.file(.info, category: "permissions", "skipping main window refocus after \(completedPrompt) permission prompt")
+            return
+        }
+
+        refocusMainWindowAfterPermissionPrompt()
     }
 
     private static func refocusMainWindowAfterPermissionPrompt() {
