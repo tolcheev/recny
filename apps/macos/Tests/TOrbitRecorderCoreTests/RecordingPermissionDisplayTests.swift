@@ -176,7 +176,7 @@ struct RecordingPermissionDisplayTests {
             PermissionOnboardingFormatter.explanation(
                 for: .screenSystemAudio,
                 state: .notDetermined
-            ) == "Use Fix Permissions to request system audio access before recording."
+            ) == "Use Fix Permissions to request system audio access before recording. macOS may ask you to enable it in System Settings."
         )
         #expect(
             PermissionOnboardingFormatter.inlineActionTitle(
@@ -212,5 +212,38 @@ struct RecordingPermissionDisplayTests {
                 bundlePath: "/Applications/TOrbitRecorder.app"
             ).contains("open \"/Applications/TOrbitRecorder.app\"")
         )
+    }
+
+    @Test
+    func skipsMainWindowRefocusBetweenMicrophoneAndSystemAudioPrompts() {
+        #expect(
+            !PermissionPromptSequencePolicy.shouldRefocusMainWindow(
+                after: .microphone,
+                next: .systemAudio
+            )
+        )
+        #expect(
+            PermissionPromptSequencePolicy.shouldRefocusMainWindow(
+                after: .microphone,
+                next: nil
+            )
+        )
+        #expect(
+            PermissionPromptSequencePolicy.shouldRefocusMainWindow(
+                after: .systemAudio,
+                next: nil
+            )
+        )
+    }
+
+    @Test
+    func restartCommandWaitsForCurrentProcessToExitBeforeOpeningBundle() {
+        let command = AppRestartCommand.shellCommand(
+            currentProcessID: 12345,
+            bundlePath: "/Applications/TOrbitRecorder.app"
+        )
+
+        #expect(command.contains("while /bin/kill -0 12345"))
+        #expect(command.contains("/usr/bin/open -n '/Applications/TOrbitRecorder.app'"))
     }
 }

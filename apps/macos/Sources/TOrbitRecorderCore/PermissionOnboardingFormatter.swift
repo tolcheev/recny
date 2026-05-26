@@ -47,7 +47,7 @@ public enum PermissionOnboardingFormatter {
         case (.screenSystemAudio, .missing):
             return "Required for source/system.m4a and mixed preview. Request access before recording."
         case (.screenSystemAudio, .notDetermined):
-            return "Use Fix Permissions to request system audio access before recording."
+            return "Use Fix Permissions to request system audio access before recording. macOS may ask you to enable it in System Settings."
         case (.screenSystemAudio, .unknown):
             return "T-Orbit Recorder cannot determine system audio permission."
 

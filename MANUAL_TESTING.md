@@ -227,9 +227,9 @@ Grant permissions in macOS System Settings:
 
 If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
 
-If System audio is `Not determined` or `Missing`, click the main `Fix Permissions` button. The app requests Screen & System Audio Recording access through ScreenCaptureKit before any recording folder is created. `Start Recording` should remain unavailable until this permission is granted.
+If System audio is `Not determined` or `Missing`, click the main `Fix Permissions` button. The app requests Screen & System Audio Recording access through ScreenCaptureKit before any recording folder is created. On macOS Sequoia, this prompt may ask you to open System Settings and enable the toggle instead of showing a simple `Allow` button. `Start Recording` should remain unavailable until this permission is granted.
 
-After either macOS permission prompt closes, T-Orbit Recorder should bring the existing main window back to the front. If the window is still behind another app, use the menu bar icon -> `Show Window`; the process should not quit and Diagnostics should not open automatically.
+The app should not bring its main window to the front between the microphone prompt and the system-audio prompt. This keeps the second macOS prompt visible instead of opening behind the app. After the permission sequence finishes, T-Orbit Recorder should bring the existing main window back to the front. If the window is still behind another app, use the menu bar icon -> `Show Window`; the process should not quit and Diagnostics should not open automatically.
 
 After the ScreenCaptureKit request succeeds, or macOS preflight already reports the current bundle as approved, the app treats system audio as ready. If a real recording start later fails with a system-audio permission error, the app clears the persisted state and returns to onboarding.
 
@@ -237,9 +237,9 @@ Expected first-launch flow:
 
 1. Click `Fix Permissions`.
 2. Approve the microphone prompt if macOS shows it.
-3. Approve the system-audio prompt when macOS shows it.
-4. Confirm the app returns to the same main window after each prompt instead of disappearing or opening Diagnostics automatically.
-5. If onboarding shows `Restart required`, restart the same app bundle.
+3. Approve the system-audio prompt when macOS shows it, or open System Settings and enable `TOrbitRecorder` if macOS uses the Settings-style prompt.
+4. Confirm the app does not cover the system-audio prompt after microphone approval.
+5. If onboarding shows `Restart required`, click `Restart App`; the app should quit and reopen `/Applications/TOrbitRecorder.app` by itself.
 6. Confirm the main button changes back to `Start Recording`.
 
 If system audio is denied or still missing after a failed start:
@@ -247,7 +247,7 @@ If system audio is denied or still missing after a failed start:
 1. Click `Open System Audio Settings`.
 2. Enable `TOrbitRecorder`.
 3. Return to the app.
-4. If the app shows `Permission is enabled. Restart T-Orbit Recorder to apply it.`, click `Restart App` in onboarding or quit from the menu bar.
+4. If the app shows `Permission is enabled. Restart T-Orbit Recorder to apply it.`, click `Restart App` in onboarding. It should reopen `/Applications/TOrbitRecorder.app` after the old process exits.
 5. Reopen the same app bundle shown by onboarding. Normal manual test path:
 
 ```sh

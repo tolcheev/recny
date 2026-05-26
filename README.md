@@ -225,11 +225,11 @@ osascript -e 'tell application id "com.torbit.recorder" to quit' || true
 open /Applications/TOrbitRecorder.app
 ```
 
-macOS often requires a process restart after this permission changes. The app now blocks duplicate launches and points you back to the already-running copy.
+macOS often requires a process restart after this permission changes. Use the in-app `Restart App` button when it is shown; the app waits for the current process to exit and then reopens `/Applications/TOrbitRecorder.app`.
 
 If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in the system-audio section once, then restart `/Applications/TOrbitRecorder.app`.
 
-On first launch, use `Fix Permissions` before recording. It requests microphone access and then requests Screen & System Audio Recording access through ScreenCaptureKit, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created. If macOS has already granted system-audio access for the current bundle, the app can skip the second prompt and mark system audio as ready from the macOS preflight check. After each macOS permission prompt closes, the app requests focus for the existing main window again. This flow stays on the main window when the checks finish and no longer opens Diagnostics automatically.
+On first launch, use `Fix Permissions` before recording. It requests microphone access and then requests Screen & System Audio Recording access through ScreenCaptureKit, so the macOS system-audio prompt appears before `Start Recording` is available and before any recording folder is created. On macOS Sequoia, the system-audio prompt may ask you to open System Settings instead of showing a simple `Allow` button; that is expected for this permission. If macOS has already granted system-audio access for the current bundle, the app can skip the second prompt and mark system audio as ready from the macOS preflight check. The app does not raise its main window between the microphone prompt and the system-audio prompt, which prevents the second macOS prompt from opening behind the app.
 
 After the ScreenCaptureKit permission request or macOS preflight succeeds, T-Orbit Recorder treats system-audio capture as ready for the current bundle. A real recorder permission failure clears the remembered state and sends the user back to onboarding. If an ad-hoc rebuild changes the code-signing hash, macOS can require approval again even when an older `TOrbitRecorder` entry is still visible in System Settings.
 

@@ -50,7 +50,10 @@ enum PermissionActionHandler {
         let reopenedBundlePath = FileManager.default.fileExists(atPath: "/Applications/TOrbitRecorder.app")
             ? "/Applications/TOrbitRecorder.app"
             : bundlePath
-        let shellCommand = "sleep 0.8; open \(shellQuoted(reopenedBundlePath))"
+        let shellCommand = AppRestartCommand.shellCommand(
+            currentProcessID: ProcessInfo.processInfo.processIdentifier,
+            bundlePath: reopenedBundlePath
+        )
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -81,7 +84,12 @@ enum PermissionActionHandler {
 
         if appState.permissionSnapshot.microphone != .granted {
             appState.updatePermissionOnboardingMessage("Requesting microphone access...")
-            let microphoneGranted = await requestMicrophoneAccessOrOpenSettings(appState: appState)
+            let willRequestSystemAudioAfterMicrophone = appState.recordingSettings.systemAudioEnabled
+                && appState.permissionSnapshot.screenSystemAudio != .granted
+            let microphoneGranted = await requestMicrophoneAccessOrOpenSettings(
+                appState: appState,
+                nextPrompt: willRequestSystemAudioAfterMicrophone ? .systemAudio : nil
+            )
             guard microphoneGranted else {
                 appState.completePermissionOnboarding(
                     message: "Microphone access is still required.",
@@ -126,14 +134,17 @@ enum PermissionActionHandler {
         AppLogger.file(.info, category: "permissions", "permission onboarding completed without opening diagnostics")
     }
 
-    private static func requestMicrophoneAccessOrOpenSettings(appState: AppState) async -> Bool {
+    private static func requestMicrophoneAccessOrOpenSettings(
+        appState: AppState,
+        nextPrompt: PermissionPromptKind? = nil
+    ) async -> Bool {
         guard appState.permissionSnapshot.microphone == .notDetermined else {
             openMicrophoneSettings(appState: appState)
             return appState.permissionSnapshot.microphone == .granted
         }
 
         AppLogger.file(.info, category: "permissions", "microphone permission request started from onboarding")
-        await focusMainWindowBeforePermissionPrompt()
+        await waitBeforeMicrophonePermissionPrompt()
         let granted = await AVCaptureDevice.requestAccess(for: .audio)
         AppLogger.file(.info, category: "permissions", "microphone permission request finished granted=\(granted)")
         appState.refreshPermissionSnapshot()
@@ -142,7 +153,12 @@ enum PermissionActionHandler {
             return false
         } else {
             await waitForMicrophoneGrant(appState: appState)
-            refocusMainWindowAfterPermissionPrompt()
+            if PermissionPromptSequencePolicy.shouldRefocusMainWindow(
+                after: .microphone,
+                next: nextPrompt
+            ) {
+                refocusMainWindowAfterPermissionPrompt()
+            }
         }
 
         return true
@@ -156,7 +172,7 @@ enum PermissionActionHandler {
         case .notDetermined, .missing:
             do {
                 AppLogger.file(.info, category: "permissions", "system audio permission request started from onboarding")
-                await focusMainWindowBeforePermissionPrompt()
+                await waitBeforeSystemAudioPermissionPrompt()
                 try await ScreenCaptureKitSystemAudioRecorder.requestSystemAudioAccess()
                 appState.noteSystemAudioPermissionRequestSucceeded()
                 refocusMainWindowAfterPermissionPrompt()
@@ -172,17 +188,6 @@ enum PermissionActionHandler {
         }
     }
 
-    private static func shellQuoted(_ value: String) -> String {
-        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
-    }
-
-    private static func focusMainWindowBeforePermissionPrompt() async {
-        AppLogger.file(.info, category: "permissions", "requesting main window focus before permission prompt")
-        NSApp.activate(ignoringOtherApps: true)
-        AppWindowRequest.postShowMainWindow(reason: .permissionPromptCompleted)
-        try? await Task.sleep(nanoseconds: 200_000_000)
-    }
-
     private static func refocusMainWindowAfterPermissionPrompt() {
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 200_000_000)
@@ -192,10 +197,18 @@ enum PermissionActionHandler {
     }
 
     private static func prepareForNextPermissionPrompt() async {
-        AppLogger.file(.info, category: "permissions", "waiting before next permission prompt")
-        NSApp.activate(ignoringOtherApps: true)
-        AppWindowRequest.postShowMainWindow(reason: .permissionPromptCompleted)
+        AppLogger.file(.info, category: "permissions", "waiting before next permission prompt without changing window z-order")
         try? await Task.sleep(nanoseconds: 1_000_000_000)
+    }
+
+    private static func waitBeforeSystemAudioPermissionPrompt() async {
+        AppLogger.file(.info, category: "permissions", "waiting before system audio permission prompt without changing window z-order")
+        try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+
+    private static func waitBeforeMicrophonePermissionPrompt() async {
+        AppLogger.file(.info, category: "permissions", "waiting before microphone permission prompt without changing window z-order")
+        try? await Task.sleep(nanoseconds: 150_000_000)
     }
 
     private static func waitForMicrophoneGrant(appState: AppState) async {
