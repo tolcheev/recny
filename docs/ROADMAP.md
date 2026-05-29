@@ -25,7 +25,7 @@ Still outside the MVP:
 
 - Telegram integration.
 - T-Orbit sync.
-- AI transcription.
+- Local transcription UX hardening and future cloud/sync transcription options.
 - Screen recording.
 - Windows client.
 - Browser URL or meeting-room detection.
@@ -109,7 +109,7 @@ Candidate work:
 - Action items.
 - Mentor-facing insights.
 
-AI is not in MVP.
+Automatic/cloud AI is not in MVP. Explicit local transcription is available only as a user-triggered action after optional local setup in Settings.
 
 ## Future: Windows Client
 
@@ -129,6 +129,6 @@ The GitHub issue tracker should carry separate follow-up issues for:
 
 - Telegram integration.
 - T-Orbit sync.
-- AI transcription.
+- Cloud/synced transcription.
 - Screen recording.
 - Windows client.

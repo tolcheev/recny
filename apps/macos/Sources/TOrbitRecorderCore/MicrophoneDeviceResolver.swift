@@ -39,7 +39,8 @@ public enum DevicePriorityCategory: Int, Sendable {
 
 public enum DevicePriorityResolver {
     public static let autoRecommendedID = ""
-    public static let bluetoothFallbackWarning = "Bluetooth microphone is used. Audio quality may be degraded."
+    public static let bluetoothBlockedWarning = "AirPods/Bluetooth microphone is blocked for recording. Connect the MacBook or USB microphone."
+    public static let bluetoothFallbackWarning = bluetoothBlockedWarning
 
     public static func resolve(
         devices: [MicrophoneInputDevice],
@@ -50,25 +51,21 @@ public enum DevicePriorityResolver {
             return nil
         }
 
-        let nonBluetooth = available.filter { !isBluetoothHeadset($0) }
+        let allowed = available.filter { !isBluetoothHeadset($0) }
+        guard !allowed.isEmpty else {
+            return nil
+        }
+
         if let preferredDeviceID,
            !preferredDeviceID.isEmpty,
-           let preferred = available.first(where: { $0.id == preferredDeviceID }),
-           !isBluetoothHeadset(preferred) || nonBluetooth.isEmpty {
-            return selection(for: preferred, hasNonBluetoothAlternative: !nonBluetooth.isEmpty)
+           let preferred = allowed.first(where: { $0.id == preferredDeviceID }) {
+            return selection(for: preferred)
         }
 
-        if !nonBluetooth.isEmpty {
-            return nonBluetooth
-                .sorted(by: sortByPriority)
-                .first
-                .map { selection(for: $0, hasNonBluetoothAlternative: true) }
-        }
-
-        return available
+        return allowed
             .sorted(by: sortByPriority)
             .first
-            .map { selection(for: $0, hasNonBluetoothAlternative: false) }
+            .map { selection(for: $0) }
     }
 
     public static func category(for device: MicrophoneInputDevice) -> DevicePriorityCategory {
@@ -92,7 +89,7 @@ public enum DevicePriorityResolver {
         recommendedDeviceID: String?
     ) -> String {
         if device.id == recommendedDeviceID {
-            return category(for: device) == .bluetoothHeadset ? "Bluetooth fallback" : "Recommended"
+            return category(for: device) == .bluetoothHeadset ? "Blocked" : "Recommended"
         }
 
         switch category(for: device) {
@@ -101,7 +98,7 @@ public enum DevicePriorityResolver {
         case .builtIn:
             return "Built-in"
         case .bluetoothHeadset:
-            return "Bluetooth fallback"
+            return "Blocked"
         case .otherInput:
             return "Available"
         }
@@ -112,26 +109,31 @@ public enum DevicePriorityResolver {
         selection: MicrophoneDeviceSelection?,
         preferredDeviceID: String?
     ) -> String {
+        let available = devices.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let hasBluetooth = available.contains(where: isBluetoothHeadset)
+        let hasAllowedInput = available.contains { !isBluetoothHeadset($0) }
+
         guard let selection else {
+            if !hasAllowedInput, hasBluetooth {
+                return bluetoothBlockedWarning
+            }
             return "No microphone input devices are available."
         }
 
-        let available = devices.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        let hasBluetooth = available.contains(where: isBluetoothHeadset)
         let selectedCategory = category(for: selection.device)
         let preferredWasRequested = preferredDeviceID?.isEmpty == false
         let preferredDevice = preferredWasRequested
             ? available.first(where: { $0.id == preferredDeviceID })
             : nil
 
-        if selection.isBluetoothFallback {
-            return "Only Bluetooth microphone is available."
-        }
-
         if let preferredDeviceID,
            !preferredDeviceID.isEmpty,
            selection.device.id == preferredDeviceID {
             return "Manual microphone selection is available."
+        }
+
+        if !hasAllowedInput, hasBluetooth {
+            return bluetoothBlockedWarning
         }
 
         if preferredWasRequested, preferredDevice == nil {
@@ -143,7 +145,7 @@ public enum DevicePriorityResolver {
             case .otherInput:
                 return "Preferred microphone is unavailable; auto selected the best available input."
             case .bluetoothHeadset:
-                return "Preferred microphone is unavailable; only Bluetooth microphone is available."
+                return "Preferred microphone is unavailable; AirPods/Bluetooth microphone is blocked."
             }
         }
 
@@ -163,7 +165,7 @@ public enum DevicePriorityResolver {
         case .otherInput:
             return "Auto selected the best available input."
         case .bluetoothHeadset:
-            return "Only Bluetooth microphone is available."
+            return bluetoothBlockedWarning
         }
     }
 
@@ -181,15 +183,11 @@ public enum DevicePriorityResolver {
         ].contains { name.contains($0) }
     }
 
-    private static func selection(
-        for device: MicrophoneInputDevice,
-        hasNonBluetoothAlternative: Bool
-    ) -> MicrophoneDeviceSelection {
-        let isBluetooth = isBluetoothHeadset(device)
+    private static func selection(for device: MicrophoneInputDevice) -> MicrophoneDeviceSelection {
         return MicrophoneDeviceSelection(
             device: device,
-            isBluetoothFallback: isBluetooth && !hasNonBluetoothAlternative,
-            warning: isBluetooth && !hasNonBluetoothAlternative ? bluetoothFallbackWarning : nil
+            isBluetoothFallback: false,
+            warning: nil
         )
     }
 
@@ -284,21 +282,23 @@ public enum MicrophoneInputRestorePolicy {
             return nil
         }
 
-        let hasNonBluetooth = available.contains { !DevicePriorityResolver.isBluetoothHeadset($0) }
+        let allowed = available.filter { !DevicePriorityResolver.isBluetoothHeadset($0) }
+        guard !allowed.isEmpty else {
+            return nil
+        }
+
         if let originalDeviceID,
-           let original = available.first(where: { $0.id == originalDeviceID }),
-           !DevicePriorityResolver.isBluetoothHeadset(original) || !hasNonBluetooth {
+           let original = allowed.first(where: { $0.id == originalDeviceID }) {
             return original
         }
 
         if let currentSelectedDeviceID,
-           let currentSelected = available.first(where: { $0.id == currentSelectedDeviceID }),
-           !DevicePriorityResolver.isBluetoothHeadset(currentSelected) {
+           let currentSelected = allowed.first(where: { $0.id == currentSelectedDeviceID }) {
             return currentSelected
         }
 
         return DevicePriorityResolver.resolve(
-            devices: available,
+            devices: allowed,
             preferredDeviceID: nil
         )?.device
     }
@@ -309,6 +309,11 @@ public enum MicrophoneInputRestorePolicy {
         originalDeviceID: String?
     ) -> String {
         guard let target else {
+            let available = devices.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            if !available.isEmpty,
+               available.allSatisfy(DevicePriorityResolver.isBluetoothHeadset) {
+                return "No non-Bluetooth microphone input is available for restore."
+            }
             return "No input device is available for microphone restore."
         }
 
@@ -373,7 +378,15 @@ public final class CoreAudioInputDeviceOverride {
             originalDeviceID: originalDeviceUID,
             currentSelectedDeviceID: currentSelectedDeviceUID
         )
-        let targetDeviceID = target.flatMap { Self.deviceID(forUID: $0.id) } ?? originalDeviceID
+        guard let targetDeviceID = target.flatMap({ Self.deviceID(forUID: $0.id) }) else {
+            AppLogger.file(
+                .warning,
+                category: "recording",
+                "microphone input restore skipped reason=\(MicrophoneInputRestorePolicy.restoreReason(devices: devices, target: target, originalDeviceID: originalDeviceUID))"
+            )
+            didChangeDefaultInput = false
+            return
+        }
 
         do {
             try Self.setDefaultInputDeviceID(targetDeviceID)

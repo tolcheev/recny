@@ -14,6 +14,7 @@ public enum AudioHealthWarning: String, Codable, CaseIterable, Identifiable, Sen
     case clippingDetected = "clipping_detected"
     case balancedMixFailed = "balanced_mix_failed"
     case onlyOneTrackAvailable = "only_one_track_available"
+    case systemTrackTruncated = "system_track_truncated"
 
     public var id: String {
         rawValue
@@ -48,7 +49,8 @@ public enum AudioHealthEvaluator {
         audioTracks: [AudioTrackMetadata],
         processing: AudioProcessingMetadata = .skipped,
         microphoneAnalysis: AudioLevelAnalysis? = nil,
-        systemAnalysis: AudioLevelAnalysis? = nil
+        systemAnalysis: AudioLevelAnalysis? = nil,
+        recordingDuration: TimeInterval? = nil
     ) -> AudioHealthMetadata {
         let microphoneTrack = audioTracks.first { $0.kind == "microphone" }
         let systemTrack = audioTracks.first { $0.kind == "system" }
@@ -88,6 +90,14 @@ public enum AudioHealthEvaluator {
             warnings.append(.balancedMixFailed)
         }
 
+        if isSystemTrackTruncated(
+            systemTrack,
+            systemAnalysis: systemAnalysis,
+            recordingDuration: recordingDuration
+        ) {
+            warnings.append(.systemTrackTruncated)
+        }
+
         let status: AudioHealthStatus
         if !microphoneAvailable && !systemAvailable {
             status = .failed
@@ -110,8 +120,7 @@ public enum AudioHealthEvaluator {
         }
 
         guard let track,
-              track.status == "completed",
-              (track.fileSizeBytes ?? 0) > 0
+              track.isUsableCompletedTrack
         else {
             return false
         }
@@ -155,5 +164,27 @@ public enum AudioHealthEvaluator {
         }
 
         return track?.signal?.clippingDetected == true
+    }
+
+    private static func isSystemTrackTruncated(
+        _ track: AudioTrackMetadata?,
+        systemAnalysis: AudioLevelAnalysis?,
+        recordingDuration: TimeInterval?
+    ) -> Bool {
+        guard let recordingDuration,
+              recordingDuration >= 60
+        else {
+            return false
+        }
+
+        let duration = systemAnalysis?.durationSec ?? track?.durationSec
+        guard let duration,
+              duration > 0
+        else {
+            return false
+        }
+
+        let missingSeconds = recordingDuration - duration
+        return missingSeconds >= 15 && duration < recordingDuration * 0.9
     }
 }

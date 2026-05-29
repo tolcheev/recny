@@ -51,7 +51,9 @@ public enum RecordingFinalizationPolicy {
             return emptyAudioFileReason
         }
 
-        guard track.status == "completed" else {
+        guard track.status == AudioTrackMetadata.completedStatus
+            || track.status == AudioTrackMetadata.completedWithWarningsStatus
+        else {
             if isEmptyAudioFailureMessage(track.error) {
                 return emptyAudioFileReason
             }

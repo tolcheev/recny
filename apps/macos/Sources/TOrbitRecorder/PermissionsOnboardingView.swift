@@ -6,16 +6,47 @@ struct PermissionsOnboardingView: View {
 
     var body: some View {
         RecorderCard {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Set up recording permissions")
-                    .font(.headline)
-                Text("T-Orbit Recorder needs local access before Start Recording is available.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
+            onboardingHeader
 
             PermissionChecklistContent(appState: appState)
         }
+    }
+
+    private var onboardingHeader: some View {
+        let isBlocked = appState.recordingStartBlockingReason != nil || !appState.isRecordingStartAllowed
+        let toneColor = isBlocked ? Color.red : Color.green
+
+        return VStack(alignment: .leading, spacing: 7) {
+            Label(
+                isBlocked ? "Recording is blocked" : "Recording permissions ready",
+                systemImage: isBlocked ? "exclamationmark.octagon.fill" : "checkmark.shield.fill"
+            )
+                .font(.headline)
+                .foregroundStyle(toneColor)
+
+            Text(isBlocked
+                 ? "T-Orbit Recorder needs local access before Start Recording is available."
+                 : "T-Orbit Recorder has the local access required for recording.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            if let blockingReason = appState.recordingStartBlockingReason {
+                Text(blockingReason)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(toneColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(toneColor.opacity(0.10))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(toneColor.opacity(0.55), lineWidth: 1.5)
+        )
     }
 }
 

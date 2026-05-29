@@ -28,6 +28,28 @@ struct AppStateTests {
     }
 
     @Test
+    func exposesCurrentSessionFolderForScreenshotsWhileRecording() async throws {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+
+        #expect(appState.currentSessionFolderURL == nil)
+        #expect(appState.preferredScreenshotFolderURL == nil)
+
+        try await appState.startRecording()
+
+        let activeFolder = try #require(appState.currentSessionFolderURL)
+        #expect(appState.preferredScreenshotFolderURL == activeFolder)
+
+        try await appState.stopRecording()
+
+        #expect(appState.currentSessionFolderURL == nil)
+        #expect(appState.preferredScreenshotFolderURL == appState.lastRecording?.sessionFolderURL)
+    }
+
+    @Test
     func stopRecordingShowsStoppingStateAndIgnoresDuplicateStop() async throws {
         let controller = DelayedStopRecordingController(stopDelay: .milliseconds(150))
         let appState = AppState(
@@ -160,6 +182,89 @@ struct AppStateTests {
     }
 
     @Test
+    func askFirstAutoStartWaitsForExplicitConfirmation() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                mode: .askFirst,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let activeApp = ActiveApplicationSnapshot(name: "Zoom", bundleID: "us.zoom.xos")
+        let audio = AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false)
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: activeApp,
+            audioActivity: audio,
+            now: startedAt
+        )
+
+        await appState.evaluateAutoStart(
+            activeApplication: activeApp,
+            audioActivity: audio,
+            now: startedAt.addingTimeInterval(15)
+        )
+
+        #expect(appState.status == .idle)
+        let prompt = try #require(appState.pendingAutoStartPrompt)
+        #expect(prompt.source.appName == "Zoom")
+        #expect(prompt.source.ruleID == "autostart.v2.zoom")
+        try await appState.confirmPendingAutoStart()
+
+        #expect(appState.pendingAutoStartPrompt == nil)
+        #expect(appState.status == .recording)
+
+        try await appState.stopRecording()
+        let draft = try #require(appState.postCallDraft)
+        let metadata = try FileSystemRecordingStore(rootURL: outputFolder).readMetadata(at: draft.metadataURL)
+        #expect(metadata.source.appName == "Zoom")
+        #expect(metadata.source.trigger == "autostart")
+    }
+
+    @Test
+    func ignorePendingAutoStartClearsPromptWithoutRecording() async throws {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                mode: .askFirst,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let activeApp = ActiveApplicationSnapshot(name: "Zoom", bundleID: "us.zoom.xos")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: activeApp,
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+            now: startedAt
+        )
+        await appState.evaluateAutoStart(
+            activeApplication: activeApp,
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+            now: startedAt.addingTimeInterval(15)
+        )
+
+        #expect(appState.pendingAutoStartPrompt != nil)
+
+        appState.ignorePendingAutoStart()
+
+        #expect(appState.pendingAutoStartPrompt == nil)
+        #expect(appState.status == .idle)
+    }
+
+    @Test
     func autoStartUsesRunningZoomAsRecordingSourceWhenUserSwitchedWindows() async throws {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(
@@ -238,7 +343,7 @@ struct AppStateTests {
     }
 
     @Test
-    func autoStartPublishesStartedNotificationForBrowserCall() async {
+    func autoStartStartsBrowserCallWithoutUserNotificationState() async {
         let outputFolder = Self.testOutputFolder()
         let appState = AppState(
             recordingController: StubRecordingController(),
@@ -273,7 +378,6 @@ struct AppStateTests {
         )
 
         #expect(appState.status == .recording)
-        #expect(appState.autoStartNotificationMessage == "Recording started: browser call detected")
     }
 
     @Test
@@ -315,7 +419,6 @@ struct AppStateTests {
         )
 
         #expect(appState.status == .idle)
-        #expect(appState.autoStartNotificationMessage == "Recording stopped: call ended")
         #expect(appState.postCallDraft != nil)
     }
 
@@ -370,7 +473,6 @@ struct AppStateTests {
         )
 
         #expect(appState.status == .idle)
-        #expect(appState.autoStartNotificationMessage == "Recording stopped: call ended")
     }
 
     @Test
@@ -424,7 +526,346 @@ struct AppStateTests {
         )
 
         #expect(appState.status == .idle)
-        #expect(appState.autoStartNotificationMessage == "Recording stopped: call ended")
+    }
+
+    @Test
+    func autoStopDelayDefaultsToTenSecondsAndShortensGracePeriod() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        #expect(appState.autoStartSettings.autoStopDelaySeconds == 10)
+
+        let zoomMeeting = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let zoomIdle = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "zoom Workplace"
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomMeeting,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        // Signal lost at t=20, grace = 10s, so at t=25 we are within grace.
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomIdle],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(20)
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomIdle],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(25)
+        )
+        #expect(appState.status == .recording)
+
+        // After 11s post signal-lost (>10s grace), must stop.
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomIdle],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(31)
+        )
+        #expect(appState.status == .idle)
+    }
+
+    @Test
+    func autoStartMonitoringPollsOftenEnoughForTenSecondAutoStop() {
+        #expect(AppState.defaultAutoStartMonitoringPollIntervalSeconds == 1)
+        #expect(AppState.defaultAutoStartMonitoringPollIntervalSeconds < AutoStartSettings.defaultAutoStopDelaySeconds)
+    }
+
+    @Test
+    func setAutoStopDelaySnapsToNearestAllowedValue() {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+
+        appState.setAutoStopDelaySeconds(30)
+        #expect(appState.autoStartSettings.autoStopDelaySeconds == 30)
+
+        appState.setAutoStopDelaySeconds(60)
+        #expect(appState.autoStartSettings.autoStopDelaySeconds == 60)
+
+        // Out-of-range values must snap to the closest allowed entry.
+        appState.setAutoStopDelaySeconds(45)
+        #expect([30.0, 60.0].contains(appState.autoStartSettings.autoStopDelaySeconds))
+
+        appState.setAutoStopDelaySeconds(0)
+        #expect(appState.autoStartSettings.autoStopDelaySeconds == 10)
+    }
+
+    @Test
+    func autoStartedZoomRecordingKeepsRunningWhenWindowTitlesAreNilAndSystemAudioIsActive() async throws {
+        // Real-world scenario: macOS Sequoia user granted only the
+        // System Audio Recording sub-permission so window titles are nil,
+        // and the Core Audio process tap keeps both default input and
+        // output devices in IsRunning=true. The user can switch to Safari,
+        // IDE, notes, or slides during a real call; unavailable window
+        // titles alone must not stop a Zoom recording while system audio
+        // is still active.
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let zoomMeeting = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let zoomBlind = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: nil
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomMeeting,
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomBlind],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(20)
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomBlind],
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(55)
+        )
+        #expect(appState.status == .recording)
+    }
+
+    @Test
+    func autoStartedZoomRecordingKeepsRunningWhenZoomProcessAudioIsActive() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let zoomMeeting = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let zoomBlind = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: nil
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomMeeting,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomBlind],
+            audioActivity: AudioActivitySnapshot(
+                microphoneActive: false,
+                systemAudioActive: false,
+                processActivities: [
+                    AudioProcessActivitySnapshot(
+                        processID: 44,
+                        bundleID: "us.zoom.ZoomDaemon",
+                        isRunningInput: false,
+                        isRunningOutput: true
+                    )
+                ]
+            ),
+            now: startedAt.addingTimeInterval(55)
+        )
+
+        #expect(appState.status == .recording)
+        try await appState.stopRecording()
+    }
+
+    @Test
+    func autoStartedZoomRecordingStopsWhenZoomProcessAudioStopsEvenIfGlobalAudioIsActive() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let zoomMeeting = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let zoomBlind = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: nil
+        )
+        let codex = ActiveApplicationSnapshot(name: "Codex", bundleID: "com.openai.codex")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomMeeting,
+            audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomBlind],
+            audioActivity: AudioActivitySnapshot(
+                microphoneActive: true,
+                systemAudioActive: true,
+                processActivities: [
+                    AudioProcessActivitySnapshot(
+                        processID: 44,
+                        bundleID: "us.zoom.xos",
+                        isRunningInput: false,
+                        isRunningOutput: false
+                    ),
+                    AudioProcessActivitySnapshot(
+                        processID: 55,
+                        bundleID: "com.apple.Music",
+                        isRunningInput: false,
+                        isRunningOutput: true
+                    )
+                ]
+            ),
+            now: startedAt.addingTimeInterval(20)
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: codex,
+            runningApplications: [zoomBlind],
+            audioActivity: AudioActivitySnapshot(
+                microphoneActive: true,
+                systemAudioActive: true,
+                processActivities: [
+                    AudioProcessActivitySnapshot(
+                        processID: 44,
+                        bundleID: "us.zoom.xos",
+                        isRunningInput: false,
+                        isRunningOutput: false
+                    ),
+                    AudioProcessActivitySnapshot(
+                        processID: 55,
+                        bundleID: "com.apple.Music",
+                        isRunningInput: false,
+                        isRunningOutput: true
+                    )
+                ]
+            ),
+            now: startedAt.addingTimeInterval(31)
+        )
+
+        #expect(appState.status == .idle)
+    }
+
+    @Test
+    func autoStartedZoomRecordingKeepsRunningWhenZoomIsFrontmostEvenWithoutWindowTitle() async throws {
+        // When window titles are unavailable but Zoom is frontmost, the
+        // user is interacting with the call — must keep recording.
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Zoom"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let zoomMeeting = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: "Zoom Meeting"
+        )
+        let zoomFrontmostNoTitle = ActiveApplicationSnapshot(
+            name: "zoom.us",
+            bundleID: "us.zoom.xos",
+            windowTitle: nil
+        )
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomMeeting,
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: zoomFrontmostNoTitle,
+            audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+            now: startedAt.addingTimeInterval(55)
+        )
+        #expect(appState.status == .recording)
+        try await appState.stopRecording()
     }
 
     @Test
@@ -675,7 +1116,7 @@ struct AppStateTests {
     }
 
     @Test
-    func cachedSystemAudioProbeDoesNotUnlockStartOnNewAppProcess() {
+    func cachedSystemAudioProbeUnlocksStartOnCurrentBuildRelaunch() {
         UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
         defer {
             UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
@@ -709,8 +1150,230 @@ struct AppStateTests {
             )
         )
 
+        #expect(relaunchedAppState.permissionSnapshot.screenSystemAudio == .granted)
+        #expect(relaunchedAppState.isRecordingStartAllowed)
+    }
+
+    @Test
+    func systemAudioPermissionRequestInProgressBlocksRecordingStartAndReady() {
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+
+        appState.noteSystemAudioPermissionRequestStarted()
+
+        #expect(appState.isSystemAudioPermissionRequestInProgress)
+        #expect(appState.permissionSnapshot.screenSystemAudio != .granted)
+        #expect(!appState.isRecordingStartAllowed)
+        #expect(appState.shouldShowPermissionsOnboarding)
+        #expect(appState.shouldShowPermissionChecklist)
+        #expect(
+            appState.recordingStartBlockingReason
+                == "Waiting for system audio permission. Click Allow on the macOS prompt."
+        )
+    }
+
+    @Test
+    func pendingSystemAudioProbeSuppressesCachedGrantPromotion() {
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
+        // Simulate cached "probe succeeded" from a previous launch.
+        let firstAppState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+        firstAppState.noteSystemAudioPermissionRequestSucceeded()
+        #expect(firstAppState.permissionSnapshot.screenSystemAudio == .granted)
+
+        // A new launch with cached UserDefaults flag must NOT immediately
+        // show Ready while a fresh permission request is in flight.
+        let relaunchedAppState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+        #expect(relaunchedAppState.permissionSnapshot.screenSystemAudio == .granted)
+        #expect(relaunchedAppState.isRecordingStartAllowed)
+
+        // Now start a new probe — Ready must disappear.
+        relaunchedAppState.noteSystemAudioPermissionRequestStarted()
+        #expect(relaunchedAppState.isSystemAudioPermissionRequestInProgress)
+        #expect(relaunchedAppState.permissionSnapshot.screenSystemAudio != .granted)
+        #expect(!relaunchedAppState.isRecordingStartAllowed)
+    }
+
+    @Test
+    func clearRecordingErrorIfPermissionsResolvedExitsErrorStateAfterGrant() async {
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
+        let appState = AppState(
+            recordingController: FailingRecordingController(
+                error: RecordingControllerError.preflightFailed("Microphone access is required before recording.")
+            ),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .notDetermined,
+                    screenSystemAudio: .granted,
+                    storage: .granted
+                )
+            )
+        )
+
+        await #expect(throws: RecordingControllerError.self) {
+            try await appState.startRecording()
+        }
+        #expect(appState.status == .error)
+
+        // Helper must not exit the error state while permissions are still
+        // blocking.
+        appState.clearRecordingErrorIfPermissionsResolved()
+        #expect(appState.status == .error)
+
+        // Now grant the missing permission. With the helper called, the
+        // app should leave the Recording failed panel.
+        let recoveredAppState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+        await #expect(throws: Never.self) {
+            try await recoveredAppState.startRecording()
+            try await recoveredAppState.stopRecording()
+        }
+        // Simulate a stale preflight failure prior to granting permissions.
+        recoveredAppState.applyTestErrorForPreflight()
+        #expect(recoveredAppState.status == .error)
+
+        recoveredAppState.clearRecordingErrorIfPermissionsResolved()
+        #expect(recoveredAppState.status == .idle)
+        #expect(recoveredAppState.errorMessage == nil)
+    }
+
+    @Test
+    func clearRecordingErrorIfPermissionsResolvedRespectsPendingSystemAudioProbe() {
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+        appState.applyTestErrorForPreflight()
+        #expect(appState.status == .error)
+
+        appState.noteSystemAudioPermissionRequestStarted()
+        // While the probe is pending we must NOT clear the error: the
+        // UI must remain in a blocked state until samples are verified.
+        appState.clearRecordingErrorIfPermissionsResolved()
+        #expect(appState.status == .error)
+
+        appState.noteSystemAudioPermissionRequestSucceeded()
+        appState.clearRecordingErrorIfPermissionsResolved()
+        #expect(appState.status == .idle)
+    }
+
+    @Test
+    func invalidateSystemAudioPermissionCacheDropsCachedGrantSoFixPermissionsReprobes() {
+        UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: Self.currentSystemAudioProbeKey)
+        }
+
+        // First run: probe succeeds and the persisted flag is written.
+        let firstAppState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+        firstAppState.noteSystemAudioPermissionRequestSucceeded()
+        #expect(firstAppState.permissionSnapshot.screenSystemAudio == .granted)
+
+        // Second launch: persisted flag still grants. But the user then
+        // clicks Fix Permissions and the system must re-verify.
+        let relaunchedAppState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker(
+                snapshot: RecorderPermissionSnapshot(
+                    microphone: .granted,
+                    screenSystemAudio: .notDetermined,
+                    storage: .granted
+                )
+            )
+        )
+        #expect(relaunchedAppState.permissionSnapshot.screenSystemAudio == .granted)
+
+        relaunchedAppState.invalidateSystemAudioPermissionCache()
+
         #expect(relaunchedAppState.permissionSnapshot.screenSystemAudio == .notDetermined)
         #expect(!relaunchedAppState.isRecordingStartAllowed)
+        // Persisted UserDefaults entry must also be cleared so a third
+        // launch does not auto-grant again.
+        #expect(UserDefaults.standard.bool(forKey: Self.currentSystemAudioProbeKey) == false)
+    }
+
+    @Test
+    func systemAudioFormatterReportsCheckingWhileProbePending() {
+        #expect(
+            RecordingDisplayFormatter.systemAudioText(
+                isEnabled: true,
+                permissionState: .granted,
+                captureStatus: .idle,
+                recordingStatus: .idle,
+                isPermissionRequestInProgress: true
+            ) == "Checking permission"
+        )
+        #expect(
+            RecordingDisplayFormatter.systemAudioText(
+                isEnabled: true,
+                permissionState: .notDetermined,
+                captureStatus: .idle,
+                recordingStatus: .idle,
+                isPermissionRequestInProgress: true
+            ) == "Checking permission"
+        )
     }
 
     @Test
@@ -838,6 +1501,43 @@ struct AppStateTests {
         #expect(appState.microphoneSelectionReason == "AirPods microphone avoided because external microphone is available.")
     }
 
+    @Test
+    func airPodsOnlyInputBlocksRecordingStartWithExplicitReason() {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted,
+            microphoneDeviceProvider: {
+                [MicrophoneInputDevice(id: "airpods", name: "AirPods Pro")]
+            }
+        )
+
+        #expect(appState.selectedMicrophoneName == "No input device")
+        #expect(appState.microphoneSelectionReason == "AirPods/Bluetooth microphone is blocked for recording. Connect the MacBook or USB microphone.")
+        #expect(appState.recordingStartBlockingReason == "AirPods/Bluetooth microphone is blocked for recording. Connect the MacBook or USB microphone.")
+        #expect(!appState.isRecordingStartAllowed)
+    }
+
+    @Test
+    func selectingPreferredAirPodsClearsManualMicrophonePreference() {
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted,
+            microphoneDeviceProvider: {
+                [
+                    MicrophoneInputDevice(id: "airpods", name: "AirPods Pro"),
+                    MicrophoneInputDevice(id: "builtin", name: "MacBook Pro Microphone")
+                ]
+            }
+        )
+
+        appState.setPreferredMicrophoneDeviceID("airpods")
+
+        #expect(appState.recordingSettings.microphoneDeviceID == nil)
+        #expect(appState.selectedMicrophoneName == "MacBook Pro Microphone")
+    }
+
     private static func testOutputFolder() -> URL {
         let packageRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -854,7 +1554,7 @@ struct AppStateTests {
         let fingerprint = "\(BuildInfo.appVersion).\(BuildInfo.gitCommit)"
             .replacingOccurrences(of: " ", with: "_")
             .replacingOccurrences(of: "/", with: "_")
-        return "com.torbit.recorder.systemAudioPermissionProbeSucceeded.\(fingerprint)"
+        return "com.torbit.recorder.systemAudioPermissionProbeSucceeded.\(fingerprint).core-audio-capture-start-v2"
     }
 }
 

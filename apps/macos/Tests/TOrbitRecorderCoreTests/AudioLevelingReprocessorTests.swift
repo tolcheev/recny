@@ -122,7 +122,7 @@ struct AudioLevelingReprocessorTests {
             title: "Old recording",
             startedAt: "2026-05-24T09:00:00Z",
             endedAt: "2026-05-24T09:01:00Z",
-            durationSec: 60,
+            durationSec: 1,
             audio: RecordingAudioMetadata(),
             audioTracks: [
                 existingTrack(kind: "microphone", relativePath: "source/mic.m4a", folder: sessionFolder),

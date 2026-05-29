@@ -39,6 +39,21 @@ struct TOrbitRecorderCommands: Commands {
                 KeyEquivalent(Character(KeyboardShortcutCatalog.openDiagnostics.keyEquivalent)),
                 modifiers: [.command, .shift]
             )
+
+            Button("Capture Full Screenshot") {
+                appDelegate.captureScreenshotFromShortcut()
+            }
+            .keyboardShortcut(
+                KeyEquivalent(Character(KeyboardShortcutCatalog.captureScreenshot.keyEquivalent)),
+                modifiers: [.command, .shift]
+            )
+        }
+
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings...") {
+                appDelegate.openSettingsFromShortcut()
+            }
+            .keyboardShortcut(",", modifiers: [.command])
         }
     }
 

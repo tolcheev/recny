@@ -80,6 +80,13 @@ enum PermissionActionHandler {
     private static func requestMissingPermissions(appState: AppState) async {
         appState.beginPermissionOnboarding(message: "Checking recording permissions...")
         appState.refreshMicrophoneDevices()
+        // The user explicitly asked to re-verify permissions. Drop the
+        // persisted "probe succeeded" cache so a TCC reset (or a stale
+        // approval) between launches cannot make us skip the system audio
+        // probe.
+        if appState.recordingSettings.systemAudioEnabled {
+            appState.invalidateSystemAudioPermissionCache()
+        }
         appState.refreshPermissionSnapshot()
 
         if appState.permissionSnapshot.microphone != .granted {
@@ -98,6 +105,9 @@ enum PermissionActionHandler {
                 return
             }
             appState.updatePermissionOnboardingMessage("Microphone access granted. Requesting system audio access...")
+            // Drop a stale `.error` state from a previous preflight failure
+            // so the UI can leave the Recording failed panel mid-flow.
+            appState.clearRecordingErrorIfPermissionsResolved()
             await prepareForNextPermissionPrompt()
         }
 
@@ -128,6 +138,7 @@ enum PermissionActionHandler {
             return
         }
 
+        appState.clearRecordingErrorIfPermissionsResolved()
         appState.completePermissionOnboarding(
             message: "Microphone and system audio access are ready. macOS skips prompts that were already granted."
         )
@@ -165,6 +176,10 @@ enum PermissionActionHandler {
         case .granted:
             return true
         case .notDetermined, .missing:
+            // Mark the request in-flight BEFORE any await so the UI cannot
+            // show Ready / enable Start Recording while the macOS prompt is
+            // on screen and the capture probe has not yet seen real samples.
+            appState.noteSystemAudioPermissionRequestStarted()
             do {
                 AppLogger.file(.info, category: "permissions", "system audio permission request started from onboarding")
                 await waitBeforeSystemAudioPermissionPrompt()

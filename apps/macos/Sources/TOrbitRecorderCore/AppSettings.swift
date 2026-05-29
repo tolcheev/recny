@@ -72,8 +72,8 @@ public struct RecordingSettings: Codable, Equatable, Sendable {
     ) {
         self.audioQualityPreset = audioQualityPreset
         self.microphoneDeviceID = microphoneDeviceID
-        self.systemAudioEnabled = systemAudioEnabled
-        self.mixedPreviewEnabled = mixedPreviewEnabled
+        self.systemAudioEnabled = true
+        self.mixedPreviewEnabled = true
         self.audioLevelingEnabled = audioLevelingEnabled
         self.audioLevelingMode = audioLevelingMode
     }
@@ -91,11 +91,18 @@ public struct RecordingSettings: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.audioQualityPreset = try container.decodeIfPresent(AudioQualityPreset.self, forKey: .audioQualityPreset) ?? .standard
         self.microphoneDeviceID = try container.decodeIfPresent(String.self, forKey: .microphoneDeviceID)
-        self.systemAudioEnabled = try container.decodeIfPresent(Bool.self, forKey: .systemAudioEnabled) ?? true
-        self.mixedPreviewEnabled = try container.decodeIfPresent(Bool.self, forKey: .mixedPreviewEnabled) ?? true
+        _ = try container.decodeIfPresent(Bool.self, forKey: .systemAudioEnabled)
+        _ = try container.decodeIfPresent(Bool.self, forKey: .mixedPreviewEnabled)
+        self.systemAudioEnabled = true
+        self.mixedPreviewEnabled = true
         self.audioLevelingEnabled = try container.decodeIfPresent(Bool.self, forKey: .audioLevelingEnabled) ?? true
         let decodedMode = try container.decodeIfPresent(AudioLevelingMode.self, forKey: .audioLevelingMode) ?? .balanced
         self.audioLevelingMode = decodedMode.isImplemented ? decodedMode : .balanced
+    }
+
+    public mutating func enforceMVPRequiredOutputs() {
+        systemAudioEnabled = true
+        mixedPreviewEnabled = true
     }
 }
 
@@ -118,8 +125,8 @@ public struct RecordingRuntimeSettings: Equatable, Sendable {
         preferredMicrophoneDeviceID: String? = nil
     ) {
         self.audioQualityPreset = audioQualityPreset
-        self.systemAudioEnabled = systemAudioEnabled
-        self.mixedPreviewEnabled = mixedPreviewEnabled
+        self.systemAudioEnabled = true
+        self.mixedPreviewEnabled = true
         self.audioLevelingEnabled = audioLevelingEnabled
         self.audioLevelingMode = audioLevelingMode.isImplemented ? audioLevelingMode : .balanced
         self.shortRecordingThresholdSeconds = max(0, shortRecordingThresholdSeconds)
@@ -224,8 +231,11 @@ public enum AppSettingsStore {
             return settings
         }
 
+        var recording = settings.recording
+        recording.enforceMVPRequiredOutputs()
+
         var resolvedSettings = AppSettings(
-            recording: settings.recording,
+            recording: recording,
             autoStart: settings.autoStart,
             storage: settings.storage,
             hotkeys: settings.hotkeys,
@@ -243,7 +253,10 @@ public enum AppSettingsStore {
     }
 
     public static func save(_ settings: AppSettings, defaults: UserDefaults = .standard) {
-        guard let data = try? JSONEncoder().encode(settings) else {
+        var resolvedSettings = settings
+        resolvedSettings.recording.enforceMVPRequiredOutputs()
+
+        guard let data = try? JSONEncoder().encode(resolvedSettings) else {
             return
         }
 

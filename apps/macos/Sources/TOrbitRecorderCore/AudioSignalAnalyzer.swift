@@ -33,9 +33,10 @@ public enum AudioQualityWarningMapper {
     public static let microphoneSilentWarning = "Microphone track seems silent."
     public static let systemSilentWarning = "System audio track seems silent."
     public static let microphoneClippingWarning = "Microphone is clipping."
+    public static let systemTrackTruncatedWarning = "System audio track ended before the recording stopped."
 
-    public static func warnings(for tracks: [AudioTrackMetadata]) -> [String] {
-        let completedTracks = tracks.filter { $0.status == "completed" }
+    public static func warnings(for tracks: [AudioTrackMetadata], recordingDuration: TimeInterval? = nil) -> [String] {
+        let completedTracks = tracks.filter(\.hasCompletedStatus)
         var warnings: [String] = []
 
         if isSilent(completedTracks.first(where: { $0.kind == "microphone" })?.signal) {
@@ -50,6 +51,13 @@ public enum AudioQualityWarningMapper {
             warnings.append(microphoneClippingWarning)
         }
 
+        if isSystemTrackTruncated(
+            completedTracks.first(where: { $0.kind == "system" }),
+            recordingDuration: recordingDuration
+        ) {
+            warnings.append(systemTrackTruncatedWarning)
+        }
+
         return warnings
     }
 
@@ -59,6 +67,22 @@ public enum AudioQualityWarningMapper {
         }
 
         return !signal.hadSignal || signal.approximateSilenceRatio >= 0.95
+    }
+
+    private static func isSystemTrackTruncated(
+        _ track: AudioTrackMetadata?,
+        recordingDuration: TimeInterval?
+    ) -> Bool {
+        guard let recordingDuration,
+              recordingDuration >= 60,
+              let duration = track?.durationSec,
+              duration > 0
+        else {
+            return false
+        }
+
+        let missingSeconds = recordingDuration - duration
+        return missingSeconds >= 15 && duration < recordingDuration * 0.9
     }
 }
 

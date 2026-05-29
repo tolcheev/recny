@@ -6,22 +6,31 @@ struct KeyboardShortcutCatalogTests {
     func exposesMVPAppActiveShortcuts() {
         let shortcuts = KeyboardShortcutCatalog.appActiveShortcuts
 
-        #expect(shortcuts.count == 4)
+        #expect(shortcuts.count == 5)
         #expect(shortcuts.map(\.displayText) == [
             "Cmd+Shift+R",
             "Cmd+Shift+O",
             "Cmd+Shift+L",
-            "Cmd+Shift+D"
+            "Cmd+Shift+D",
+            "Cmd+Shift+S"
         ])
-        #expect(shortcuts.map(\.keyEquivalent) == ["r", "o", "l", "d"])
+        #expect(shortcuts.map(\.keyEquivalent) == ["r", "o", "l", "d", "s"])
         #expect(KeyboardShortcutCatalog.openLatestRecordingFolder.title == "Open Library")
         #expect(KeyboardShortcutCatalog.openLibrary.title == "Open Records")
     }
 
     @Test
-    func showWindowGlobalShortcutIsDisabledToAvoidAppConflicts() {
-        #expect(KeyboardShortcutCatalog.showWindowGlobal.keyEquivalent.isEmpty)
-        #expect(KeyboardShortcutCatalog.showWindowGlobal.displayText == "Menu bar")
+    func exposesGlobalScreenshotShortcut() {
+        #expect(KeyboardShortcutCatalog.captureScreenshotGlobal.title == "Capture full screenshot")
+        #expect(KeyboardShortcutCatalog.captureScreenshotGlobal.keyEquivalent == "s")
+        #expect(KeyboardShortcutCatalog.captureScreenshotGlobal.displayText == "Ctrl+Option+S")
+    }
+
+    @Test
+    func exposesGlobalShowWindowShortcut() {
+        #expect(KeyboardShortcutCatalog.showWindowGlobal.title == "Show window")
+        #expect(KeyboardShortcutCatalog.showWindowGlobal.keyEquivalent == "r")
+        #expect(KeyboardShortcutCatalog.showWindowGlobal.displayText == "Ctrl+Option+R")
     }
 
     @Test

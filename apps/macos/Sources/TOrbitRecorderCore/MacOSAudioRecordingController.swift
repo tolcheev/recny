@@ -278,6 +278,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             micURL: micURL,
             systemURL: systemURL,
             balancedMixedURL: balancedMixedURL,
+            recordingDuration: duration,
             audioTracks: &audioTracks
         )
         AppLogger.file(.info, category: "recording", "audio leveling finished id=\(activeSession.id) status=\(audioMetadata.processing.balancedMixStatus.rawValue)")
@@ -333,6 +334,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         micURL: URL,
         systemURL: URL,
         balancedMixedURL: URL,
+        recordingDuration: TimeInterval,
         audioTracks: inout [AudioTrackMetadata]
     ) async -> RecordingAudioMetadata {
         let analysisRelativePath = "analysis/audio_analysis.json"
@@ -347,7 +349,8 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             )
             return makeAudioMetadata(
                 processing: processing,
-                audioTracks: audioTracks
+                audioTracks: audioTracks,
+                recordingDuration: recordingDuration
             )
         }
 
@@ -401,7 +404,8 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 processing: processing,
                 audioTracks: audioTracks,
                 microphoneAnalysis: microphoneAnalysis,
-                systemAnalysis: systemAnalysis
+                systemAnalysis: systemAnalysis,
+                recordingDuration: recordingDuration
             )
         }
 
@@ -442,7 +446,8 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 processing: processing,
                 audioTracks: audioTracks,
                 microphoneAnalysis: microphoneAnalysis,
-                systemAnalysis: systemAnalysis
+                systemAnalysis: systemAnalysis,
+                recordingDuration: recordingDuration
             )
         } catch {
             var failedWarnings = plan.warnings
@@ -484,7 +489,8 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 processing: processing,
                 audioTracks: audioTracks,
                 microphoneAnalysis: microphoneAnalysis,
-                systemAnalysis: systemAnalysis
+                systemAnalysis: systemAnalysis,
+                recordingDuration: recordingDuration
             )
         }
     }
@@ -493,13 +499,15 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
         processing: AudioProcessingMetadata,
         audioTracks: [AudioTrackMetadata],
         microphoneAnalysis: AudioLevelAnalysis? = nil,
-        systemAnalysis: AudioLevelAnalysis? = nil
+        systemAnalysis: AudioLevelAnalysis? = nil,
+        recordingDuration: TimeInterval? = nil
     ) -> RecordingAudioMetadata {
         let health = AudioHealthEvaluator.evaluate(
             audioTracks: audioTracks,
             processing: processing,
             microphoneAnalysis: microphoneAnalysis,
-            systemAnalysis: systemAnalysis
+            systemAnalysis: systemAnalysis,
+            recordingDuration: recordingDuration
         )
         return RecordingAudioMetadata(
             processing: processing,
@@ -596,8 +604,8 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
                 channels: channels,
                 bitrate: bitrate,
                 fileSizeBytes: fileSize,
-                status: error == nil ? "completed" : "failed",
-                signal: error == nil ? AudioSignalAnalyzer.analyze(url: url) : nil,
+                status: error == nil ? AudioTrackMetadata.completedStatus : AudioTrackMetadata.completedWithWarningsStatus,
+                signal: AudioSignalAnalyzer.analyze(url: url),
                 error: error
             )
         } catch {
@@ -655,14 +663,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
     }
 
     private func requiredTrackKindsForFinalization() -> [String] {
-        var requiredTrackKinds = ["microphone"]
-        if runtimeSettings.systemAudioEnabled {
-            requiredTrackKinds.append("system")
-        }
-        if runtimeSettings.mixedPreviewEnabled {
-            requiredTrackKinds.append("mixed")
-        }
-        return requiredTrackKinds
+        ["microphone", "system", "mixed"]
     }
 
     private func updateRecoveryMetadata(

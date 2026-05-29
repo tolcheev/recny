@@ -66,11 +66,43 @@ public enum RecordingPlaybackDisplayState: Equatable, Sendable {
 }
 
 public enum RecordingPlaybackResolver {
+    public static func shouldStopPlaybackBeforeDeleting(
+        inlinePlayback: RecordingInlinePlaybackRequest?,
+        deletedRecordingID: String,
+        deletedSessionFolderURL: URL
+    ) -> Bool {
+        guard let inlinePlayback else {
+            return false
+        }
+
+        return inlinePlayback.recordingID == deletedRecordingID
+            || isPlaybackURL(inlinePlayback.url, insideSessionFolder: deletedSessionFolderURL)
+    }
+
+    public static func isPlaybackURL(
+        _ playbackURL: URL?,
+        insideSessionFolder sessionFolderURL: URL
+    ) -> Bool {
+        guard let playbackURL else {
+            return false
+        }
+
+        let playbackPath = normalizedPath(playbackURL)
+        let sessionPath = normalizedDirectoryPath(sessionFolderURL)
+        return playbackPath.hasPrefix(sessionPath)
+    }
+
     public static func preferredPlayback(
         sessionFolderURL: URL,
         processingStatus: BalancedMixStatus = .skipped
     ) -> RecordingPlaybackCandidate? {
         playbackCandidates(sessionFolderURL: sessionFolderURL, processingStatus: processingStatus).first
+    }
+
+    public static func preferredShareableAudio(
+        sessionFolderURL: URL
+    ) -> RecordingPlaybackCandidate? {
+        playbackCandidates(sessionFolderURL: sessionFolderURL).first
     }
 
     public static func playbackCandidates(
@@ -167,5 +199,16 @@ public enum RecordingPlaybackResolver {
         }
 
         return RecordingPlaybackCandidate(kind: kind, url: url, fileSizeBytes: size)
+    }
+
+    private static func normalizedDirectoryPath(_ url: URL) -> String {
+        let path = normalizedPath(url)
+        return path.hasSuffix("/") ? path : "\(path)/"
+    }
+
+    private static func normalizedPath(_ url: URL) -> String {
+        url.standardizedFileURL
+            .resolvingSymlinksInPath()
+            .path(percentEncoded: false)
     }
 }

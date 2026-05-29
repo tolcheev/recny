@@ -52,8 +52,8 @@ struct AppSettingsTests {
         AppSettingsStore.save(settings, defaults: defaults)
         let loaded = AppSettingsStore.load(defaults: defaults)
 
-        #expect(loaded.recording.systemAudioEnabled == false)
-        #expect(loaded.recording.mixedPreviewEnabled == false)
+        #expect(loaded.recording.systemAudioEnabled)
+        #expect(loaded.recording.mixedPreviewEnabled)
         #expect(loaded.recording.audioLevelingEnabled == false)
         #expect(loaded.recording.audioLevelingMode == .conservative)
         #expect(loaded.autoStart.mode == .askFirst)
@@ -67,6 +67,39 @@ struct AppSettingsTests {
         #expect(loaded.privacy.showRecordingIndicator == false)
         #expect(loaded.privacy.showDockIcon == false)
         #expect(loaded.privacy.launchAtLogin)
+    }
+
+    @Test
+    func recordingSettingsDecodeLegacyDisabledOutputPayloadAsMVPRequiredOutputs() throws {
+        let json = """
+        {
+          "audioQualityPreset": "standard",
+          "microphoneDeviceID": "BuiltInMic",
+          "systemAudioEnabled": false,
+          "mixedPreviewEnabled": false,
+          "audioLevelingEnabled": true,
+          "audioLevelingMode": "balanced"
+        }
+        """
+
+        let settings = try JSONDecoder().decode(
+            RecordingSettings.self,
+            from: try #require(json.data(using: .utf8))
+        )
+
+        #expect(settings.systemAudioEnabled)
+        #expect(settings.mixedPreviewEnabled)
+    }
+
+    @Test
+    func runtimeSettingsKeepMVPRequiredOutputsEnabled() {
+        let settings = RecordingRuntimeSettings(
+            systemAudioEnabled: false,
+            mixedPreviewEnabled: false
+        )
+
+        #expect(settings.systemAudioEnabled)
+        #expect(settings.mixedPreviewEnabled)
     }
 
     @Test

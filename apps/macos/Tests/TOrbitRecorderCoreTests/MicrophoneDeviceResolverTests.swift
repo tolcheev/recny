@@ -31,16 +31,14 @@ struct MicrophoneDeviceResolverTests {
     }
 
     @Test
-    func usesAirPodsOnlyWhenNoOtherInputExists() throws {
+    func rejectsAirPodsWhenNoOtherInputExists() {
         let devices = [
             MicrophoneInputDevice(id: "airpods", name: "AirPods Pro")
         ]
 
-        let selection = try #require(MicrophoneDeviceResolver.resolve(devices: devices, preferredDeviceID: nil))
+        let selection = MicrophoneDeviceResolver.resolve(devices: devices, preferredDeviceID: nil)
 
-        #expect(selection.device.id == "airpods")
-        #expect(selection.isBluetoothFallback)
-        #expect(selection.warning == MicrophoneDeviceResolver.bluetoothFallbackWarning)
+        #expect(selection == nil)
     }
 
     @Test
@@ -54,6 +52,17 @@ struct MicrophoneDeviceResolverTests {
 
         #expect(selection.device.id == "builtin")
         #expect(selection.warning == nil)
+    }
+
+    @Test
+    func rejectsPreferredAirPodsEvenWhenNoOtherInputExists() {
+        let devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods")
+        ]
+
+        let selection = MicrophoneDeviceResolver.resolve(devices: devices, preferredDeviceID: "airpods")
+
+        #expect(selection == nil)
     }
 
     @Test

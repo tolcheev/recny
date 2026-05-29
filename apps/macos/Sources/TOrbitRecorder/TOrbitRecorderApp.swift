@@ -11,9 +11,5 @@ struct TOrbitRecorderApp: App {
         .commands {
             TOrbitRecorderCommands(appState: appDelegate.appState, appDelegate: appDelegate)
         }
-
-        Settings {
-            SettingsView(appState: appDelegate.appState)
-        }
     }
 }

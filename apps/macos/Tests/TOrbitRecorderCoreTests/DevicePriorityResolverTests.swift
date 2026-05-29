@@ -58,18 +58,33 @@ struct DevicePriorityResolverTests {
     }
 
     @Test
-    func bluetoothHeadsetIsOnlyFallbackWhenNoOtherInputExists() throws {
+    func bluetoothHeadsetIsRejectedWhenNoOtherInputExists() {
         let devices = [
             MicrophoneInputDevice(id: "airpods", name: "AirPods Pro")
         ]
 
-        let selection = try #require(DevicePriorityResolver.resolve(devices: devices, preferredDeviceID: nil))
+        let selection = DevicePriorityResolver.resolve(devices: devices, preferredDeviceID: nil)
 
-        #expect(selection.device.id == "airpods")
-        #expect(selection.isBluetoothFallback)
-        #expect(selection.warning == DevicePriorityResolver.bluetoothFallbackWarning)
-        #expect(selection.warning == "Bluetooth microphone is used. Audio quality may be degraded.")
-        #expect(DevicePriorityResolver.displayLabel(for: selection.device, recommendedDeviceID: selection.device.id) == "Bluetooth fallback")
+        #expect(selection == nil)
+        #expect(
+            DevicePriorityResolver.selectionReason(
+                devices: devices,
+                selection: selection,
+                preferredDeviceID: nil
+            ) == "AirPods/Bluetooth microphone is blocked for recording. Connect the MacBook or USB microphone."
+        )
+        #expect(DevicePriorityResolver.displayLabel(for: devices[0], recommendedDeviceID: nil) == "Blocked")
+    }
+
+    @Test
+    func preferredAirPodsAreRejectedEvenWhenNoOtherInputExists() {
+        let devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods")
+        ]
+
+        let selection = DevicePriorityResolver.resolve(devices: devices, preferredDeviceID: "airpods")
+
+        #expect(selection == nil)
     }
 
     @Test
@@ -196,6 +211,28 @@ struct DevicePriorityResolverTests {
                 target: target,
                 originalDeviceID: "shure"
             ) == "Original microphone is unavailable; restored best available input."
+        )
+    }
+
+    @Test
+    func restoreDoesNotTargetAirPodsWhenNoNonBluetoothInputExists() {
+        let devices = [
+            MicrophoneInputDevice(id: "airpods", name: "AirPods Pro 2")
+        ]
+
+        let target = MicrophoneInputRestorePolicy.restoreTarget(
+            devices: devices,
+            originalDeviceID: "airpods",
+            currentSelectedDeviceID: nil
+        )
+
+        #expect(target == nil)
+        #expect(
+            MicrophoneInputRestorePolicy.restoreReason(
+                devices: devices,
+                target: target,
+                originalDeviceID: "airpods"
+            ) == "No non-Bluetooth microphone input is available for restore."
         )
     }
 

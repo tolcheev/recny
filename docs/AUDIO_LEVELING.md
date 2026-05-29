@@ -11,10 +11,10 @@ Current behavior:
 - `export/mixed_balanced.m4a` is created after Stop Recording when Audio leveling is enabled.
 - `analysis/audio_analysis.json` stores track analysis, gain plan, and balanced output summary.
 - `metadata.json` stores `audio.processing` summary fields and `audio.health` warnings.
-- The Latest strip and Diagnostics prefer balanced playback when it is ready.
+- The post-stop summary, Library, and Diagnostics prefer balanced playback when it is ready.
 - Playback priority is `export/mixed_balanced.m4a`, then `export/mixed.m4a`, then an available source track.
-- Latest and Library expose Original playback through More/Details actions.
-- Latest and Library show compact audio health badges: `Audio OK`, `Audio warning`, or `Audio failed`.
+- Library exposes Original playback through More/Details actions.
+- Library and details show compact audio health badges: `Audio OK`, `Audio warning`, or `Audio failed`.
 - Diagnostics exposes the latest `analysis/audio_analysis.json`.
 - Existing recordings can be reprocessed from Library or Diagnostics to create missing balanced audio.
 

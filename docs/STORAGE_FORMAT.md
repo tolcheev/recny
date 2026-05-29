@@ -29,6 +29,18 @@ The root contains both user recordings and app internals. In normal use, the app
             system.m4a
           export/
             mixed.m4a
+            mixed_balanced.m4a
+            clip_YYYY-MM-DD_HH-mm-ss-SSS.m4a
+          transcript/
+            transcript.txt
+            transcript.srt
+            transcript.vtt
+            transcript.json
+            call_note.md
+          screenshots/
+            screenshot_YYYY-MM-DD_HH-mm-ss-SSS.png
+          analysis/
+            audio_analysis.json
           metadata.json
   db/
     app.sqlite
@@ -85,6 +97,19 @@ metadata.json
 
 Failed sessions may have missing final audio files, but `metadata.json` should be written whenever possible. Interrupted and failed sessions keep `recovery.json` and any files under `source/segments/`.
 
+## Optional Derived Files
+
+The app may create local derived files inside the same session folder:
+
+- `export/mixed_balanced.m4a`: balanced audio export when volume leveling succeeds.
+- `analysis/audio_analysis.json`: lightweight audio analysis used by diagnostics and Records.
+- `export/clip_*.m4a`: non-destructive user-created audio clips from Records trim actions.
+- `transcript/transcript.*`: explicit local transcription outputs created after optional Parakeet setup in Settings.
+- `transcript/call_note.md`: local Markdown note with metadata, transcript, and a Codex review prompt.
+- `screenshots/screenshot_*.png`: manual full-screen still screenshots captured by the app without an area/window selector.
+
+Derived files do not replace the required source or mixed files. Deleting a local recording removes the whole session folder, including these derived files.
+
 ## SQLite Index
 
 `db/app.sqlite` stores the MVP local index for the recordings list, post-call tags, and local library actions.
@@ -94,7 +119,8 @@ MVP rules:
 - The app must not require SQLite to recover a recording.
 - `metadata.json` remains the source of truth for a session.
 - SQLite mirrors local recording metadata needed for list filtering by date, status, source app, title, and tags.
-- If the SQLite database is empty, the app may rebuild the index by scanning `Library/` and `Inbox/` for `metadata.json`.
+- Before listing or editing recordings, the app refreshes SQLite from `Library/` and `Inbox/` metadata files so folders created or restored on disk appear in Records.
+- If a session folder or its `metadata.json` is deleted outside the app, the next refresh removes the stale SQLite row instead of showing a broken `missing file` record.
 
 MVP tables:
 
@@ -120,7 +146,7 @@ recording_tags
   tag TEXT
 ```
 
-Deleting a local record removes the session folder and the SQLite index row. It does not call T-Orbit, cloud storage, or AI services.
+Deleting a local record removes the session folder and the SQLite index row. Manual Finder deletion is also reflected on the next Records refresh. Neither path calls T-Orbit, cloud storage, or AI services.
 
 ## Metadata Schema
 
@@ -142,9 +168,9 @@ Deleting a local record removes the session folder and the SQLite index row. It 
     "app_name": "Zoom",
     "bundle_id": "us.zoom.xos",
     "trigger": "autostart",
-    "rule_id": "autostart.v2.zoom",
+    "rule_id": "autostart.v2.zoom_process_audio",
     "confidence": "high",
-    "reason": "Zoom active with microphone activity."
+    "reason": "Zoom process is using audio."
   },
   "audio_tracks": [
     {

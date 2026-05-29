@@ -8,12 +8,13 @@ enum AppWindows {
     private static var diagnosticsWindow: NSWindow?
     private static var settingsWindow: NSWindow?
     private static var audioPlayerWindow: NSWindow?
+    private static var audioPlayerURL: URL?
 
     static func openLibrary(appState: AppState) {
         let window = libraryWindow ?? makeWindow(
             title: "T-Orbit Recorder Records",
-            width: 1_040,
-            height: 700,
+            width: 1_280,
+            height: 760,
             rootView: LibraryView(appState: appState)
         )
         libraryWindow = window
@@ -51,6 +52,7 @@ enum AppWindows {
             rootView: AudioPlayerView(url: url, title: title)
         )
         audioPlayerWindow = window
+        audioPlayerURL = url
         AppLogger.file(.info, category: "playback", "open in-app player path=\(url.path(percentEncoded: false))")
         present(window)
     }
@@ -58,6 +60,17 @@ enum AppWindows {
     static func closeAudioPlayer() {
         audioPlayerWindow?.close()
         audioPlayerWindow = nil
+        audioPlayerURL = nil
+    }
+
+    @discardableResult
+    static func closeAudioPlayer(ifPlayingInside sessionFolderURL: URL) -> Bool {
+        guard RecordingPlaybackResolver.isPlaybackURL(audioPlayerURL, insideSessionFolder: sessionFolderURL) else {
+            return false
+        }
+
+        closeAudioPlayer()
+        return true
     }
 
     static func openRecordingsFolder(appState: AppState) {
@@ -88,7 +101,6 @@ enum AppWindows {
         window.title = title
         window.contentViewController = NSHostingController(rootView: rootView)
         window.isReleasedWhenClosed = false
-        window.center()
         return window
     }
 
@@ -96,5 +108,6 @@ enum AppWindows {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
+        AppWindowCentering.centerAfterPresentation(window)
     }
 }

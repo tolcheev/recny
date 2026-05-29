@@ -7,8 +7,8 @@ DIST_APP="$ROOT_DIR/dist/$APP_NAME.app"
 INSTALL_APP="/Applications/$APP_NAME.app"
 DRY_RUN="${DRY_RUN:-0}"
 AUTO_QUIT="${AUTO_QUIT:-1}"
-
-"$ROOT_DIR/scripts/package_macos.sh"
+STORAGE_ROOT="${TORBIT_RECORDINGS_ROOT:-$HOME/Recordings/TOrbitRecorder}"
+ALLOW_INSTALL_WHILE_RECORDING="${ALLOW_INSTALL_WHILE_RECORDING:-0}"
 
 running_pids() {
     pgrep -x "$APP_NAME" || true
@@ -26,6 +26,30 @@ print_running_instances() {
         ps -p "$(echo "$pids" | paste -sd, -)" -o pid=,command=
     fi
 }
+
+active_recording_recoveries() {
+    [[ -d "$STORAGE_ROOT" ]] || return 0
+
+    while IFS= read -r -d '' recovery; do
+        if /usr/bin/grep -Eq '"status"[[:space:]]*:[[:space:]]*"recording"' "$recovery"; then
+            printf '%s\n' "$recovery"
+        fi
+    done < <(/usr/bin/find "$STORAGE_ROOT/Inbox/Unsorted" -name recovery.json -type f -print0 2>/dev/null)
+}
+
+if is_running && [[ "$ALLOW_INSTALL_WHILE_RECORDING" != "1" ]]; then
+    active_recoveries="$(active_recording_recoveries)"
+    if [[ -n "$active_recoveries" ]]; then
+        print_running_instances
+        echo "$APP_NAME appears to be actively recording. Refusing to install over a live recording." >&2
+        echo "$active_recoveries" >&2
+        echo "Stop recording and wait for finalization to finish, then rerun this script." >&2
+        echo "Override only for emergency debugging: ALLOW_INSTALL_WHILE_RECORDING=1 ./scripts/install_macos.sh" >&2
+        exit 1
+    fi
+fi
+
+"$ROOT_DIR/scripts/package_macos.sh"
 
 if is_running; then
     print_running_instances

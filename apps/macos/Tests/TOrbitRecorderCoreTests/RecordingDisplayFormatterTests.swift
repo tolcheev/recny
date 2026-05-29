@@ -63,6 +63,26 @@ struct RecordingDisplayFormatterTests {
     }
 
     @Test
+    func systemAudioSummaryReflectsPermissionStateBeforeCaptureStatus() {
+        #expect(
+            RecordingDisplayFormatter.systemAudioText(
+                isEnabled: true,
+                permissionState: .notDetermined,
+                captureStatus: .idle,
+                recordingStatus: .idle
+            ) == "Needs permission"
+        )
+        #expect(
+            RecordingDisplayFormatter.systemAudioText(
+                isEnabled: true,
+                permissionState: .granted,
+                captureStatus: .idle,
+                recordingStatus: .idle
+            ) == "Ready"
+        )
+    }
+
+    @Test
     func exposesShortRecordingCopy() {
         #expect(RecordingDisplayFormatter.statusSubtitle(.shortRecording) == "Saved to Inbox/Short")
     }
@@ -109,6 +129,9 @@ struct RecordingDisplayFormatterTests {
         )
         #expect(
             RecordingDisplayFormatter.audioHealthWarningText(.balancedMixFailed) == "Balanced mix failed, original audio is available"
+        )
+        #expect(
+            RecordingDisplayFormatter.audioHealthWarningText(.systemTrackTruncated) == "System audio ended before recording stopped"
         )
         #expect(
             RecordingDisplayFormatter.audioHealthSuccessText(processingStatus: .done) == "Balanced mix was created"

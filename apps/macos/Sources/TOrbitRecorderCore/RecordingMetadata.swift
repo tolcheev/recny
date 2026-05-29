@@ -60,6 +60,9 @@ public struct RecordingSource: Codable, Equatable, Sendable {
 }
 
 public struct AudioTrackMetadata: Codable, Equatable, Sendable {
+    public static let completedStatus = "completed"
+    public static let completedWithWarningsStatus = "completed_with_warnings"
+
     public var kind: String
     public var relativePath: String
     public var codec: String?
@@ -99,6 +102,14 @@ public struct AudioTrackMetadata: Codable, Equatable, Sendable {
         self.signal = signal
         self.status = status
         self.error = error
+    }
+
+    public var isUsableCompletedTrack: Bool {
+        hasCompletedStatus && (fileSizeBytes ?? 0) > 0
+    }
+
+    public var hasCompletedStatus: Bool {
+        status == Self.completedStatus || status == Self.completedWithWarningsStatus
     }
 
     enum CodingKeys: String, CodingKey {

@@ -14,11 +14,13 @@ struct TagEditorView: View {
     @State private var customTagsText = ""
     @State private var saveError: String?
 
+    private let originalStatus: TaggingStatus
     let onSave: (PostCallDraft) throws -> Void
 
     init(draft: PostCallDraft, onSave: @escaping (PostCallDraft) throws -> Void) {
         self._draft = State(initialValue: draft)
         self._selectedStatus = State(initialValue: Self.initialStatus(for: draft.status))
+        self.originalStatus = draft.status
         self.onSave = onSave
     }
 
@@ -125,13 +127,27 @@ struct TagEditorView: View {
     }
 
     private var statusPicker: some View {
-        Picker("Status", selection: $selectedStatus) {
-            ForEach(Self.saveStatuses, id: \.self) { status in
-                Text(RecordingDisplayFormatter.statusText(status)).tag(status)
+        Group {
+            if TagEditorLogic.isTechnicalStatusLocked(originalStatus) {
+                HStack {
+                    Text("Status")
+                    Spacer()
+                    Text(RecordingDisplayFormatter.statusText(originalStatus))
+                        .foregroundStyle(.secondary)
+                }
+                .font(.callout)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Recording status \(RecordingDisplayFormatter.statusText(originalStatus))")
+            } else {
+                Picker("Status", selection: $selectedStatus) {
+                    ForEach(Self.saveStatuses, id: \.self) { status in
+                        Text(RecordingDisplayFormatter.statusText(status)).tag(status)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityLabel("Recording status")
             }
         }
-        .pickerStyle(.segmented)
-        .accessibilityLabel("Recording status")
     }
 
     private var footer: some View {
@@ -180,7 +196,10 @@ struct TagEditorView: View {
             savedDraft.tags = TagEditorLogic.normalizedTags(
                 savedDraft.tags + TagEditorLogic.normalizedCustomTags(customTagsText)
             )
-            savedDraft.status = selectedStatus
+            savedDraft.status = TagEditorLogic.resolvedSaveStatus(
+                originalStatus: originalStatus,
+                selectedStatus: selectedStatus
+            )
             try onSave(savedDraft)
             dismiss()
         } catch {

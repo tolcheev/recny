@@ -80,18 +80,22 @@ Known direct call apps can start confidently from active app + call audio activi
 - Telegram
 - Discord
 
-For Zoom and other known call apps, the MVP accepts either:
+For Zoom, the MVP accepts:
 
 - microphone activity, with the configured minimum detection duration
-- for Zoom only: system audio activity, immediately
+- for Zoom only: Core Audio process activity from the Zoom process, immediately
+- for Zoom only: global system audio activity, immediately, only when per-process audio activity is unavailable
 
-The Zoom system-audio path exists because macOS/CoreAudio can report the default input device as inactive while Zoom is already using another microphone path or while the user is muted. Browser, Telegram, and Discord rules remain stricter.
+For non-Zoom known call apps such as Telegram and Discord, the MVP requires both microphone activity and system audio activity for the configured minimum detection duration. Microphone-only activity is ignored because it can be a stale mic session, voice message, input-monitoring state, or background app behavior rather than a real call.
+
+The Zoom process-audio path uses Core Audio process objects (`kAudioProcessPropertyIsRunningInput` / `kAudioProcessPropertyIsRunningOutput`) for `us.zoom.xos`. This is the preferred MVP signal because it means Zoom itself is using audio, not merely open. The older global system-audio path remains only as a fallback when macOS does not expose the process list. Browser, Telegram, and Discord rules remain stricter.
 
 Zoom can also start or continue after the user switches to another window. The engine checks both the foreground app and running Zoom processes:
 
-- If Zoom is running in the background and both microphone and system-audio activity are present, the app can start immediately with `autostart.v2.zoom`.
+- If Zoom is running in the background and the Zoom process has active input or output audio, the app can start immediately with `autostart.v2.zoom_process_audio`.
+- If per-process audio activity is unavailable and Zoom is running in the background with both microphone and system-audio activity, the app can start immediately with `autostart.v2.zoom`.
 - This high-confidence Zoom signal can bypass the normal post-stop cooldown so a real call is not missed after a short manual test recording.
-- If Zoom was recently foregrounded and system audio activity appears within the continuation window, the app can still start with `autostart.v2.zoom` even while another app is frontmost.
+- If Zoom was recently foregrounded and Zoom process audio activity appears within the continuation window, the app can still start with `autostart.v2.zoom_process_audio` even while another app is frontmost.
 
 This matches real call behavior where the user opens Zoom, joins a call, and then works in a browser, IDE, notes, or slides.
 
@@ -99,18 +103,18 @@ Browser heuristic v2:
 
 - Browser + system audio alone is never enough.
 - Browser detection requires microphone activity for the configured detection duration.
-- If an active browser window title is available, the title must look call-like.
+- Browser detection requires an active window title that looks call-like.
 - Call-like title tokens include `Meet`, `Zoom`, `Teams`, `KTalk`, `МТС Линк`, `SberJazz`, `Встреча`, `Собеседование`, `Interview`, and `Call`.
 - Single-word title tokens match on word boundaries, so unrelated words like `Callback` do not count as `Call`.
-- If the active window title is unavailable, the MVP falls back to browser + microphone activity + system audio activity with `medium` confidence.
+- If the active window title is unavailable or does not look call-like, the browser auto-start signal is ignored even when microphone and system audio are active.
 - Browser URL detection and browser extensions are not part of MVP.
 
 Rule ids:
 
+- `autostart.v2.zoom_process_audio`
 - `autostart.v2.zoom`
 - `autostart.v2.known_call_app`
 - `autostart.v2.browser_title`
-- `autostart.v2.browser_fallback`
 - `autostart.v2.generic_whitelist`
 
 ## Settings
@@ -127,7 +131,7 @@ MVP settings:
 
 Changing whitelist, blacklist, cooldown, detection duration, or short-recording threshold resets the current detection candidate.
 
-Browsers are not blocked globally. A YouTube-only browser false positive cannot be perfectly detected without a browser extension, so V2 relies on microphone activity plus active window title when available.
+Browsers are not blocked globally, but silent browser auto-start requires a call-like active window title. Without a title, the app ignores the browser signal instead of guessing from microphone and system audio alone.
 
 ## Recording Categories
 
@@ -149,9 +153,11 @@ Rules:
 
 - Do not start multiple sessions for the same continuous call signal.
 - Keep a 3 minute default cooldown after stop before a new automatic start can occur.
-- Zoom with simultaneous microphone and system-audio activity can bypass cooldown because it is treated as a high-confidence active call.
+- Zoom process audio activity can bypass cooldown because it is treated as a high-confidence active call.
+- Zoom with simultaneous microphone and system-audio activity can bypass cooldown only when per-process audio activity is unavailable.
 - Keep the call signal stable for the configured minimum detection duration before starting.
-- Zoom with system audio activity can bypass the minimum detection duration because it is a high-confidence call surface.
+- Zoom process audio activity can bypass the minimum detection duration because it is a high-confidence call surface.
+- Zoom with global system audio activity can bypass the minimum detection duration only when per-process audio activity is unavailable.
 - If a recording is below the short-session threshold, classify it under `Inbox/Short/`.
 - Short sessions must still keep metadata so false positives can be debugged.
 - V1 short-session threshold defaults to 60 seconds and is configurable from Settings.
@@ -166,7 +172,7 @@ MVP stop rule:
 ```text
 IF recording was started by autostart
 AND call signal is no longer present
-AND signal has been lost for at least 30 seconds
+AND signal has been lost for the configured grace period
 THEN stop_recording()
 ```
 
@@ -175,8 +181,10 @@ Rules:
 - Manual recordings never auto-stop.
 - App focus changes do not stop an auto-started recording.
 - Zoom recordings inspect running Zoom window titles when macOS exposes them. A meeting/conference-like Zoom window keeps the recording active even if another app is foreground.
-- If Zoom is still running but only the main `zoom Workplace`/home window is visible, the call signal is treated as ended even if Core Audio still reports microphone or system-audio activity from the recorder pipeline.
-- If Zoom window titles are unavailable, the app falls back to microphone/system-audio activity. Any restored activity cancels the pending auto-stop timer in that fallback path.
+- Zoom process audio activity keeps the recording active even when the Zoom window is in the background or titles are hidden.
+- If Zoom is still running but only the main `zoom Workplace`/home window is visible and Zoom process audio is idle, the call signal is treated as ended.
+- If Zoom window titles are unavailable and per-process audio activity is unavailable, the app falls back to global system-audio activity only. Microphone activity is ignored in that fallback path because the recorder can keep input devices marked as running.
+- The default auto-stop grace period is 10 seconds, and auto-start monitoring polls once per second so stop timing stays close to that target.
 - After auto-stop succeeds, the normal cooldown applies before another automatic start.
 - The app logs when signal loss starts, when signal is restored, and when auto-stop runs.
 
@@ -201,6 +209,7 @@ Every autostart decision should log:
 - confidence
 - microphone active state
 - system audio active state
+- Zoom process audio state when evaluating Zoom auto-stop
 - cooldown state
 - session id, when a session was created
 
@@ -208,13 +217,13 @@ V2 logs both start and non-start decisions. Repeated identical non-start decisio
 
 ## Known False Positive Cases
 
-- A whitelisted direct call app is foreground and has microphone or system audio activity, but the user is not in a real call.
-- Zoom remains open after a call and macOS does not expose window titles; the app falls back to broad audio activity.
-- A browser is foreground while another tab or app creates microphone and system audio activity.
-- A browser call title is unavailable, forcing fallback to microphone + system audio activity.
+- A whitelisted non-Zoom direct call app is foreground and has both microphone and system audio activity, but the user is not in a real call.
+- Zoom remains open after a call and macOS exposes neither window titles nor process audio activity; the app falls back to coarse global system-audio activity.
+- A browser is foreground while another tab or app creates microphone and system audio activity; this is ignored unless the active title looks call-like.
+- A real browser call title is unavailable, so the app may miss that browser call instead of recording a false positive.
 - A non-call browser page contains words such as `Call` or `Interview` in the title.
-- System audio activity can be coarse because CoreAudio reports device activity, not a semantic "call audio" classification.
-- Telegram or Discord voice/video areas can trigger without enough context to know whether the conversation should be recorded.
+- Global system audio activity can be coarse because CoreAudio reports device activity, not a semantic "call audio" classification.
+- Telegram or Discord voice/video areas can trigger only when both microphone and system audio are active; without a direct meeting API this can still be ambiguous.
 - Quick app switches during a browser call can reset the minimum detection duration and delay start.
 
 ## Not In MVP

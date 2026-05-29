@@ -1,17 +1,42 @@
 import Combine
 import Foundation
 
+public struct PendingAutoStartPrompt: Equatable, Sendable {
+    public let source: RecordingSource
+    public let message: String
+    public let confidence: String
+    public let detectedAt: Date
+
+    public init(
+        source: RecordingSource,
+        message: String,
+        confidence: String,
+        detectedAt: Date
+    ) {
+        self.source = source
+        self.message = message
+        self.confidence = confidence
+        self.detectedAt = detectedAt
+    }
+}
+
 @MainActor
 public final class AppState: ObservableObject {
+    public static let defaultAutoStartMonitoringPollIntervalSeconds: TimeInterval = 1
+
     private static let legacySystemAudioPermissionProbeSucceededKey =
         "com.torbit.recorder.systemAudioPermissionProbeSucceeded"
+    private static let systemAudioPermissionProbeVersion = "core-audio-capture-start-v2"
     private static var systemAudioPermissionProbeSucceededKey: String {
         let fingerprint = "\(BuildInfo.appVersion).\(BuildInfo.gitCommit)"
             .replacingOccurrences(of: " ", with: "_")
             .replacingOccurrences(of: "/", with: "_")
-        return "\(legacySystemAudioPermissionProbeSucceededKey).\(fingerprint)"
+        return "\(legacySystemAudioPermissionProbeSucceededKey).\(fingerprint).\(systemAudioPermissionProbeVersion)"
     }
-    private static let autoStopSignalLostGracePeriodSeconds: TimeInterval = 30
+    /// Maximum grace period the engine ever waits before stopping a
+    /// signal-lost recording. Used only as a defensive upper bound; the
+    /// active value comes from `autoStartSettings.autoStopDelaySeconds`.
+    private static let autoStopSignalLostGracePeriodSecondsMax: TimeInterval = 60
 
     @Published public private(set) var status: RecordingStatus
     @Published public private(set) var currentRecordingDuration: TimeInterval
@@ -35,7 +60,7 @@ public final class AppState: ObservableObject {
     @Published public private(set) var hotkeySettings: HotkeySettings
     @Published public private(set) var privacySettings: PrivacySettings
     @Published public private(set) var autoStartLastDecision: String
-    @Published public private(set) var autoStartNotificationMessage: String?
+    @Published public private(set) var pendingAutoStartPrompt: PendingAutoStartPrompt?
     @Published public private(set) var outputFolderURL: URL
     @Published public private(set) var availableMicrophoneDevices: [MicrophoneInputDevice]
     @Published public private(set) var selectedMicrophoneName: String
@@ -45,10 +70,12 @@ public final class AppState: ObservableObject {
     @Published public private(set) var permissionSnapshot: RecorderPermissionSnapshot
     @Published public private(set) var permissionOnboardingMessage: String?
     @Published public private(set) var isPermissionOnboardingInProgress: Bool
+    @Published public private(set) var isSystemAudioPermissionRequestInProgress: Bool
     @Published public private(set) var audioReprocessProgress: AudioReprocessProgress?
     @Published public private(set) var audioReprocessLastSummary: AudioReprocessBatchSummary?
     @Published public private(set) var launchAtLoginLastErrorMessage: String?
     @Published public private(set) var isStoppingRecording: Bool
+    @Published public private(set) var currentSessionFolderURL: URL?
 
     private let recordingController: RecordingController
     private let permissionChecker: RecordingPermissionChecking
@@ -82,7 +109,11 @@ public final class AppState: ObservableObject {
     }
 
     public var shouldShowPermissionsOnboarding: Bool {
-        RecordingPermissionDisplay.shouldShowOnboarding(
+        if isSystemAudioPermissionRequestInProgress
+            && recordingSettings.systemAudioEnabled {
+            return true
+        }
+        return RecordingPermissionDisplay.shouldShowOnboarding(
             permissionSnapshot,
             systemAudioEnabled: recordingSettings.systemAudioEnabled
         )
@@ -91,11 +122,16 @@ public final class AppState: ObservableObject {
     public var shouldShowPermissionChecklist: Bool {
         shouldShowPermissionsOnboarding
             || isPermissionOnboardingInProgress
+            || isSystemAudioPermissionRequestInProgress
             || permissionOnboardingMessage != nil
     }
 
     public var isRecordingStartAllowed: Bool {
-        status != .recording
+        guard !(isSystemAudioPermissionRequestInProgress
+                && recordingSettings.systemAudioEnabled) else {
+            return false
+        }
+        return status != .recording
             && !isStoppingRecording
             && selectedMicrophoneName != "No input device"
             && RecordingPermissionDisplay.canStartRecording(
@@ -106,13 +142,22 @@ public final class AppState: ObservableObject {
 
     public var recordingStartBlockingReason: String? {
         if selectedMicrophoneName == "No input device" {
-            return "No microphone input device is available."
+            return microphoneSelectionReason
+        }
+
+        if isSystemAudioPermissionRequestInProgress
+            && recordingSettings.systemAudioEnabled {
+            return "Waiting for system audio permission. Click Allow on the macOS prompt."
         }
 
         return RecordingPermissionDisplay.blockingReason(
             permissionSnapshot,
             systemAudioEnabled: recordingSettings.systemAudioEnabled
         )
+    }
+
+    public var preferredScreenshotFolderURL: URL? {
+        currentSessionFolderURL ?? lastRecording?.sessionFolderURL
     }
 
     public init(
@@ -165,7 +210,7 @@ public final class AppState: ObservableObject {
         self.hotkeySettings = resolvedSettings.hotkeys
         self.privacySettings = resolvedSettings.privacy
         self.autoStartLastDecision = "not_checked"
-        self.autoStartNotificationMessage = nil
+        self.pendingAutoStartPrompt = nil
         let availableMicrophoneDevices = microphoneDeviceProvider()
         self.availableMicrophoneDevices = availableMicrophoneDevices
         let recommendedMicrophoneSelection = Self.resolveMicrophoneSelection(
@@ -187,10 +232,12 @@ public final class AppState: ObservableObject {
         self.permissionSnapshot = .unknown
         self.permissionOnboardingMessage = nil
         self.isPermissionOnboardingInProgress = false
+        self.isSystemAudioPermissionRequestInProgress = false
         self.audioReprocessProgress = nil
         self.audioReprocessLastSummary = nil
         self.launchAtLoginLastErrorMessage = nil
         self.isStoppingRecording = false
+        self.currentSessionFolderURL = nil
         self.autoStartEngine = AutoStartEngine()
         self.recordingStore = FileSystemRecordingStore(rootURL: resolvedSettings.storage.rootFolderURL)
         UserDefaults.standard.removeObject(forKey: Self.legacySystemAudioPermissionProbeSucceededKey)
@@ -364,7 +411,7 @@ public final class AppState: ObservableObject {
         try reloadRecordings()
         try reloadLastRecording()
         AppLogger.recording.info("Saved post-call tags for \(draft.id, privacy: .public)")
-        AppLogger.file(.info, category: "recording", "saved post-call tags id=\(draft.id) status=\(draft.status.rawValue) tags=\(draft.tags.joined(separator: ","))")
+        AppLogger.file(.info, category: "recording", "saved post-call tags id=\(draft.id) status=\(draft.status.rawValue) tag_count=\(draft.tags.count)")
     }
 
     public func setTagFilter(_ tag: String?) {
@@ -499,6 +546,9 @@ public final class AppState: ObservableObject {
         updateAutoStartSettings { settings in
             settings.mode = mode
         }
+        if mode != .askFirst {
+            pendingAutoStartPrompt = nil
+        }
     }
 
     public func setAutoStartWhitelist(_ whitelist: [String]) {
@@ -521,7 +571,8 @@ public final class AppState: ObservableObject {
                 blacklist: settings.blacklist,
                 cooldownSeconds: seconds,
                 minDetectionDurationSeconds: settings.minDetectionDurationSeconds,
-                shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds
+                shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds,
+                autoStopDelaySeconds: settings.autoStopDelaySeconds
             )
         }
     }
@@ -534,7 +585,8 @@ public final class AppState: ObservableObject {
                 blacklist: settings.blacklist,
                 cooldownSeconds: settings.cooldownSeconds,
                 minDetectionDurationSeconds: seconds,
-                shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds
+                shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds,
+                autoStopDelaySeconds: settings.autoStopDelaySeconds
             )
         }
     }
@@ -547,19 +599,34 @@ public final class AppState: ObservableObject {
                 blacklist: settings.blacklist,
                 cooldownSeconds: settings.cooldownSeconds,
                 minDetectionDurationSeconds: settings.minDetectionDurationSeconds,
-                shortRecordingThresholdSeconds: seconds
+                shortRecordingThresholdSeconds: seconds,
+                autoStopDelaySeconds: settings.autoStopDelaySeconds
+            )
+        }
+    }
+
+    public func setAutoStopDelaySeconds(_ seconds: TimeInterval) {
+        updateAutoStartSettings { settings in
+            settings = AutoStartSettings(
+                mode: settings.mode,
+                whitelist: settings.whitelist,
+                blacklist: settings.blacklist,
+                cooldownSeconds: settings.cooldownSeconds,
+                minDetectionDurationSeconds: settings.minDetectionDurationSeconds,
+                shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds,
+                autoStopDelaySeconds: AutoStartSettings.normalizeAutoStopDelay(seconds)
             )
         }
     }
 
     public func setSystemAudioEnabled(_ isEnabled: Bool) {
-        recordingSettings.systemAudioEnabled = isEnabled
+        recordingSettings.systemAudioEnabled = true
         refreshPermissionSnapshot()
         saveSettings()
     }
 
     public func setMixedPreviewEnabled(_ isEnabled: Bool) {
-        recordingSettings.mixedPreviewEnabled = isEnabled
+        recordingSettings.mixedPreviewEnabled = true
         saveSettings()
     }
 
@@ -593,9 +660,17 @@ public final class AppState: ObservableObject {
             screenSystemAudioSettingsOpened: screenSystemAudioSettingsOpened,
             lastErrorMessage: errorMessage
         )
-        if systemAudioPermissionVerifiedThisRun,
-           snapshot.screenSystemAudio != .denied,
-           snapshot.screenSystemAudio != .restartRequired {
+        // While the system-audio permission request is in flight (macOS
+        // prompt may still be on screen, or the post-prompt sample probe
+        // has not finished), the snapshot MUST NOT report .granted. Real
+        // audio frames have not yet been verified after a user choice.
+        if isSystemAudioPermissionRequestInProgress {
+            if snapshot.screenSystemAudio == .granted {
+                snapshot.screenSystemAudio = .notDetermined
+            }
+        } else if (systemAudioPermissionVerifiedThisRun || systemAudioPermissionProbeSucceeded),
+                  snapshot.screenSystemAudio != .denied,
+                  snapshot.screenSystemAudio != .restartRequired {
             snapshot.screenSystemAudio = .granted
         }
         permissionSnapshot = snapshot
@@ -648,7 +723,30 @@ public final class AppState: ObservableObject {
         refreshPermissionSnapshot()
     }
 
+    public func noteSystemAudioPermissionRequestStarted() {
+        isSystemAudioPermissionRequestInProgress = true
+        // Drop any stale verification flag so that the snapshot cannot
+        // report .granted while the prompt is on screen.
+        systemAudioPermissionVerifiedThisRun = false
+        refreshPermissionSnapshot()
+        AppLogger.file(.info, category: "permissions", "system audio permission request marked in-flight")
+    }
+
+    /// Drops cached "probe succeeded" flags (both in-run and persisted)
+    /// so that the next Fix Permissions click is forced to re-verify
+    /// system audio via the Core Audio probe. Necessary because macOS
+    /// TCC can be revoked or reset between launches without our app
+    /// being notified.
+    public func invalidateSystemAudioPermissionCache() {
+        systemAudioPermissionVerifiedThisRun = false
+        systemAudioPermissionProbeSucceeded = false
+        UserDefaults.standard.set(false, forKey: Self.systemAudioPermissionProbeSucceededKey)
+        refreshPermissionSnapshot()
+        AppLogger.file(.info, category: "permissions", "system audio permission cache invalidated for re-verification")
+    }
+
     public func noteSystemAudioPermissionRequestSucceeded() {
+        isSystemAudioPermissionRequestInProgress = false
         setSystemAudioPermissionProbeSucceeded(true)
         if let errorMessage,
            errorMessage.localizedCaseInsensitiveContains("system audio") {
@@ -662,14 +760,62 @@ public final class AppState: ObservableObject {
     }
 
     public func noteSystemAudioPermissionRequestFailed(_ error: Error) {
+        isSystemAudioPermissionRequestInProgress = false
         setSystemAudioPermissionProbeSucceeded(false)
         errorMessage = String(describing: error)
         systemAudioStatus = .permissionDenied
         refreshPermissionSnapshot()
     }
 
+    /// Test-only entry point: forces the recording status into `.error` with
+    /// a preflight-style message, simulating a previous failed start.
+    internal func applyTestErrorForPreflight() {
+        applyError(RecordingControllerError.preflightFailed("Microphone access is required before recording."))
+    }
+
+    /// Drops a previous `.error` recording status when current permissions
+    /// are no longer blocking. Called after a successful permission
+    /// onboarding flow so the UI exits the `Recording failed` panel.
+    public func clearRecordingErrorIfPermissionsResolved() {
+        guard status == .error else {
+            return
+        }
+        // Use the same gating logic as the Start Recording button — if
+        // nothing is blocking now, the previous error is stale.
+        let reason = RecordingPermissionDisplay.blockingReason(
+            permissionSnapshot,
+            systemAudioEnabled: recordingSettings.systemAudioEnabled
+        )
+        guard reason == nil,
+              selectedMicrophoneName != "No input device",
+              !(isSystemAudioPermissionRequestInProgress
+                && recordingSettings.systemAudioEnabled)
+        else {
+            return
+        }
+
+        if let message = errorMessage,
+           message.localizedCaseInsensitiveContains("microphone")
+            || message.localizedCaseInsensitiveContains("system audio")
+            || message.localizedCaseInsensitiveContains("preflight")
+            || message.localizedCaseInsensitiveContains("permission") {
+            errorMessage = nil
+        }
+        status = .idle
+        micStatus = .idle
+        systemAudioStatus = .idle
+        AppLogger.file(.info, category: "permissions", "cleared recording error after permissions resolved")
+    }
+
     public func setPreferredMicrophoneDeviceID(_ deviceID: String?) {
-        recordingSettings.microphoneDeviceID = deviceID?.isEmpty == true ? nil : deviceID
+        let normalizedDeviceID = deviceID?.isEmpty == true ? nil : deviceID
+        if let normalizedDeviceID,
+           let device = availableMicrophoneDevices.first(where: { $0.id == normalizedDeviceID }),
+           DevicePriorityResolver.isBluetoothHeadset(device) {
+            recordingSettings.microphoneDeviceID = nil
+        } else {
+            recordingSettings.microphoneDeviceID = normalizedDeviceID
+        }
         refreshSelectedMicrophone(allowSelectionChange: status != .recording)
         saveSettings()
     }
@@ -717,7 +863,9 @@ public final class AppState: ObservableObject {
         saveSettings()
     }
 
-    public func startAutoStartMonitoring(pollIntervalSeconds: TimeInterval = 5) {
+    public func startAutoStartMonitoring(
+        pollIntervalSeconds: TimeInterval = AppState.defaultAutoStartMonitoringPollIntervalSeconds
+    ) {
         guard autoStartTask == nil else {
             return
         }
@@ -818,8 +966,17 @@ public final class AppState: ObservableObject {
         )
 
         if decision.action == .ask, let source = decision.recordingSource {
-            publishAutoStartNotification("Call detected: \(source.appName)")
+            pendingAutoStartPrompt = PendingAutoStartPrompt(
+                source: source,
+                message: decision.message,
+                confidence: decision.confidence,
+                detectedAt: now
+            )
             return
+        }
+
+        if decision.action != .wait {
+            pendingAutoStartPrompt = nil
         }
 
         guard decision.action == .start, let source = decision.recordingSource else {
@@ -828,12 +985,38 @@ public final class AppState: ObservableObject {
 
         do {
             try await startRecording(source: source)
-            publishAutoStartNotification(notificationMessage(for: source))
         } catch {
             applyError(error)
             AppLogger.recording.error("Auto-start failed: reason=\(decision.reason.rawValue, privacy: .public), confidence=\(decision.confidence, privacy: .public), app=\(source.appName, privacy: .public), bundle_id=\(source.bundleID, privacy: .public), error=\(String(describing: error), privacy: .public)")
             AppLogger.file(.error, category: "autostart", "auto-start failed reason=\(decision.reason.rawValue) confidence=\(decision.confidence) app=\(source.appName) bundle_id=\(source.bundleID) error=\(String(describing: error))")
         }
+    }
+
+    public func confirmPendingAutoStart() async throws {
+        guard let prompt = pendingAutoStartPrompt else {
+            return
+        }
+
+        pendingAutoStartPrompt = nil
+
+        do {
+            try await startRecording(source: prompt.source)
+        } catch {
+            applyError(error)
+            AppLogger.recording.error("Ask-first auto-start failed: app=\(prompt.source.appName, privacy: .public), bundle_id=\(prompt.source.bundleID, privacy: .public), error=\(String(describing: error), privacy: .public)")
+            AppLogger.file(.error, category: "autostart", "ask-first start failed app=\(prompt.source.appName) bundle_id=\(prompt.source.bundleID) error=\(String(describing: error))")
+            throw error
+        }
+    }
+
+    public func ignorePendingAutoStart(now: Date = Date()) {
+        guard let prompt = pendingAutoStartPrompt else {
+            return
+        }
+
+        pendingAutoStartPrompt = nil
+        lastRecordingStoppedAt = now
+        AppLogger.file(.info, category: "autostart", "ask-first ignored app=\(prompt.source.appName) bundle_id=\(prompt.source.bundleID) confidence=\(prompt.confidence)")
     }
 
     private func evaluateAutoStop(
@@ -848,6 +1031,11 @@ public final class AppState: ObservableObject {
             return
         }
 
+        let zoomTitles = (([activeApplication].compactMap { $0 } + runningApplications))
+            .filter(isZoomApplication)
+            .compactMap { $0.windowTitle }
+            .joined(separator: "|")
+        let zoomProcessAudioState = zoomProcessAudioLogState(audioActivity)
         if autoStartedCallStillLooksActive(
             source: source,
             activeApplication: activeApplication,
@@ -858,26 +1046,32 @@ public final class AppState: ObservableObject {
                 AppLogger.file(
                     .info,
                     category: "autostart",
-                    "auto-stop cancelled signal_restored active_app=\(activeApplication?.name ?? "none") mic_active=\(audioActivity.microphoneActive) system_active=\(audioActivity.systemAudioActive)"
+                    "auto-stop cancelled signal_restored active_app=\(activeApplication?.name ?? "none") mic_active=\(audioActivity.microphoneActive) system_active=\(audioActivity.systemAudioActive) zoom_process_audio=\(zoomProcessAudioState) zoom_titles=\(zoomTitles.isEmpty ? "<none>" : zoomTitles)"
                 )
             }
             autoStopSignalLostAt = nil
             return
         }
 
+        // Live delay from settings; clamped defensively in case future
+        // migrations write something out of range.
+        let configuredGrace = min(
+            Self.autoStopSignalLostGracePeriodSecondsMax,
+            max(0, autoStartSettings.autoStopDelaySeconds)
+        )
         if autoStopSignalLostAt == nil {
             autoStopSignalLostAt = now
             AppLogger.file(
                 .info,
                 category: "autostart",
-                "auto-stop waiting signal_lost grace_seconds=\(Int(Self.autoStopSignalLostGracePeriodSeconds)) active_app=\(activeApplication?.name ?? "none") source_app=\(source.appName)"
+                "auto-stop waiting signal_lost grace_seconds=\(Int(configuredGrace)) active_app=\(activeApplication?.name ?? "none") source_app=\(source.appName) mic_active=\(audioActivity.microphoneActive) system_active=\(audioActivity.systemAudioActive) zoom_process_audio=\(zoomProcessAudioState) zoom_titles=\(zoomTitles.isEmpty ? "<none>" : zoomTitles)"
             )
             return
         }
 
         let signalLostAt = autoStopSignalLostAt ?? now
         let elapsed = now.timeIntervalSince(signalLostAt)
-        guard elapsed >= Self.autoStopSignalLostGracePeriodSeconds else {
+        guard elapsed >= configuredGrace else {
             return
         }
 
@@ -888,7 +1082,6 @@ public final class AppState: ObservableObject {
                 "auto-stop recording signal_lost_elapsed=\(Int(elapsed.rounded(.down))) source_app=\(source.appName)"
             )
             try await stopRecording()
-            publishAutoStartNotification("Recording stopped: call ended")
         } catch {
             applyError(error)
             AppLogger.recording.error("Auto-stop failed: \(String(describing: error), privacy: .public)")
@@ -911,13 +1104,57 @@ public final class AppState: ObservableObject {
             }
 
             if let zoomMeetingWindowIsActive = zoomMeetingWindowLooksActive(zoomSnapshots) {
-                return zoomMeetingWindowIsActive
+                if zoomMeetingWindowIsActive {
+                    return true
+                }
+
+                if let zoomProcessAudioIsActive = zoomProcessAudioLooksActive(audioActivity) {
+                    return zoomProcessAudioIsActive
+                }
+
+                return false
             }
 
+            if let zoomProcessAudioIsActive = zoomProcessAudioLooksActive(audioActivity) {
+                return zoomProcessAudioIsActive
+            }
+
+            // Window titles are unavailable and Core Audio process activity is
+            // unavailable. In this fallback mode, microphone activity is not
+            // reliable because the recorder itself may keep input devices
+            // marked as running; use global system-audio activity as the
+            // remaining call signal.
             return audioActivity.systemAudioActive
         }
 
         return audioActivity.microphoneActive || audioActivity.systemAudioActive
+    }
+
+    private func zoomProcessAudioLooksActive(_ audioActivity: AudioActivitySnapshot) -> Bool? {
+        guard audioActivity.processActivityAvailable else {
+            return nil
+        }
+
+        return audioActivity.processActivities.contains { activity in
+            isZoomToken(activity.bundleID) && activity.isRunningAudio
+        }
+    }
+
+    private func zoomProcessAudioLogState(_ audioActivity: AudioActivitySnapshot) -> String {
+        guard audioActivity.processActivityAvailable else {
+            return "unavailable"
+        }
+
+        let zoomActivities = audioActivity.processActivities.filter { isZoomToken($0.bundleID) }
+        guard !zoomActivities.isEmpty else {
+            return "missing"
+        }
+
+        if zoomActivities.contains(where: \.isRunningAudio) {
+            return "active"
+        }
+
+        return "idle"
     }
 
     private func isZoomRecordingSource(_ source: RecordingSource) -> Bool {
@@ -935,6 +1172,8 @@ public final class AppState: ObservableObject {
         return normalizedValue == "zoom"
             || normalizedValue == "zoom.us"
             || normalizedValue == "us.zoom.xos"
+            || normalizedValue.hasPrefix("us.zoom.")
+            || normalizedValue.contains(".zoom.")
             || normalizedValue.contains("zoom workplace")
     }
 
@@ -1032,6 +1271,11 @@ public final class AppState: ObservableObject {
         status = update.status
         micStatus = update.micStatus
         systemAudioStatus = update.systemAudioStatus
+        if let session = update.session {
+            currentSessionFolderURL = session.folderURL
+        } else if update.status != .recording {
+            currentSessionFolderURL = nil
+        }
 
         if let duration = update.duration {
             currentRecordingDuration = duration
@@ -1056,19 +1300,6 @@ public final class AppState: ObservableObject {
         } ?? 0
         AppLogger.recording.info("Auto-start decision: action=\(String(describing: decision.action), privacy: .public), reason=\(decision.reason.rawValue, privacy: .public), confidence=\(decision.confidence, privacy: .public), active_app=\(activeApplication?.name ?? "none", privacy: .public), bundle_id=\(activeApplication?.bundleID ?? "", privacy: .public), mic_active=\(audioActivity.microphoneActive, privacy: .public), system_active=\(audioActivity.systemAudioActive, privacy: .public), cooldown_remaining=\(Int(cooldownRemaining.rounded(.up)), privacy: .public), message=\(decision.message, privacy: .public)")
         AppLogger.file(.info, category: "autostart", "decision action=\(decision.action) reason=\(decision.reason.rawValue) confidence=\(decision.confidence) active_app=\(activeApplication?.name ?? "none") bundle_id=\(activeApplication?.bundleID ?? "") mic_active=\(audioActivity.microphoneActive) system_active=\(audioActivity.systemAudioActive) cooldown_remaining=\(Int(cooldownRemaining.rounded(.up))) message=\(decision.message)")
-    }
-
-    private func publishAutoStartNotification(_ message: String) {
-        autoStartNotificationMessage = nil
-        autoStartNotificationMessage = message
-    }
-
-    private func notificationMessage(for source: RecordingSource) -> String {
-        if source.ruleID.contains("browser") {
-            return "Recording started: browser call detected"
-        }
-
-        return "Recording started: \(source.appName)"
     }
 
     private func applyError(_ error: Error) {
@@ -1173,7 +1404,8 @@ public final class AppState: ObservableObject {
             blacklist: normalizedAppList(settings.blacklist),
             cooldownSeconds: settings.cooldownSeconds,
             minDetectionDurationSeconds: settings.minDetectionDurationSeconds,
-            shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds
+            shortRecordingThresholdSeconds: settings.shortRecordingThresholdSeconds,
+            autoStopDelaySeconds: settings.autoStopDelaySeconds
         )
         autoStartEngine.resetCandidate()
         saveSettings()

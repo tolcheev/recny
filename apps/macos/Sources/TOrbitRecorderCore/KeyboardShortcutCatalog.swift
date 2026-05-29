@@ -23,8 +23,8 @@ public enum KeyboardShortcutCatalog {
     public static let showWindowGlobal = KeyboardShortcutDefinition(
         id: "show_window_global",
         title: "Show window",
-        keyEquivalent: "",
-        displayText: "Menu bar"
+        keyEquivalent: "r",
+        displayText: "Ctrl+Option+R"
     )
 
     public static let toggleRecording = KeyboardShortcutDefinition(
@@ -55,6 +55,20 @@ public enum KeyboardShortcutCatalog {
         displayText: "Cmd+Shift+D"
     )
 
+    public static let captureScreenshot = KeyboardShortcutDefinition(
+        id: "capture_screenshot",
+        title: "Capture full screenshot",
+        keyEquivalent: "s",
+        displayText: "Cmd+Shift+S"
+    )
+
+    public static let captureScreenshotGlobal = KeyboardShortcutDefinition(
+        id: "capture_screenshot_global",
+        title: "Capture full screenshot",
+        keyEquivalent: "s",
+        displayText: "Ctrl+Option+S"
+    )
+
     public static let markerImportant = markerShortcut(for: .important)
     public static let markerObjection = markerShortcut(for: .objection)
     public static let markerConflict = markerShortcut(for: .conflict)
@@ -73,7 +87,8 @@ public enum KeyboardShortcutCatalog {
         toggleRecording,
         openLatestRecordingFolder,
         openLibrary,
-        openDiagnostics
+        openDiagnostics,
+        captureScreenshot
     ]
 
     private static func markerShortcut(for kind: RecordingMarkerKind) -> KeyboardShortcutDefinition {

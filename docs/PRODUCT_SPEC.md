@@ -48,8 +48,8 @@ The MVP is intentionally not a media studio, meeting bot, cloud recorder, or T-O
 - Manual tagging from Library after stop.
 - MVP tags saved to `metadata.json` and local SQLite.
 - Recording list filtering by date, status, source app, title, and tag.
-- Local library actions: Open in Finder, Play mixed preview, edit title, add tags, and delete with confirmation.
-- Local Settings screen for recording toggles, auto-start rules, storage root, hotkey placeholders, and privacy controls.
+- Local library actions: Open in Finder, Play mixed preview, share through macOS share sheet, trim a local clip, capture a still screenshot, edit title, add tags, and delete with confirmation.
+- Local Settings screen for preferred microphone, required MVP output indicators, auto-start rules, storage root, screenshot hotkeys, disabled custom-hotkey placeholders, and privacy controls.
 - Local storage under `~/Recordings/TOrbitRecorder/`.
 - Lifecycle and failure logs.
 
@@ -96,9 +96,11 @@ AI and sync fields exist in the schema even though AI processing and T-Orbit syn
 - Screen recording.
 - Cloud upload.
 - T-Orbit sync.
-- AI transcription, summaries, scoring, or recommendations.
+- Automatic/cloud AI transcription, summaries, scoring, or recommendations. Explicit local transcription is allowed only as a user-triggered local action after optional Settings preparation is ready.
 - Windows support.
 - Telegram integration.
+- Telegram bot/API upload.
+- Destructive audio editing, waveform editor, or multi-clip timeline.
 - Multi-user administration.
 - Retention or autodelete.
 - Encryption.

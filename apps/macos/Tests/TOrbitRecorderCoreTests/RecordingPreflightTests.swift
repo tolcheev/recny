@@ -50,4 +50,28 @@ struct RecordingPreflightTests {
             try checker.validate(context)
         }
     }
+
+    @Test
+    func airPodsOnlyInputBlocksPreflightWithExplicitMessage() {
+        let checker = DefaultRecordingPreflightChecker(minimumFreeDiskSpaceBytes: 0)
+        let context = RecordingPreflightContext(
+            permissionSnapshot: RecorderPermissionSnapshot(
+                microphone: .granted,
+                screenSystemAudio: .granted,
+                storage: .granted
+            ),
+            systemAudioEnabled: true,
+            outputFolderURL: URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true),
+            availableMicrophoneDevices: [
+                MicrophoneInputDevice(id: "airpods", name: "AirPods Pro")
+            ],
+            preferredMicrophoneDeviceID: nil,
+            systemAudioCaptureAvailable: true,
+            isRecordingActive: false
+        )
+
+        #expect(throws: RecordingControllerError.preflightFailed("AirPods/Bluetooth microphone is blocked for recording. Connect the MacBook or USB microphone.")) {
+            try checker.validate(context)
+        }
+    }
 }

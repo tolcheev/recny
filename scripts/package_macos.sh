@@ -3,32 +3,58 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="TOrbitRecorder"
-PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.0}"
+PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.1}"
 BUILD_APP="$ROOT_DIR/apps/macos/.build/app/$APP_NAME.app"
 DIST_DIR="$ROOT_DIR/dist"
 DIST_APP="$DIST_DIR/$APP_NAME.app"
 DIST_INSTALL="$DIST_DIR/INSTALL.md"
+DIST_RELEASE_NOTES="$DIST_DIR/RELEASE_NOTES.md"
 DIST_ZIP="$DIST_DIR/$APP_NAME-$PACKAGE_VERSION-macOS.zip"
+DIST_SHA256="$DIST_ZIP.sha256"
 
 "$ROOT_DIR/scripts/build_macos.sh"
 
 mkdir -p "$DIST_DIR"
-rm -rf "$DIST_APP" "$DIST_ZIP" "$DIST_DIR/$APP_NAME-macOS-MVP.zip"
+rm -rf \
+    "$DIST_APP" \
+    "$DIST_RELEASE_NOTES" \
+    "$DIST_DIR"/"$APP_NAME"-*-macOS.zip \
+    "$DIST_DIR"/"$APP_NAME"-*-macOS.zip.sha256 \
+    "$DIST_DIR/$APP_NAME-macOS-MVP.zip"
 
 cat > "$DIST_INSTALL" <<'INSTALL_GUIDE'
 # TOrbitRecorder macOS Install
 
-This folder contains the packaged macOS MVP build.
+This folder contains the packaged macOS MVP build for internal testing on Apple Silicon Macs.
 
-## Install
+## Install From This Zip
 
-From the repository root:
+1. Unzip the archive.
+2. Move `TOrbitRecorder.app` to `/Applications`.
+3. Open `/Applications/TOrbitRecorder.app`.
+
+If macOS blocks the first launch because this internal build is not notarized yet, use Finder -> Applications -> right-click `TOrbitRecorder` -> Open. For trusted internal testing only, you can also clear the download quarantine:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/TOrbitRecorder.app
+open /Applications/TOrbitRecorder.app
+```
+
+## Install From Repository
+
+From the repository root, developers can run:
 
 ```sh
 ./scripts/install_macos.sh
 ```
 
-The installer packages the app, replaces `/Applications/TOrbitRecorder.app`, and opens the installed app.
+The repository installer packages the app, replaces `/Applications/TOrbitRecorder.app`, and opens the installed app.
+
+If TOrbitRecorder is already running and an active recording is in progress, the installer refuses to replace the app. Stop recording and wait for finalization before installing. Emergency override:
+
+```sh
+ALLOW_INSTALL_WHILE_RECORDING=1 ./scripts/install_macos.sh
+```
 
 For a dry run without copying to `/Applications`:
 
@@ -106,14 +132,27 @@ rm -rf ~/Recordings/TOrbitRecorder
 ```
 INSTALL_GUIDE
 
+if [[ -f "$ROOT_DIR/docs/RELEASE_NOTES_V0_1_1.md" ]]; then
+    cp "$ROOT_DIR/docs/RELEASE_NOTES_V0_1_1.md" "$DIST_RELEASE_NOTES"
+else
+    : > "$DIST_RELEASE_NOTES"
+fi
+
 cp -R "$BUILD_APP" "$DIST_APP"
 
 (
     cd "$DIST_DIR"
-    zip -qry "$(basename "$DIST_ZIP")" "$(basename "$DIST_APP")" "$(basename "$DIST_INSTALL")"
+    zip -qry "$(basename "$DIST_ZIP")" "$(basename "$DIST_APP")" "$(basename "$DIST_INSTALL")" "$(basename "$DIST_RELEASE_NOTES")"
+)
+
+(
+    cd "$DIST_DIR"
+    env LC_ALL=C LANG=C /usr/bin/shasum -a 256 "$(basename "$DIST_ZIP")" > "$(basename "$DIST_SHA256")"
 )
 
 echo "Version: $PACKAGE_VERSION"
 echo "App bundle: $DIST_APP"
 echo "Install guide: $DIST_INSTALL"
+echo "Release notes: $DIST_RELEASE_NOTES"
 echo "Archive: $DIST_ZIP"
+echo "SHA256: $DIST_SHA256"

@@ -1,16 +1,35 @@
 # TOrbitRecorder macOS Install
 
-This folder contains the packaged macOS MVP build.
+This folder contains the packaged macOS MVP build for internal testing on Apple Silicon Macs.
 
-## Install
+## Install From This Zip
 
-From the repository root:
+1. Unzip the archive.
+2. Move `TOrbitRecorder.app` to `/Applications`.
+3. Open `/Applications/TOrbitRecorder.app`.
+
+If macOS blocks the first launch because this internal build is not notarized yet, use Finder -> Applications -> right-click `TOrbitRecorder` -> Open. For trusted internal testing only, you can also clear the download quarantine:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/TOrbitRecorder.app
+open /Applications/TOrbitRecorder.app
+```
+
+## Install From Repository
+
+From the repository root, developers can run:
 
 ```sh
 ./scripts/install_macos.sh
 ```
 
-The installer packages the app, replaces `/Applications/TOrbitRecorder.app`, and opens the installed app.
+The repository installer packages the app, replaces `/Applications/TOrbitRecorder.app`, and opens the installed app.
+
+If TOrbitRecorder is already running and an active recording is in progress, the installer refuses to replace the app. Stop recording and wait for finalization before installing. Emergency override:
+
+```sh
+ALLOW_INSTALL_WHILE_RECORDING=1 ./scripts/install_macos.sh
+```
 
 For a dry run without copying to `/Applications`:
 

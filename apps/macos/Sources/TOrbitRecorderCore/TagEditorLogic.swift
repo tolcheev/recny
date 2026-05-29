@@ -1,6 +1,27 @@
 import Foundation
 
 public enum TagEditorLogic {
+    public static func resolvedSaveStatus(
+        originalStatus: TaggingStatus,
+        selectedStatus: TaggingStatus
+    ) -> TaggingStatus {
+        switch originalStatus {
+        case .failed, .shortRecording:
+            return originalStatus
+        case .needsTagging, .saved, .needsReview, .reviewed:
+            return selectedStatus
+        }
+    }
+
+    public static func isTechnicalStatusLocked(_ status: TaggingStatus) -> Bool {
+        switch status {
+        case .failed, .shortRecording:
+            return true
+        case .needsTagging, .saved, .needsReview, .reviewed:
+            return false
+        }
+    }
+
     public static func toggled(_ tag: String, in tags: [String]) -> [String] {
         let normalized = normalizedTag(tag)
         guard !normalized.isEmpty else {

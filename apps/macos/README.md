@@ -23,19 +23,19 @@ apps/macos/.build/app/TOrbitRecorder.app
 - `AppState` core state layer.
 - `RecordingController` protocol.
 - Real microphone recording through AVFoundation into `source/mic.m4a`.
-- Real system audio recording through ScreenCaptureKit audio output into `source/system.m4a`.
-- ScreenCaptureKit is configured for audio capture only; no screen video stream is written.
+- Real system audio recording through the native macOS audio capture path into `source/system.m4a`.
+- System audio capture is audio-only; no screen video stream is written.
 - Mixed audio preview through AVFoundation into `export/mixed.m4a`.
 - Crash recovery metadata in `recovery.json` and active segment files under `source/segments/`.
 - Recoverable interrupted recordings surfaced in the UI with a Recover Recording action.
-- Auto-start Engine v1 with active app detection, bundle id detection, allowlist/blocklist settings, cooldown, and minimum detection duration.
+- Auto-start Engine v2 with active app detection, process-audio signals, browser call-title heuristics, allowlist/blocklist settings, cooldown, and minimum detection duration.
 - Settings screen persisted locally with sections for Recording, Auto-start, Storage, Hotkeys, and Privacy.
 - `StubRecordingController` that changes state without writing audio.
 - Compact post-call tagging panel after Stop.
 - MVP tags saved to `metadata.json` and SQLite.
 - Local recordings list backed by `~/Recordings/TOrbitRecorder/db/app.sqlite`.
 - Recording filters by date, status, source app, title, and tag.
-- Local library actions: Open in Finder, Play mixed preview, edit title, add tags, and delete with confirmation.
+- Local library actions: Open in Finder, Play mixed preview, share through the macOS share sheet, trim a local clip, capture a full-screen still screenshot, optionally transcribe locally after setup, edit title, add tags, and delete with confirmation.
 - File-system storage with temporary sessions in `Inbox/Unsorted`, short sessions in `Inbox/Short`, failed sessions in `Inbox/Failed`, and finalized sessions in `Library/YYYY/MM`.
 - Basic OSLog logging.
 - Permission descriptions for microphone and Screen & System Audio Recording.
@@ -55,6 +55,7 @@ Disabled placeholders:
 
 - Audio quality preset beyond the current Standard AAC 48 kHz profile.
 - Microphone device selection beyond the default system input.
+- Editable custom hotkey capture.
 - Start/stop global hotkey.
 - Add marker hotkey.
 - Local-only mode toggle.

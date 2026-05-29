@@ -1,5 +1,4 @@
 import AVFoundation
-import CoreGraphics
 import Foundation
 
 public enum RecorderPermissionState: String, CaseIterable, Equatable, Sendable {
@@ -195,7 +194,10 @@ public final class SystemRecordingPermissionChecker: RecordingPermissionChecking
                 from: Self.microphoneAuthorizationState()
             ),
             screenSystemAudio: RecordingPermissionDisplay.screenSystemAudioState(
-                processGranted: CGPreflightScreenCaptureAccess(),
+                // Core Audio system-audio permission is proven only by the
+                // capture-start probe tracked in AppState. ScreenCapture
+                // preflight can be granted while Core Audio still prompts.
+                processGranted: false,
                 settingsOpened: screenSystemAudioSettingsOpened,
                 lastErrorMessage: lastErrorMessage
             ),

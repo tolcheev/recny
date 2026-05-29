@@ -107,6 +107,93 @@ struct RecordingPlaybackResolverTests {
         #expect(request.url == url)
     }
 
+    @Test
+    func deletionStopsInlinePlaybackForDeletedRecording() throws {
+        let folder = try makeRecordingFolder()
+        let url = folder.appendingPathComponent("export/mixed_balanced.m4a")
+        let candidate = RecordingPlaybackCandidate(kind: .balanced, url: url, fileSizeBytes: 20)
+        let request = RecordingInlinePlaybackRequest(
+            recordingID: "rec_123",
+            recordingTitle: "Screening call",
+            candidate: candidate
+        )
+
+        #expect(
+            RecordingPlaybackResolver.shouldStopPlaybackBeforeDeleting(
+                inlinePlayback: request,
+                deletedRecordingID: "rec_123",
+                deletedSessionFolderURL: folder
+            )
+        )
+    }
+
+    @Test
+    func deletionDoesNotStopInlinePlaybackForDifferentRecordingOutsideDeletedFolder() throws {
+        let deletedFolder = try makeRecordingFolder()
+        let otherFolder = try makeRecordingFolder()
+        let url = otherFolder.appendingPathComponent("export/mixed_balanced.m4a")
+        let candidate = RecordingPlaybackCandidate(kind: .balanced, url: url, fileSizeBytes: 20)
+        let request = RecordingInlinePlaybackRequest(
+            recordingID: "rec_other",
+            recordingTitle: "Other call",
+            candidate: candidate
+        )
+
+        #expect(
+            !RecordingPlaybackResolver.shouldStopPlaybackBeforeDeleting(
+                inlinePlayback: request,
+                deletedRecordingID: "rec_123",
+                deletedSessionFolderURL: deletedFolder
+            )
+        )
+    }
+
+    @Test
+    func externalPlayerURLIsMatchedOnlyInsideDeletedSessionFolder() throws {
+        let folder = try makeRecordingFolder()
+        let siblingFolder = folder
+            .deletingLastPathComponent()
+            .appendingPathComponent("\(folder.lastPathComponent)-copy", isDirectory: true)
+        let playbackURL = folder.appendingPathComponent("export/mixed.m4a")
+        let siblingURL = siblingFolder.appendingPathComponent("export/mixed.m4a")
+
+        #expect(RecordingPlaybackResolver.isPlaybackURL(playbackURL, insideSessionFolder: folder))
+        #expect(!RecordingPlaybackResolver.isPlaybackURL(siblingURL, insideSessionFolder: folder))
+        #expect(!RecordingPlaybackResolver.isPlaybackURL(nil, insideSessionFolder: folder))
+    }
+
+    @Test
+    func shareableAudioPrefersBalancedThenOriginalThenSourceTrack() throws {
+        let folder = try makeRecordingFolder()
+        let mixedURL = folder.appendingPathComponent("export/mixed.m4a")
+        let balancedURL = folder.appendingPathComponent("export/mixed_balanced.m4a")
+        let micURL = folder.appendingPathComponent("source/mic.m4a")
+
+        try write(bytes: 8, to: micURL)
+        var shareable = try #require(RecordingPlaybackResolver.preferredShareableAudio(sessionFolderURL: folder))
+        #expect(shareable.kind == .microphone)
+        #expect(shareable.url == micURL)
+
+        try write(bytes: 12, to: mixedURL)
+        shareable = try #require(RecordingPlaybackResolver.preferredShareableAudio(sessionFolderURL: folder))
+        #expect(shareable.kind == .original)
+        #expect(shareable.url == mixedURL)
+
+        try write(bytes: 20, to: balancedURL)
+        shareable = try #require(RecordingPlaybackResolver.preferredShareableAudio(sessionFolderURL: folder))
+        #expect(shareable.kind == .balanced)
+        #expect(shareable.url == balancedURL)
+    }
+
+    @Test
+    func shareableAudioReturnsNilWhenAllAudioFilesAreMissingOrEmpty() throws {
+        let folder = try makeRecordingFolder()
+        try write(bytes: 0, to: folder.appendingPathComponent("export/mixed.m4a"))
+        try write(bytes: 0, to: folder.appendingPathComponent("source/mic.m4a"))
+
+        #expect(RecordingPlaybackResolver.preferredShareableAudio(sessionFolderURL: folder) == nil)
+    }
+
     private func makeRecordingFolder() throws -> URL {
         let folder = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

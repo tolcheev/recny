@@ -4,6 +4,9 @@ import TOrbitRecorderCore
 
 struct MainRecorderView: View {
     @ObservedObject var appState: AppState
+    @State private var isCapturingScreenshot = false
+    @State private var screenshotMessage: String?
+    @State private var screenshotError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -12,6 +15,7 @@ struct MainRecorderView: View {
                 PermissionsOnboardingView(appState: appState)
             }
             RecordingStatusCard(appState: appState)
+            screenshotFeedback
             footerActions
         }
         .padding(18)
@@ -84,7 +88,7 @@ struct MainRecorderView: View {
         case .error:
             return "Error"
         case .idle:
-            return appState.isRecordingStartAllowed ? "Ready" : "Error"
+            return appState.isRecordingStartAllowed ? "Ready" : "Blocked"
         }
     }
 
@@ -105,6 +109,7 @@ struct MainRecorderView: View {
                 recordsButton
                 libraryFolderButton
                 settingsButton
+                screenshotButton
                 Spacer(minLength: 12)
                 diagnosticsButton
             }
@@ -114,11 +119,27 @@ struct MainRecorderView: View {
                     recordsButton
                     libraryFolderButton
                     settingsButton
+                    screenshotButton
                 }
                 diagnosticsButton
             }
         }
         .padding(.top, 2)
+    }
+
+    @ViewBuilder
+    private var screenshotFeedback: some View {
+        if let screenshotError {
+            Label(screenshotError, systemImage: "exclamationmark.triangle")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .textSelection(.enabled)
+        } else if let screenshotMessage {
+            Label(screenshotMessage, systemImage: "checkmark.circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+        }
     }
 
     private var recordsButton: some View {
@@ -148,11 +169,56 @@ struct MainRecorderView: View {
         .accessibilityLabel("Open Settings")
     }
 
+    private var screenshotButton: some View {
+        Button {
+            captureScreenshot()
+        } label: {
+            Label(isCapturingScreenshot ? "Capturing" : "Full Screenshot", systemImage: "camera.viewfinder")
+        }
+        .disabled(isCapturingScreenshot || appState.preferredScreenshotFolderURL == nil)
+        .accessibilityLabel("Capture full-screen screenshot")
+    }
+
     private var diagnosticsButton: some View {
         Button("Diagnostics") {
             AppWindows.openDiagnostics(appState: appState)
         }
         .buttonStyle(.link)
         .accessibilityLabel("Open Diagnostics")
+    }
+
+    private func captureScreenshot() {
+        guard let sessionFolderURL = appState.preferredScreenshotFolderURL else {
+            screenshotError = "Start a recording or keep a recent recording before taking a screenshot."
+            screenshotMessage = nil
+            return
+        }
+
+        isCapturingScreenshot = true
+        screenshotError = nil
+        screenshotMessage = nil
+
+        Task {
+            do {
+                let screenshotURL = try await NativeScreenshotCapture.captureFullScreen(
+                    sessionFolderURL: sessionFolderURL
+                )
+                await MainActor.run {
+                    isCapturingScreenshot = false
+                    screenshotMessage = "Screenshot saved: \(screenshotURL.lastPathComponent)"
+                    screenshotError = nil
+                }
+            } catch NativeScreenshotError.cancelled {
+                await MainActor.run {
+                    isCapturingScreenshot = false
+                }
+            } catch {
+                await MainActor.run {
+                    isCapturingScreenshot = false
+                    screenshotError = String(describing: error)
+                    screenshotMessage = nil
+                }
+            }
+        }
     }
 }

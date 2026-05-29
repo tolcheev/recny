@@ -4,7 +4,7 @@
 
 T-Orbit Recorder MVP is local-first.
 
-The app stores recordings, metadata, and logs on the user's Mac and does not upload them to cloud storage, T-Orbit, AI providers, or external services.
+The app stores recordings, metadata, transcripts, notes, screenshots, and logs on the user's Mac and does not upload them to cloud storage, T-Orbit, AI providers, or external services.
 
 ## Sensitive Data
 
@@ -31,6 +31,8 @@ MVP data stays local:
 
 - source audio
 - mixed exports
+- user-created audio clips
+- manual still screenshots
 - metadata
 - logs
 - local SQLite recordings index
@@ -44,17 +46,20 @@ Required capabilities:
 - microphone capture
 - system audio capture where macOS allows it
 
-If a permission is missing or macOS blocks capture, the app must show and log the blocked state. It must not mark the session as successfully recorded.
+If a permission is missing or macOS blocks capture, the app must show and log the blocked state. Missing microphone or system-audio permission is surfaced as a red menu-bar icon, a `Blocked` main-window state, a red `Recording is blocked` panel, and a `Fix Recording Permissions` menu action. It must not mark the session as successfully recorded.
 
 ## No Uploads In MVP
 
 The MVP must not:
 
 - upload audio files
+- upload screenshots
 - upload metadata
 - sync with T-Orbit
 - call AI services
 - send transcripts, notes, tags, or participant data anywhere
+
+Explicit local transcription may launch user-installed local tools such as `parakeet-mlx` and `ffmpeg`. The app does not send audio or transcript text to a cloud API. Model download/preparation is optional and initiated from Settings -> Local transcription; Records does not trigger first-run model downloads.
 
 Future upload and sync work must be designed separately and documented before implementation.
 
@@ -72,7 +77,9 @@ Allowed log content:
 - permission status
 - failure category and error code
 
-Avoid logging unnecessary participant names, raw transcript text, or long file contents.
+Avoid logging unnecessary participant names, raw transcript text, raw browser/window titles, raw custom tags, or long file contents. File logs should record tag counts instead of tag values and should keep auto-start decision messages free of raw window titles.
+
+Local destructive actions must only operate inside the configured T-Orbit Recorder storage root. If a local index row points outside that root, the app must refuse the action instead of deleting or opening the path.
 
 ## Encryption
 
@@ -110,3 +117,5 @@ Rotation keeps one archive:
 Local file logs are for troubleshooting recorder lifecycle and permission issues. They may include file paths, app names, bundle IDs, device names, selected microphone names, auto-start decisions, and error messages.
 
 Local logs must not include raw transcript text, raw audio content, call content, or screen content.
+
+Manual screenshot capture immediately saves a full-screen PNG into the selected recording folder. It is a user-triggered still-image action, not background screen recording, and it does not ask the user to choose an area or window. Screenshots are sensitive local files and are deleted when the whole local recording folder is deleted.

@@ -66,7 +66,13 @@ public final class DefaultRecordingPreflightChecker: RecordingPreflightChecking,
             devices: context.availableMicrophoneDevices,
             preferredDeviceID: context.preferredMicrophoneDeviceID
         ) != nil else {
-            throw RecordingControllerError.preflightFailed("No microphone input device is available.")
+            throw RecordingControllerError.preflightFailed(
+                DevicePriorityResolver.selectionReason(
+                    devices: context.availableMicrophoneDevices,
+                    selection: nil,
+                    preferredDeviceID: context.preferredMicrophoneDeviceID
+                )
+            )
         }
 
         try validateWritableOutputRoot(context.outputFolderURL)

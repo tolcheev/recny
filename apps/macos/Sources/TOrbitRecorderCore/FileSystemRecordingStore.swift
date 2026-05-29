@@ -1,6 +1,10 @@
 import Foundation
 import SQLite3
 
+public enum FileSystemRecordingStoreError: Error, Equatable, Sendable {
+    case pathOutsideStorageRoot
+}
+
 public final class FileSystemRecordingStore {
     public let rootURL: URL
     public let paths: StoragePathBuilder
@@ -253,9 +257,7 @@ public final class FileSystemRecordingStore {
         try prepareRoot()
         let index = SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL)
 
-        if try index.isEmpty() {
-            try reindexMetadataFiles(with: index)
-        }
+        try synchronizeIndexWithDisk(index)
 
         return try index.recordings(filters: filters)
     }
@@ -270,10 +272,9 @@ public final class FileSystemRecordingStore {
     }
 
     public func updateRecording(id: String, title: String, tags: [String]) throws {
+        try prepareRoot()
         let index = SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL)
-        if try index.isEmpty() {
-            try reindexMetadataFiles(with: index)
-        }
+        try synchronizeIndexWithDisk(index)
 
         guard let summary = try index.recording(id: id) else {
             throw SQLiteIndexError(message: "Recording not found: \(id)")
@@ -289,6 +290,7 @@ public final class FileSystemRecordingStore {
 
     public func deleteLocalRecord(_ summary: RecordingSummary) throws {
         let index = SQLiteRecordingIndex(rootURL: rootURL, dbURL: paths.dbURL)
+        try validatePathInsideStorageRoot(summary.sessionFolderURL)
         try FileManager.default.removeItemIfExists(at: summary.sessionFolderURL)
         try index.delete(recordingID: summary.id)
     }
@@ -357,16 +359,162 @@ public final class FileSystemRecordingStore {
     private func reindexMetadataFiles(with index: SQLiteRecordingIndex) throws {
         for metadataURL in try metadataURLsForReindex() {
             do {
-                let metadata = try readMetadata(at: metadataURL)
+                var metadata = try readMetadata(at: metadataURL)
+                let sessionFolderURL = metadataURL.deletingLastPathComponent()
+                var refreshedMetadata = repairRecoverableFailedMetadataIfNeeded(
+                    metadata,
+                    sessionFolderURL: sessionFolderURL
+                )
+                refreshedMetadata = refreshSystemTrackTruncationWarningIfNeeded(refreshedMetadata)
+                if refreshedMetadata != metadata {
+                    metadata = refreshedMetadata
+                    try codec.write(metadata, to: metadataURL)
+                    AppLogger.file(.info, category: "storage", "refreshed recording metadata id=\(metadata.id) folder=\(sessionFolderURL.path(percentEncoded: false))")
+                }
                 try index.upsert(
                     metadata: metadata,
                     metadataURL: metadataURL,
-                    sessionFolderURL: metadataURL.deletingLastPathComponent()
+                    sessionFolderURL: sessionFolderURL
                 )
             } catch {
                 AppLogger.storage.error("Failed to index metadata file \(metadataURL.path(percentEncoded: false), privacy: .public): \(String(describing: error), privacy: .public)")
             }
         }
+    }
+
+    private func synchronizeIndexWithDisk(_ index: SQLiteRecordingIndex) throws {
+        try pruneDeletedIndexedRecordings(with: index)
+        try reindexMetadataFiles(with: index)
+    }
+
+    private func pruneDeletedIndexedRecordings(with index: SQLiteRecordingIndex) throws {
+        for location in try index.recordingLocations() {
+            let folderExists = FileManager.default.fileExists(atPath: location.sessionFolderURL.path(percentEncoded: false))
+            let metadataExists = FileManager.default.fileExists(atPath: location.metadataURL.path(percentEncoded: false))
+            guard !folderExists || !metadataExists else {
+                continue
+            }
+
+            try index.delete(recordingID: location.id)
+            AppLogger.file(
+                .info,
+                category: "storage",
+                "removed stale recording index id=\(location.id) folderExists=\(folderExists) metadataExists=\(metadataExists)"
+            )
+        }
+    }
+
+    private func refreshSystemTrackTruncationWarningIfNeeded(_ metadata: RecordingMetadata) -> RecordingMetadata {
+        let hasWarning = hasTruncatedSystemTrack(metadata)
+        var refreshed = metadata
+        refreshed.qualityWarnings.removeAll {
+            $0 == AudioQualityWarningMapper.systemTrackTruncatedWarning
+        }
+        refreshed.audio.health.warnings.removeAll {
+            $0 == .systemTrackTruncated
+        }
+
+        if hasWarning {
+            refreshed.qualityWarnings.append(AudioQualityWarningMapper.systemTrackTruncatedWarning)
+            refreshed.audio.health.warnings.append(.systemTrackTruncated)
+        }
+
+        if refreshed.audio.health.status != .failed {
+            refreshed.audio.health = AudioHealthMetadata(
+                status: refreshed.audio.health.warnings.isEmpty ? .good : .warning,
+                warnings: refreshed.audio.health.warnings
+            )
+        }
+
+        return refreshed
+    }
+
+    private func hasTruncatedSystemTrack(_ metadata: RecordingMetadata) -> Bool {
+        guard metadata.durationSec >= 60,
+              let systemTrack = metadata.audioTracks.first(where: { $0.kind == "system" }),
+              systemTrack.hasCompletedStatus,
+              let systemDuration = systemTrack.durationSec,
+              systemDuration > 0
+        else {
+            return false
+        }
+
+        let missingSeconds = metadata.durationSec - systemDuration
+        return missingSeconds >= 15 && systemDuration < metadata.durationSec * 0.9
+    }
+
+    private func repairRecoverableFailedMetadataIfNeeded(
+        _ metadata: RecordingMetadata,
+        sessionFolderURL: URL
+    ) -> RecordingMetadata {
+        guard metadata.status == .failed else {
+            return metadata
+        }
+
+        var repaired = metadata
+        let requiredKinds = ["microphone", "system", "mixed"]
+        for kind in requiredKinds {
+            guard let index = repaired.audioTracks.firstIndex(where: { $0.kind == kind }) else {
+                return metadata
+            }
+
+            var track = repaired.audioTracks[index]
+            let trackURL = sessionFolderURL.appendingPathComponent(track.relativePath)
+            guard let fileSize = nonEmptyFileSize(at: trackURL) else {
+                return metadata
+            }
+
+            if track.status == AudioTrackMetadata.completedStatus
+                || track.status == AudioTrackMetadata.completedWithWarningsStatus {
+                track.fileSizeBytes = track.fileSizeBytes ?? fileSize
+                repaired.audioTracks[index] = track
+                continue
+            }
+
+            if RecordingFinalizationPolicy.isEmptyAudioFailureMessage(track.error)
+                || RecordingFinalizationPolicy.isMissingAudioFailureMessage(track.error) {
+                return metadata
+            }
+
+            track.fileSizeBytes = track.fileSizeBytes ?? fileSize
+            track.status = AudioTrackMetadata.completedWithWarningsStatus
+            repaired.audioTracks[index] = track
+        }
+
+        let finalization = RecordingFinalizationPolicy.finalize(
+            duration: metadata.durationSec,
+            preferredStatus: .needsTagging,
+            shortRecordingThresholdSeconds: TaggingStatus.shortRecordingThresholdSeconds,
+            requiredTrackKinds: requiredKinds,
+            audioTracks: repaired.audioTracks
+        )
+        guard finalization.status != .failed else {
+            return metadata
+        }
+
+        repaired.status = finalization.status
+        repaired.qualityWarnings = AudioQualityWarningMapper.warnings(
+            for: repaired.audioTracks,
+            recordingDuration: metadata.durationSec
+        )
+        repaired.audio.health = AudioHealthEvaluator.evaluate(
+            audioTracks: repaired.audioTracks,
+            processing: repaired.audio.processing,
+            recordingDuration: metadata.durationSec
+        )
+        return repaired
+    }
+
+    private func nonEmptyFileSize(at url: URL) -> Int64? {
+        guard let size = try? FileManager.default.attributesOfItem(
+            atPath: url.path(percentEncoded: false)
+        )[.size] as? NSNumber,
+              size.int64Value > 0
+        else {
+            return nil
+        }
+
+        return size.int64Value
     }
 
     private func lastRecordingSummary(
@@ -483,7 +631,10 @@ public final class FileSystemRecordingStore {
                 )
             ],
             status: status,
-            qualityWarnings: AudioQualityWarningMapper.warnings(for: audioTracks ?? [])
+            qualityWarnings: AudioQualityWarningMapper.warnings(
+                for: audioTracks ?? [],
+                recordingDuration: duration
+            )
         )
     }
 
@@ -556,6 +707,22 @@ public final class FileSystemRecordingStore {
         }
 
         return size.int64Value > 0
+    }
+
+    private func validatePathInsideStorageRoot(_ url: URL) throws {
+        let rootPath = canonicalPath(rootURL)
+        let candidatePath = canonicalPath(url)
+        guard candidatePath == rootPath || candidatePath.hasPrefix(rootPath + "/") else {
+            throw FileSystemRecordingStoreError.pathOutsideStorageRoot
+        }
+    }
+
+    private func canonicalPath(_ url: URL) -> String {
+        var path = url.standardizedFileURL.path(percentEncoded: false)
+        while path.count > 1 && path.hasSuffix("/") {
+            path.removeLast()
+        }
+        return path
     }
 
     private func cleanupRecoveryArtifactsIfFinalized(in folderURL: URL, status: TaggingStatus) throws {
@@ -686,6 +853,12 @@ public final class FileSystemRecordingStore {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
     }
+}
+
+private struct IndexedRecordingLocation {
+    let id: String
+    let metadataURL: URL
+    let sessionFolderURL: URL
 }
 
 private final class SQLiteRecordingIndex {
@@ -840,6 +1013,31 @@ private final class SQLiteRecordingIndex {
         }
 
         return try summary(from: row)
+    }
+
+    func recordingLocations() throws -> [IndexedRecordingLocation] {
+        try open()
+        try migrate()
+
+        let rows = try queryRows(
+            """
+            SELECT id, metadata_path, folder_path
+            FROM recordings
+            """,
+            bindings: []
+        )
+
+        return rows.compactMap { row in
+            guard row.count == 3 else {
+                return nil
+            }
+
+            return IndexedRecordingLocation(
+                id: row[0],
+                metadataURL: URL(fileURLWithPath: row[1]),
+                sessionFolderURL: URL(fileURLWithPath: row[2])
+            )
+        }
     }
 
     func delete(recordingID: String) throws {

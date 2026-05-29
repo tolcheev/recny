@@ -50,6 +50,63 @@ struct AudioQualityTests {
     }
 
     @Test
+    func mapsCompletedWithWarningsSignalMetadataToUserWarnings() {
+        let tracks = [
+            AudioTrackMetadata(
+                kind: "system",
+                relativePath: "source/system.m4a",
+                fileSizeBytes: 160_000,
+                status: "completed_with_warnings",
+                signal: AudioSignalMetadata(
+                    hadSignal: false,
+                    approximateSilenceRatio: 0.98,
+                    clippingDetected: false
+                ),
+                error: "Recorder stop returned a late CoreAudio warning."
+            )
+        ]
+
+        #expect(AudioQualityWarningMapper.warnings(for: tracks) == [
+            "System audio track seems silent."
+        ])
+    }
+
+    @Test
+    func mapsTruncatedSystemTrackToUserWarning() {
+        let tracks = [
+            AudioTrackMetadata(
+                kind: "microphone",
+                relativePath: "source/mic.m4a",
+                durationSec: 420,
+                fileSizeBytes: 420_000,
+                status: "completed",
+                signal: AudioSignalMetadata(
+                    hadSignal: true,
+                    approximateSilenceRatio: 0.2,
+                    clippingDetected: false
+                )
+            ),
+            AudioTrackMetadata(
+                kind: "system",
+                relativePath: "source/system.m4a",
+                durationSec: 170,
+                fileSizeBytes: 170_000,
+                status: "completed_with_warnings",
+                signal: AudioSignalMetadata(
+                    hadSignal: true,
+                    approximateSilenceRatio: 0.3,
+                    clippingDetected: false
+                ),
+                error: "Core Audio writer stopped early."
+            )
+        ]
+
+        #expect(AudioQualityWarningMapper.warnings(for: tracks, recordingDuration: 420) == [
+            "System audio track ended before the recording stopped."
+        ])
+    }
+
+    @Test
     func recordingMetadataStoresQualityWarnings() {
         let metadata = RecordingMetadata(
             id: "rec_quality",

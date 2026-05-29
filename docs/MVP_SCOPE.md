@@ -13,14 +13,16 @@
 - Full system audio capture.
 - Separate microphone and system source files.
 - Mixed `m4a` export.
+- Non-destructive local audio clip export from existing recording audio.
+- Manual still screenshots saved into a recording folder.
 - `metadata.json` next to every session.
 - Manual tagging from Library after stop.
 - MVP tags.
 - Status values: `needs_tagging`, `saved`, `needs_review`, `reviewed`, `failed`, `short_recording`.
 - SQLite recordings index for local filters and library actions.
 - Recordings list filters: date, status, source app, title, and tags.
-- Local recording actions: Open in Finder, Play mixed preview, edit title, add tags, delete with confirmation.
-- Settings screen with preferred microphone selection, recording toggles, auto-start rules, storage root actions, disabled hotkey placeholders, and local privacy controls.
+- Local recording actions: Open in Finder, Play mixed preview, share preferred local audio through the macOS share sheet, trim/export a local clip, capture a screenshot, transcribe locally on explicit user action if a local CLI is installed, copy preferred audio path, edit title, add tags, delete with confirmation.
+- Settings screen with preferred microphone selection, required MVP output indicators, auto-start rules, storage root actions, screenshot hotkeys, disabled custom-hotkey placeholders, and local privacy controls.
 - Local storage under `~/Recordings/TOrbitRecorder/`.
 - Local logs for lifecycle events and failures.
 - Basic failure classification into `Inbox/Failed/`.
@@ -31,9 +33,11 @@
 - Screen recording.
 - Cloud upload.
 - T-Orbit backend sync.
-- AI transcription, summaries, insights, or recommendations.
+- Automatic transcription, cloud AI transcription, summaries, insights, or recommendations.
 - Windows support.
 - Telegram integration.
+- Direct Telegram bot/API upload.
+- Waveform editor, destructive audio editing, or multi-clip timeline editing.
 - External storage integration.
 - Encryption.
 - Retention or autodelete.
@@ -64,16 +68,17 @@
 
 - Starting a supported call can start recording automatically.
 - Microphone audio is written to `source/mic.m4a`.
-- System audio is written to `source/system.m4a`.
-- Mixed audio is written to `export/mixed.m4a`.
+- System audio is always enabled for MVP recordings and written to `source/system.m4a`.
+- Mixed export is always enabled for MVP recordings and written to `export/mixed.m4a`.
 - `metadata.json` is created with the MVP schema.
-- Stop does not open tagging automatically; the recording remains `needs_tagging` until edited from Library.
+- Stop does not open tagging automatically; the main window shows Play, Tag, and Show actions, and the recording remains `needs_tagging` until edited from the post-stop summary or Library.
 - Recordings shorter than the configured short-recording threshold are classified as `short_recording` and placed under `Inbox/Short/`; the MVP default is 60 seconds.
 - Tags persist to `metadata.json` and `db/app.sqlite`.
 - Recordings can be filtered by date, status, source app, title, and tag in the app.
-- Local records can be opened, played, retitled, retagged, and deleted with confirmation.
+- Local records can be opened, played, shared through the native macOS share sheet, trimmed into a local `export/clip_*.m4a`, captured with local `screenshots/screenshot_*.png`, explicitly transcribed into local `transcript/` files when a local CLI is installed, copied as a local audio path, retitled, retagged, and deleted with confirmation.
+- Local delete confirmation states that deleting removes the whole recording folder and all files inside it.
 - Settings persist locally and keep unimplemented controls disabled.
-- Preferred microphone defaults to `Auto, recommended`, avoids AirPods/Bluetooth headset microphones when a built-in or external microphone is available, and never changes the macOS output device.
+- Preferred microphone defaults to `Auto, recommended`, blocks AirPods/Bluetooth headset microphones for recording, and never changes the macOS output device.
 - Logs explain start, stop, success, short recording, and failure cases.
 - The app can run without T-Orbit backend availability.
 

@@ -3,6 +3,7 @@ import Foundation
 public enum MenuBarRecordingToggleAction: Equatable, Sendable {
     case start
     case stop
+    case fixPermissions
 }
 
 public enum MenuBarTint: Equatable, Sendable {
@@ -17,6 +18,7 @@ public struct MenuBarDisplayState: Equatable, Sendable {
     public let canPlayLastRecording: Bool
     public let canOpenLastRecordingFolder: Bool
     public let symbolName: String
+    public let statusItemTitle: String
     public let tint: MenuBarTint
     public let accessibilityDescription: String
 
@@ -26,6 +28,7 @@ public struct MenuBarDisplayState: Equatable, Sendable {
         canPlayLastRecording: Bool,
         canOpenLastRecordingFolder: Bool,
         symbolName: String,
+        statusItemTitle: String,
         tint: MenuBarTint,
         accessibilityDescription: String
     ) {
@@ -34,6 +37,7 @@ public struct MenuBarDisplayState: Equatable, Sendable {
         self.canPlayLastRecording = canPlayLastRecording
         self.canOpenLastRecordingFolder = canOpenLastRecordingFolder
         self.symbolName = symbolName
+        self.statusItemTitle = statusItemTitle
         self.tint = tint
         self.accessibilityDescription = accessibilityDescription
     }
@@ -44,7 +48,8 @@ public enum MenuBarDisplayStatePresenter {
         recordingStatus: RecordingStatus,
         hasPlayableLastRecording: Bool,
         hasLastRecording: Bool,
-        showRecordingIndicator: Bool
+        showRecordingIndicator: Bool,
+        needsRecordingPermissions: Bool
     ) -> MenuBarDisplayState {
         switch recordingStatus {
         case .recording:
@@ -53,30 +58,63 @@ public enum MenuBarDisplayStatePresenter {
                 recordingToggleAction: .stop,
                 canPlayLastRecording: hasPlayableLastRecording,
                 canOpenLastRecordingFolder: hasLastRecording,
-                symbolName: "record.circle.fill",
-                tint: showRecordingIndicator ? .recording : .none,
+                symbolName: showRecordingIndicator ? "play.fill" : "play",
+                statusItemTitle: "",
+                tint: .none,
                 accessibilityDescription: "T-Orbit Recorder is recording"
             )
         case .error:
+            if needsRecordingPermissions {
+                return recordingPermissionsNeededState(
+                    hasPlayableLastRecording: hasPlayableLastRecording,
+                    hasLastRecording: hasLastRecording
+                )
+            }
+
             return MenuBarDisplayState(
                 recordingToggleTitle: "Start Recording",
                 recordingToggleAction: .start,
                 canPlayLastRecording: hasPlayableLastRecording,
                 canOpenLastRecordingFolder: hasLastRecording,
-                symbolName: "exclamationmark.triangle.fill",
-                tint: .error,
+                symbolName: "play",
+                statusItemTitle: "",
+                tint: .none,
                 accessibilityDescription: "T-Orbit Recorder error"
             )
         case .idle:
+            if needsRecordingPermissions {
+                return recordingPermissionsNeededState(
+                    hasPlayableLastRecording: hasPlayableLastRecording,
+                    hasLastRecording: hasLastRecording
+                )
+            }
+
             return MenuBarDisplayState(
                 recordingToggleTitle: "Start Recording",
                 recordingToggleAction: .start,
                 canPlayLastRecording: hasPlayableLastRecording,
                 canOpenLastRecordingFolder: hasLastRecording,
-                symbolName: "waveform.circle",
+                symbolName: "play",
+                statusItemTitle: "",
                 tint: .none,
                 accessibilityDescription: "T-Orbit Recorder idle"
             )
         }
+    }
+
+    private static func recordingPermissionsNeededState(
+        hasPlayableLastRecording: Bool,
+        hasLastRecording: Bool
+    ) -> MenuBarDisplayState {
+        MenuBarDisplayState(
+            recordingToggleTitle: "Fix Recording Permissions",
+            recordingToggleAction: .fixPermissions,
+            canPlayLastRecording: hasPlayableLastRecording,
+            canOpenLastRecordingFolder: hasLastRecording,
+            symbolName: "permission.question",
+            statusItemTitle: "",
+            tint: .error,
+            accessibilityDescription: "T-Orbit Recorder recording unavailable: permissions needed"
+        )
     }
 }

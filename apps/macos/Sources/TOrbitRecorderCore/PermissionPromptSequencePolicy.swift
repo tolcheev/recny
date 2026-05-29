@@ -10,10 +10,6 @@ public enum PermissionPromptSequencePolicy {
         after completedPrompt: PermissionPromptKind,
         next nextPrompt: PermissionPromptKind?
     ) -> Bool {
-        if completedPrompt == .systemAudio {
-            return false
-        }
-
-        return !(completedPrompt == .microphone && nextPrompt == .systemAudio)
+        true
     }
 }

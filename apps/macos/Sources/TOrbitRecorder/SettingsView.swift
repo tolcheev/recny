@@ -7,11 +7,16 @@ struct SettingsView: View {
     @State private var launchAtLoginEnabled = false
     @State private var launchAtLoginMessage = ""
     @State private var launchAtLoginError: String?
+    @State private var transcriptionSetupStatus = LocalTranscriptionSetupInspector.status()
+    @State private var transcriptionSetupMessage: String?
+    @State private var transcriptionSetupError: String?
+    @State private var isPreparingTranscription = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 recordingSection
+                transcriptionSection
                 autoStartSection
                 storageSection
                 hotkeysSection
@@ -25,6 +30,7 @@ struct SettingsView: View {
         .onAppear {
             appState.refreshMicrophoneDevices()
             refreshLaunchAtLogin()
+            refreshTranscriptionSetup()
         }
     }
 
@@ -58,11 +64,13 @@ struct SettingsView: View {
                     Text("Selected device unavailable").tag(unavailableDeviceID)
                 }
                 ForEach(appState.availableMicrophoneDevices) { device in
-                    Text("\(device.name) · \(appState.microphoneDeviceLabel(for: device))").tag(device.id)
+                    Text("\(device.name) · \(appState.microphoneDeviceLabel(for: device))")
+                        .tag(device.id)
+                        .disabled(DevicePriorityResolver.isBluetoothHeadset(device))
                 }
             }
 
-            Text("Auto prefers external or built-in mic and avoids AirPods mic. If a manual device is unplugged, the next recording falls back to the best non-Bluetooth input.")
+            Text("Auto uses external or built-in microphones only. AirPods and other Bluetooth headset mics are blocked for recording.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -108,20 +116,14 @@ struct SettingsView: View {
                 }
             }
 
-            Toggle(
-                "System audio recording",
-                isOn: Binding(
-                    get: { appState.recordingSettings.systemAudioEnabled },
-                    set: { appState.setSystemAudioEnabled($0) }
-                )
+            RequiredRecordingOutputRow(
+                label: "System audio recording",
+                detail: "Required for MVP output: source/system.m4a"
             )
 
-            Toggle(
-                "Mixed preview",
-                isOn: Binding(
-                    get: { appState.recordingSettings.mixedPreviewEnabled },
-                    set: { appState.setMixedPreviewEnabled($0) }
-                )
+            RequiredRecordingOutputRow(
+                label: "Mixed export",
+                detail: "Required for MVP output: export/mixed.m4a"
             )
 
             Divider()
@@ -174,7 +176,7 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
 
-            Text("Browser auto-start now looks for call-like window titles when available. YouTube-only browser detection is not perfect without a browser extension.")
+            Text("Browser auto-start requires a call-like active window title. If macOS does not expose the title, the browser signal is ignored.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -231,6 +233,94 @@ struct SettingsView: View {
                 step: 15
             ) {
                 Text("Short recording threshold: \(Int(appState.autoStartSettings.shortRecordingThresholdSeconds)) sec")
+            }
+
+            Picker(
+                "Auto-stop delay",
+                selection: Binding(
+                    get: { appState.autoStartSettings.autoStopDelaySeconds },
+                    set: { appState.setAutoStopDelaySeconds($0) }
+                )
+            ) {
+                ForEach(AutoStartSettings.allowedAutoStopDelays, id: \.self) { value in
+                    Text("\(Int(value)) sec").tag(value)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel("Auto-stop delay")
+
+            Text("Time to wait after the call signal is lost before stopping an auto-started recording.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var transcriptionSection: some View {
+        SettingsSection(title: "Local transcription") {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: transcriptionSetupStatus.canTranscribeWithoutSetup ? "checkmark.circle.fill" : "arrow.down.circle")
+                    .foregroundStyle(transcriptionSetupStatus.canTranscribeWithoutSetup ? .green : .orange)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(transcriptionSetupStatus.displayText)
+                        .font(.callout.weight(.medium))
+                    Text(transcriptionSetupStatus.actionHint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+
+                Spacer()
+
+                Button {
+                    refreshTranscriptionSetup()
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+            }
+
+            Text("Optional add-on. T-Orbit Recorder does not bundle models and does not download them from Records. Prepare Parakeet here first; after that Records can transcribe locally without a first-run model download.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                Button {
+                    prepareTranscriptionModel()
+                } label: {
+                    Label(isPreparingTranscription ? "Preparing..." : "Prepare Parakeet Model", systemImage: "arrow.down.circle")
+                }
+                .disabled(isPreparingTranscription || !canPrepareTranscriptionModel)
+
+                Button {
+                    copyTranscriptionInstallCommand()
+                } label: {
+                    Label("Copy Install Command", systemImage: "doc.on.doc")
+                }
+
+                if transcriptionSetupStatus.canTranscribeWithoutSetup {
+                    Text("Ready")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.green)
+                }
+            }
+
+            Text("Install command: brew install uv ffmpeg && uv tool install parakeet-mlx -U")
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+
+            if let transcriptionSetupMessage {
+                Label(transcriptionSetupMessage, systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
+            if let transcriptionSetupError {
+                Label(transcriptionSetupError, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
             }
         }
     }
@@ -290,7 +380,35 @@ struct SettingsView: View {
                 }
             }
 
-            Text("Recording, Library, and Diagnostics shortcuts work when T-Orbit Recorder is the active app. Use the menu bar icon to show the window; global Show Window is disabled to avoid conflicts.")
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(KeyboardShortcutCatalog.showWindowGlobal.title) while another app is active")
+                    .font(.callout)
+
+                Spacer()
+
+                Text(KeyboardShortcutCatalog.showWindowGlobal.displayText)
+                    .font(.callout.monospaced().weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+            }
+
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(KeyboardShortcutCatalog.captureScreenshotGlobal.title) while another app is active")
+                    .font(.callout)
+
+                Spacer()
+
+                Text(KeyboardShortcutCatalog.captureScreenshotGlobal.displayText)
+                    .font(.callout.monospaced().weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+            }
+
+            Text("Recording, Library, Diagnostics, and app-active Screenshot shortcuts work when T-Orbit Recorder is active. Show Window and full-screen Screenshot also have global shortcuts for call moments.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -460,6 +578,53 @@ struct SettingsView: View {
         }
     }
 
+    private var canPrepareTranscriptionModel: Bool {
+        if case .needsModelDownload = transcriptionSetupStatus {
+            return true
+        }
+        return false
+    }
+
+    private func refreshTranscriptionSetup() {
+        transcriptionSetupStatus = LocalTranscriptionSetupInspector.status()
+    }
+
+    private func prepareTranscriptionModel() {
+        guard !isPreparingTranscription else {
+            return
+        }
+
+        isPreparingTranscription = true
+        transcriptionSetupError = nil
+        transcriptionSetupMessage = "Downloading and preparing Parakeet model locally. This can take a few minutes once."
+
+        Task {
+            do {
+                try await LocalTranscriptionRunner().prepareParakeetModel()
+                refreshTranscriptionSetup()
+                transcriptionSetupError = nil
+                transcriptionSetupMessage = "Parakeet model is prepared. Records can transcribe locally now."
+            } catch let error as LocalTranscriptionError {
+                refreshTranscriptionSetup()
+                transcriptionSetupError = error.description
+                transcriptionSetupMessage = nil
+            } catch {
+                refreshTranscriptionSetup()
+                transcriptionSetupError = String(describing: error)
+                transcriptionSetupMessage = nil
+            }
+            isPreparingTranscription = false
+        }
+    }
+
+    private func copyTranscriptionInstallCommand() {
+        let command = "brew install uv ffmpeg && uv tool install parakeet-mlx -U"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
+        transcriptionSetupError = nil
+        transcriptionSetupMessage = "Install command copied."
+    }
+
     private func joined(_ values: [String]) -> String {
         values.joined(separator: ", ")
     }
@@ -488,6 +653,33 @@ private struct SettingsInfoRow: View {
                 .truncationMode(.middle)
                 .textSelection(.enabled)
         }
+    }
+}
+
+private struct RequiredRecordingOutputRow: View {
+    let label: String
+    let detail: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.callout.weight(.medium))
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Text("Always on")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -528,8 +720,8 @@ struct DeviceRoleBadge: View {
             return .green
         case "Built-in":
             return .blue
-        case "Bluetooth fallback":
-            return .orange
+        case "Blocked":
+            return .red
         default:
             return .secondary
         }

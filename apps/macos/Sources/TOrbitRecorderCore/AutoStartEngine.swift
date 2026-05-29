@@ -27,10 +27,42 @@ public struct ActiveApplicationSnapshot: Equatable, Sendable {
 public struct AudioActivitySnapshot: Equatable, Sendable {
     public let microphoneActive: Bool
     public let systemAudioActive: Bool
+    public let processActivities: [AudioProcessActivitySnapshot]
+    public let processActivityAvailable: Bool
 
-    public init(microphoneActive: Bool, systemAudioActive: Bool) {
+    public init(
+        microphoneActive: Bool,
+        systemAudioActive: Bool,
+        processActivities: [AudioProcessActivitySnapshot] = [],
+        processActivityAvailable: Bool? = nil
+    ) {
         self.microphoneActive = microphoneActive
         self.systemAudioActive = systemAudioActive
+        self.processActivities = processActivities
+        self.processActivityAvailable = processActivityAvailable ?? !processActivities.isEmpty
+    }
+}
+
+public struct AudioProcessActivitySnapshot: Equatable, Sendable {
+    public let processID: Int32
+    public let bundleID: String
+    public let isRunningInput: Bool
+    public let isRunningOutput: Bool
+
+    public init(
+        processID: Int32,
+        bundleID: String,
+        isRunningInput: Bool,
+        isRunningOutput: Bool
+    ) {
+        self.processID = processID
+        self.bundleID = bundleID
+        self.isRunningInput = isRunningInput
+        self.isRunningOutput = isRunningOutput
+    }
+
+    public var isRunningAudio: Bool {
+        isRunningInput || isRunningOutput
     }
 }
 
@@ -65,6 +97,13 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
     public var cooldownSeconds: TimeInterval
     public var minDetectionDurationSeconds: TimeInterval
     public var shortRecordingThresholdSeconds: TimeInterval
+    public var autoStopDelaySeconds: TimeInterval
+
+    /// User-selectable grace period before an auto-started recording is
+    /// stopped after the call-active signal is lost. Constrained to the
+    /// values shown in Settings to avoid hand-edited corner cases.
+    public static let allowedAutoStopDelays: [TimeInterval] = [10, 30, 60]
+    public static let defaultAutoStopDelaySeconds: TimeInterval = 10
 
     public var isEnabled: Bool {
         get {
@@ -81,7 +120,8 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
         blacklist: [String] = [],
         cooldownSeconds: TimeInterval = 180,
         minDetectionDurationSeconds: TimeInterval = 20,
-        shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds
+        shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds,
+        autoStopDelaySeconds: TimeInterval = AutoStartSettings.defaultAutoStopDelaySeconds
     ) {
         self.mode = isEnabled ? .auto : .off
         self.whitelist = whitelist
@@ -89,6 +129,7 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
         self.cooldownSeconds = max(0, cooldownSeconds)
         self.minDetectionDurationSeconds = min(30, max(15, minDetectionDurationSeconds))
         self.shortRecordingThresholdSeconds = min(300, max(15, shortRecordingThresholdSeconds))
+        self.autoStopDelaySeconds = Self.normalizeAutoStopDelay(autoStopDelaySeconds)
     }
 
     public init(
@@ -97,7 +138,8 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
         blacklist: [String] = [],
         cooldownSeconds: TimeInterval = 180,
         minDetectionDurationSeconds: TimeInterval = 20,
-        shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds
+        shortRecordingThresholdSeconds: TimeInterval = TaggingStatus.shortRecordingThresholdSeconds,
+        autoStopDelaySeconds: TimeInterval = AutoStartSettings.defaultAutoStopDelaySeconds
     ) {
         self.mode = mode
         self.whitelist = whitelist
@@ -105,6 +147,7 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
         self.cooldownSeconds = max(0, cooldownSeconds)
         self.minDetectionDurationSeconds = min(30, max(15, minDetectionDurationSeconds))
         self.shortRecordingThresholdSeconds = min(300, max(15, shortRecordingThresholdSeconds))
+        self.autoStopDelaySeconds = Self.normalizeAutoStopDelay(autoStopDelaySeconds)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -115,6 +158,7 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
         case cooldownSeconds
         case minDetectionDurationSeconds
         case shortRecordingThresholdSeconds
+        case autoStopDelaySeconds
     }
 
     public init(from decoder: Decoder) throws {
@@ -127,9 +171,11 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
         let cooldownSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .cooldownSeconds) ?? 180
         let minDetectionDurationSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .minDetectionDurationSeconds) ?? 20
         let shortRecordingThresholdSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .shortRecordingThresholdSeconds) ?? TaggingStatus.shortRecordingThresholdSeconds
+        let autoStopDelaySeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .autoStopDelaySeconds) ?? Self.defaultAutoStopDelaySeconds
         self.cooldownSeconds = max(0, cooldownSeconds)
         self.minDetectionDurationSeconds = min(30, max(15, minDetectionDurationSeconds))
         self.shortRecordingThresholdSeconds = min(300, max(15, shortRecordingThresholdSeconds))
+        self.autoStopDelaySeconds = Self.normalizeAutoStopDelay(autoStopDelaySeconds)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -141,6 +187,18 @@ public struct AutoStartSettings: Codable, Equatable, Sendable {
         try container.encode(cooldownSeconds, forKey: .cooldownSeconds)
         try container.encode(minDetectionDurationSeconds, forKey: .minDetectionDurationSeconds)
         try container.encode(shortRecordingThresholdSeconds, forKey: .shortRecordingThresholdSeconds)
+        try container.encode(autoStopDelaySeconds, forKey: .autoStopDelaySeconds)
+    }
+
+    /// Snaps an arbitrary delay value to the nearest entry in
+    /// `allowedAutoStopDelays`, defending against migrated/legacy values.
+    public static func normalizeAutoStopDelay(_ value: TimeInterval) -> TimeInterval {
+        guard let nearest = allowedAutoStopDelays.min(by: {
+            abs($0 - value) < abs($1 - value)
+        }) else {
+            return defaultAutoStopDelaySeconds
+        }
+        return nearest
     }
 }
 
@@ -283,12 +341,15 @@ public struct AutoStartEngine: Sendable {
             }
 
             if !context.audioActivity.microphoneActive {
-                let title = activeApplication.windowTitle.map { " title=\($0)" } ?? ""
-                return ignore(.microphoneInactive, "Microphone activity is not detected.\(title)")
+                return ignore(.microphoneInactive, "Microphone activity is not detected.")
             }
 
-            if isBrowser(activeApplication), let title = activeApplication.windowTitle, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return ignore(.browserTitleNotCall, "Browser title does not look like a call: \(title)")
+            if isBrowser(activeApplication) {
+                guard context.audioActivity.systemAudioActive else {
+                    return ignore(.systemAudioInactive, "System audio activity is not detected")
+                }
+
+                return ignore(.browserTitleNotCall, "Browser window title is unavailable or does not look like a call.")
             }
 
             return ignore(.systemAudioInactive, "System audio activity is not detected")
@@ -438,7 +499,19 @@ public struct AutoStartEngine: Sendable {
         for app: ActiveApplicationSnapshot,
         audioActivity: AudioActivitySnapshot
     ) -> AutoStartSignal? {
-        guard isZoom(app), audioActivity.microphoneActive else {
+        guard isZoom(app) else {
+            return nil
+        }
+
+        if let signal = zoomProcessAudioSignal(for: app, audioActivity: audioActivity) {
+            return signal
+        }
+
+        if audioActivity.processActivityAvailable {
+            return nil
+        }
+
+        guard audioActivity.microphoneActive else {
             return nil
         }
 
@@ -469,6 +542,14 @@ public struct AutoStartEngine: Sendable {
         recentlyActive: Bool = false
     ) -> AutoStartSignal? {
         if isKnownCallApp(app) {
+            if let signal = zoomProcessAudioSignal(for: app, audioActivity: audioActivity) {
+                return signal
+            }
+
+            if isZoom(app), audioActivity.processActivityAvailable {
+                return nil
+            }
+
             if isZoom(app), audioActivity.systemAudioActive {
                 return AutoStartSignal(
                     ruleID: "autostart.v2.zoom",
@@ -482,12 +563,18 @@ public struct AutoStartEngine: Sendable {
                 return nil
             }
 
+            if !isZoom(app) {
+                guard audioActivity.systemAudioActive else {
+                    return nil
+                }
+            }
+
             return AutoStartSignal(
                 ruleID: isZoom(app) ? "autostart.v2.zoom" : "autostart.v2.known_call_app",
                 confidence: "high",
                 reason: isZoom(app)
                     ? "Zoom active with microphone activity."
-                    : "\(app.name) active with microphone activity."
+                    : "\(app.name) active with microphone and system audio activity."
             )
         }
 
@@ -513,11 +600,7 @@ public struct AutoStartEngine: Sendable {
                 )
             }
 
-            return AutoStartSignal(
-                ruleID: "autostart.v2.browser_fallback",
-                confidence: "medium",
-                reason: "Browser call inferred from microphone and system audio activity."
-            )
+            return nil
         }
 
         guard audioActivity.microphoneActive else {
@@ -610,6 +693,39 @@ public struct AutoStartEngine: Sendable {
         }
 
         return app.name
+    }
+
+    private func zoomProcessAudioSignal(
+        for app: ActiveApplicationSnapshot,
+        audioActivity: AudioActivitySnapshot
+    ) -> AutoStartSignal? {
+        guard isZoom(app),
+              zoomProcessAudioIsActive(audioActivity)
+        else {
+            return nil
+        }
+
+        return AutoStartSignal(
+            ruleID: "autostart.v2.zoom_process_audio",
+            confidence: "high",
+            reason: "Zoom process is using audio.",
+            startsImmediately: true
+        )
+    }
+
+    private func zoomProcessAudioIsActive(_ audioActivity: AudioActivitySnapshot) -> Bool {
+        audioActivity.processActivities.contains { activity in
+            isZoomBundleID(activity.bundleID) && activity.isRunningAudio
+        }
+    }
+
+    private func isZoomBundleID(_ value: String) -> Bool {
+        let normalizedValue = normalize(value)
+        return normalizedValue == "us.zoom.xos"
+            || normalizedValue == "zoom.us"
+            || normalizedValue == "zoom"
+            || normalizedValue.hasPrefix("us.zoom.")
+            || normalizedValue.contains(".zoom.")
     }
 
     private func zoomMeetingWindowLooksActive(_ app: ActiveApplicationSnapshot) -> Bool? {
@@ -774,10 +890,130 @@ public final class CoreAudioActivityDetector: AudioActivityDetecting {
     public init() {}
 
     public func audioActivity() -> AudioActivitySnapshot {
-        AudioActivitySnapshot(
+        let processActivityResult = processAudioActivities()
+        return AudioActivitySnapshot(
             microphoneActive: isDefaultDeviceRunning(selector: kAudioHardwarePropertyDefaultInputDevice),
-            systemAudioActive: isDefaultDeviceRunning(selector: kAudioHardwarePropertyDefaultOutputDevice)
+            systemAudioActive: isDefaultDeviceRunning(selector: kAudioHardwarePropertyDefaultOutputDevice),
+            processActivities: processActivityResult.activities,
+            processActivityAvailable: processActivityResult.available
         )
+    }
+
+    private func processAudioActivities() -> (available: Bool, activities: [AudioProcessActivitySnapshot]) {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyProcessObjectList,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size = UInt32(0)
+        let sizeStatus = AudioObjectGetPropertyDataSize(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            &size
+        )
+        guard sizeStatus == noErr else {
+            AppLogger.file(.warning, category: "autostart", "process audio activity unavailable size_status=\(sizeStatus)")
+            return (false, [])
+        }
+
+        let count = Int(size) / MemoryLayout<AudioObjectID>.size
+        guard count > 0 else {
+            return (true, [])
+        }
+
+        var processObjectIDs = [AudioObjectID](repeating: 0, count: count)
+        let dataStatus = processObjectIDs.withUnsafeMutableBufferPointer { buffer in
+            AudioObjectGetPropertyData(
+                AudioObjectID(kAudioObjectSystemObject),
+                &address,
+                0,
+                nil,
+                &size,
+                buffer.baseAddress!
+            )
+        }
+        guard dataStatus == noErr else {
+            AppLogger.file(.warning, category: "autostart", "process audio activity unavailable data_status=\(dataStatus)")
+            return (false, [])
+        }
+
+        let activities = processObjectIDs.compactMap { processObjectID -> AudioProcessActivitySnapshot? in
+            guard processObjectID != kAudioObjectUnknown,
+                  let processID = processID(for: processObjectID)
+            else {
+                return nil
+            }
+
+            let bundleID = bundleID(for: processID)
+            guard !bundleID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return nil
+            }
+
+            return AudioProcessActivitySnapshot(
+                processID: Int32(processID),
+                bundleID: bundleID,
+                isRunningInput: boolProperty(kAudioProcessPropertyIsRunningInput, objectID: processObjectID),
+                isRunningOutput: boolProperty(kAudioProcessPropertyIsRunningOutput, objectID: processObjectID)
+            )
+        }
+
+        return (true, activities)
+    }
+
+    private func processID(for objectID: AudioObjectID) -> pid_t? {
+        var processID = pid_t(0)
+        var size = UInt32(MemoryLayout<pid_t>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioProcessPropertyPID,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        guard AudioObjectGetPropertyData(
+            objectID,
+            &address,
+            0,
+            nil,
+            &size,
+            &processID
+        ) == noErr, processID > 0 else {
+            return nil
+        }
+
+        return processID
+    }
+
+    private func bundleID(for processID: pid_t) -> String {
+        #if canImport(AppKit)
+        return NSRunningApplication(processIdentifier: processID)?.bundleIdentifier ?? ""
+        #else
+        return ""
+        #endif
+    }
+
+    private func boolProperty(_ selector: AudioObjectPropertySelector, objectID: AudioObjectID) -> Bool {
+        var value = UInt32(0)
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: selector,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        guard AudioObjectGetPropertyData(
+            objectID,
+            &address,
+            0,
+            nil,
+            &size,
+            &value
+        ) == noErr else {
+            return false
+        }
+
+        return value != 0
     }
 
     private func isDefaultDeviceRunning(selector: AudioObjectPropertySelector) -> Bool {

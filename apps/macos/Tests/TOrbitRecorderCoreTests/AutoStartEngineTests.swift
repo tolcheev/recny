@@ -82,6 +82,128 @@ struct AutoStartEngineTests {
     }
 
     @Test
+    func zoomDoesNotStartFromGlobalAudioWhenZoomProcessAudioIsIdle() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 20
+        )
+        let zoom = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: zoom,
+                audioActivity: AudioActivitySnapshot(
+                    microphoneActive: true,
+                    systemAudioActive: true,
+                    processActivities: [
+                        AudioProcessActivitySnapshot(
+                            processID: 44,
+                            bundleID: "us.zoom.xos",
+                            isRunningInput: false,
+                            isRunningOutput: false
+                        ),
+                        AudioProcessActivitySnapshot(
+                            processID: 55,
+                            bundleID: "com.apple.Music",
+                            isRunningInput: false,
+                            isRunningOutput: true
+                        )
+                    ]
+                ),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .systemAudioInactive)
+    }
+
+    @Test
+    func zoomStartsFromProcessOutputEvenWhenGlobalDetectorsAreQuiet() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 20
+        )
+        let zoom = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: zoom,
+                audioActivity: AudioActivitySnapshot(
+                    microphoneActive: false,
+                    systemAudioActive: false,
+                    processActivities: [
+                        AudioProcessActivitySnapshot(
+                            processID: 44,
+                            bundleID: "us.zoom.xos",
+                            isRunningInput: false,
+                            isRunningOutput: true
+                        )
+                    ]
+                ),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.reason == .startRecording)
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom_process_audio")
+        #expect(decision.recordingSource?.reason == "Zoom process is using audio.")
+    }
+
+    @Test
+    func zoomStartsFromZoomHelperProcessAudio() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 20
+        )
+        let zoom = ActiveApplicationSnapshot(name: "zoom.us", bundleID: "us.zoom.xos")
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: zoom,
+                audioActivity: AudioActivitySnapshot(
+                    microphoneActive: false,
+                    systemAudioActive: false,
+                    processActivities: [
+                        AudioProcessActivitySnapshot(
+                            processID: 45,
+                            bundleID: "us.zoom.ZoomDaemon",
+                            isRunningInput: true,
+                            isRunningOutput: false
+                        )
+                    ]
+                ),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom_process_audio")
+    }
+
+    @Test
     func recentZoomContinuesAutoStartAfterSwitchingToAnotherWindow() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(
@@ -364,6 +486,87 @@ struct AutoStartEngineTests {
     }
 
     @Test
+    func telegramMicrophoneOnlyDoesNotStartWithoutSystemAudio() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Telegram"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let telegram = ActiveApplicationSnapshot(name: "Telegram", bundleID: "ru.keepcoder.Telegram")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        _ = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: telegram,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt
+            ),
+            settings: settings
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: telegram,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt.addingTimeInterval(20)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .systemAudioInactive)
+        #expect(decision.recordingSource == nil)
+    }
+
+    @Test
+    func telegramStartsOnlyWhenMicrophoneAndSystemAudioAreActive() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Telegram"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let telegram = ActiveApplicationSnapshot(name: "Telegram", bundleID: "ru.keepcoder.Telegram")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        _ = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: telegram,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt
+            ),
+            settings: settings
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: telegram,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: true),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: startedAt.addingTimeInterval(20)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .start)
+        #expect(decision.reason == .startRecording)
+        #expect(decision.recordingSource?.ruleID == "autostart.v2.known_call_app")
+        #expect(decision.recordingSource?.reason == "Telegram active with microphone and system audio activity.")
+    }
+
+    @Test
     func browserCallTitleStartsAfterMinimumDetectionDuration() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(
@@ -410,7 +613,7 @@ struct AutoStartEngineTests {
     }
 
     @Test
-    func browserWithoutTitleFallsBackToMediumConfidenceHeuristic() {
+    func browserWithoutTitleDoesNotStartFromAudioActivityOnly() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(
             isEnabled: true,
@@ -444,10 +647,10 @@ struct AutoStartEngineTests {
             settings: settings
         )
 
-        #expect(decision.action == .start)
-        #expect(decision.recordingSource?.ruleID == "autostart.v2.browser_fallback")
-        #expect(decision.recordingSource?.confidence == "medium")
-        #expect(decision.recordingSource?.reason == "Browser call inferred from microphone and system audio activity.")
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .browserTitleNotCall)
+        #expect(decision.recordingSource == nil)
+        #expect(decision.message == "Browser window title is unavailable or does not look like a call.")
     }
 
     @Test
@@ -511,7 +714,8 @@ struct AutoStartEngineTests {
 
         #expect(decision.action == .ignore)
         #expect(decision.reason == .microphoneInactive)
-        #expect(decision.message.contains("YouTube"))
+        #expect(!decision.message.contains("YouTube"))
+        #expect(!decision.message.contains("SwiftUI"))
     }
 
     @Test
@@ -656,6 +860,72 @@ struct AutoStartEngineTests {
 
         #expect(decision.action == .ask)
         #expect(decision.recordingSource?.ruleID == "autostart.v2.zoom")
+    }
+
+    @Test
+    func ignoreDecisionDoesNotLeakNonCallBrowserWindowTitle() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Google Chrome"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Google Chrome",
+            bundleID: "com.google.Chrome",
+            windowTitle: "Candidate Ivan Petrov - Compensation notes"
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: true, systemAudioActive: false),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .systemAudioInactive)
+        #expect(!decision.message.contains("Ivan"))
+        #expect(!decision.message.contains("Compensation"))
+    }
+
+    @Test
+    func microphoneInactiveDecisionDoesNotLeakWindowTitle() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(
+            isEnabled: true,
+            whitelist: ["Zoom"],
+            blacklist: [],
+            cooldownSeconds: 180,
+            minDetectionDurationSeconds: 15
+        )
+        let activeApp = ActiveApplicationSnapshot(
+            name: "Zoom",
+            bundleID: "us.zoom.xos",
+            windowTitle: "ACME confidential interview"
+        )
+
+        let decision = engine.evaluate(
+            AutoStartEvaluationContext(
+                activeApplication: activeApp,
+                audioActivity: AudioActivitySnapshot(microphoneActive: false, systemAudioActive: false),
+                isAlreadyRecording: false,
+                lastStoppedAt: nil,
+                now: Date(timeIntervalSince1970: 1_716_468_000)
+            ),
+            settings: settings
+        )
+
+        #expect(decision.action == .ignore)
+        #expect(decision.reason == .microphoneInactive)
+        #expect(!decision.message.contains("ACME"))
+        #expect(!decision.message.contains("confidential"))
     }
 
     @Test

@@ -46,15 +46,23 @@ open /Applications/TOrbitRecorder.app
 ```
 
 - [ ] Menu bar item is visible.
+- [ ] With microphone or system-audio permission missing, the menu bar item shows a large red question mark.
+- [ ] With microphone or system-audio permission missing, app launch brings the main window forward and shows `Blocked` plus the red `Recording is blocked` panel.
+- [ ] With microphone or system-audio permission missing, the menu bar recording action is `Fix Recording Permissions`, not `Start Recording`.
+- [ ] App does not request macOS Notifications permission on first launch.
 - [ ] Show Window brings the existing window to front without creating duplicates.
+- [ ] `Ctrl+Option+R` brings the main window to front while another app is active.
 
 ## 2. Permissions
 
 - [ ] Microphone permission is granted:
   - System Settings -> Privacy & Security -> Microphone -> TOrbitRecorder enabled
-- [ ] System audio permission is granted:
-  - System Settings -> Privacy & Security -> Screen & System Audio Recording -> TOrbitRecorder enabled
-  - If macOS shows `Only System Audio Recording`, TOrbitRecorder is enabled there too
+- [ ] System audio permission is granted through the Core Audio tap path:
+  - System Settings -> Privacy & Security -> Screen & System Audio Recording -> Only System Audio Recording -> TOrbitRecorder enabled, if macOS shows the separate section
+  - Otherwise, System Settings -> Privacy & Security -> Screen & System Audio Recording -> TOrbitRecorder enabled
+- [ ] `Fix Permissions` triggers the system-audio macOS prompt while the yellow permissions panel is still visible.
+- [ ] The app does not show `Ready` or enable `Start Recording` until the Core Audio capture-start probe has completed.
+- [ ] After the microphone prompt is accepted, the Recorder window returns to the front before the system-audio prompt appears.
 - [ ] App was restarted after permission changes:
 
 ```sh
@@ -80,7 +88,7 @@ open /Applications/TOrbitRecorder.app
 - [ ] Speak into the selected microphone.
 - [ ] Play system audio from another app.
 - [ ] Stop after about 10 seconds.
-- [ ] Latest strip shows `Short recording`.
+- [ ] Post-stop summary shows `Short recording`.
 - [ ] Short recording is saved to `Inbox/Short`.
 - [ ] Play works.
 - [ ] Open works.
@@ -92,8 +100,8 @@ open /Applications/TOrbitRecorder.app
 - [ ] Speak into the selected microphone.
 - [ ] Play system audio from another app.
 - [ ] Stop after at least 70 seconds.
-- [ ] Latest strip shows a non-failed status.
-- [ ] Post-call tag dialog appears when expected.
+- [ ] Post-stop summary shows a non-failed status with Play, Tag, and Show actions.
+- [ ] Post-call tag dialog opens when the user clicks Tag.
 - [ ] Recording appears in Library.
 
 ### YouTube + Voice
@@ -112,7 +120,7 @@ open /Applications/TOrbitRecorder.app
 - [ ] Settings -> Recording -> Preferred microphone is `Auto, recommended`.
 - [ ] Main UI shows MacBook microphone, not AirPods.
 - [ ] Diagnostics reason says AirPods/Bluetooth microphone was avoided because another input is available.
-- [ ] If only AirPods are available, warning is shown: Bluetooth microphone quality may be degraded.
+- [ ] If only AirPods are available, recording is blocked and the UI says AirPods/Bluetooth microphone is blocked for recording.
 
 ### External Mic Connected
 
@@ -158,14 +166,16 @@ plutil -p metadata.json
 - [ ] Timer updates during recording.
 - [ ] Marker buttons are visible while recording.
 - [ ] Marker controls are not shown on the default recording screen.
-- [ ] Latest strip appears after a recording.
-- [ ] Latest strip does not show long absolute paths.
+- [ ] Post-stop summary appears after a recording.
+- [ ] Post-stop summary does not show long absolute paths.
 - [ ] Play plays the mixed preview.
 - [ ] Library opens the user-facing recordings folder in Finder.
 - [ ] Records opens as a separate window.
-- [ ] Records shows recent recordings.
+- [ ] Records shows all local recordings from `Library/` and `Inbox/` metadata, not only the first 80 rows.
 - [ ] Default untitled rows are numbered as `Recording #N`.
 - [ ] Long badges/details wrap cleanly and do not hide row actions.
+- [ ] Records details panel scrolls vertically and all action buttons remain reachable in the default window size.
+- [ ] Deleting a recording folder manually in Finder, then clicking Records Refresh, removes the stale row from Records.
 - [ ] Records search works for title, participant, tags, and source app.
 - [ ] Records filters are collapsed by default.
 - [ ] Records filters include status, date range, source app, tags, and audio health.
@@ -177,20 +187,38 @@ plutil -p metadata.json
 - [ ] Copy Logs copies visible log lines to the clipboard.
 - [ ] Open Logs opens `~/Recordings/TOrbitRecorder/logs/`.
 - [ ] Clear Logs asks for confirmation and clears local file logs.
-- [ ] Tag dialog opens from Latest.
+- [ ] Tag dialog opens from the post-stop summary.
 - [ ] Tag dialog opens from Library.
 - [ ] Tags save to `metadata.json`.
 - [ ] Tags save to SQLite and appear in Library.
 - [ ] Records details show marker timestamps and labels if older/imported metadata contains markers.
 - [ ] Records details show audio health, gain values, and audio analysis availability.
 - [ ] Records details can open `analysis/audio_analysis.json` when it exists.
+- [ ] Records More -> Share Audio opens the native macOS share sheet for the preferred local audio file.
+- [ ] Records details -> Share opens the native macOS share sheet for the preferred local audio file.
+- [ ] Preferred share file order is `export/mixed_balanced.m4a`, then `export/mixed.m4a`, then `source/mic.m4a`, then `source/system.m4a`.
+- [ ] Copy Audio Path copies the same preferred local audio file path to the clipboard.
+- [ ] Share Audio and Copy Audio Path are disabled when no non-empty local audio file exists.
+- [ ] Records More -> Trim Audio opens the trim sheet with start/end controls.
+- [ ] Trim Only creates a non-empty `export/clip_*.m4a` and does not modify `source/mic.m4a`, `source/system.m4a`, `export/mixed.m4a`, or `export/mixed_balanced.m4a`.
+- [ ] Trim & Share creates a non-empty `export/clip_*.m4a` and opens the native macOS share sheet for that clip.
+- [ ] Settings -> Local transcription shows whether optional tools are missing, the Parakeet model needs preparation, or transcription is ready.
+- [ ] Records More -> Transcribe Locally is unavailable until Settings reports local transcription is ready; Records must not trigger first-run model downloads.
+- [ ] Local transcription creates `transcript/transcript.txt` and `transcript/call_note.md` after Settings -> Prepare Parakeet Model has completed.
+- [ ] If local transcription is not ready, the app shows a clear Settings/setup hint and does not create partial output.
+- [ ] Main Full Screenshot button immediately captures the full screen and saves `screenshots/screenshot_*.png` under the active or latest recording folder.
+- [ ] Records Capture Full Screenshot immediately captures the full screen and saves `screenshots/screenshot_*.png` under the selected recording folder.
+- [ ] App-active `Cmd+Shift+S` and global `Ctrl+Option+S` trigger the same full-screen screenshot flow without opening an area/window selector.
+- [ ] Delete Local Recording confirmation explicitly says the entire folder and all files inside it are permanently deleted.
+- [ ] After confirming Delete Local Recording, the session folder is gone from disk and the row is removed from Records.
+- [ ] If the deleted recording is currently playing in the inline player or app player window, playback stops immediately when deletion is confirmed.
 
 ## 6. Auto-Start
 
 ### Zoom
 
 - [ ] Auto-start mode is `Auto` or `Ask first`.
-- [ ] Cooldown has passed, or Zoom has a strong mic + system-audio signal.
+- [ ] Cooldown has passed, or Zoom has active per-process input/output audio.
 - [ ] Open Zoom desktop app.
 - [ ] Join or simulate a call with microphone active.
 - [ ] Switch to another app while Zoom keeps running.
@@ -200,8 +228,10 @@ plutil -p metadata.json
 - [ ] Metadata source trigger is `autostart`.
 - [ ] Metadata includes rule id, confidence, and human-readable reason.
 - [ ] End the Zoom conference while leaving the Zoom app open.
-- [ ] Recording auto-stops after the grace period when Zoom returns to its home/workplace window.
-- [ ] If Zoom remains open but no meeting window is visible, recording auto-stops after the grace period even if TOrbitRecorder is still reading the microphone.
+- [ ] Recording auto-stops about 10 seconds after Zoom process audio becomes idle and Zoom returns to its home/workplace window.
+- [ ] If Zoom window titles are unavailable and Zoom process audio is still active, recording does not auto-stop just because another app is foreground.
+- [ ] If Zoom window titles are unavailable and Zoom process audio is idle, recording auto-stops about 10 seconds later even if another app is producing global system audio.
+- [ ] If Core Audio process activity is unavailable, global system-audio fallback keeps recording alive; microphone-only fallback does not.
 
 ### Browser Call
 
@@ -232,17 +262,22 @@ plutil -p metadata.json
 ### Quit During Recording
 
 - [ ] Start Recording.
+- [ ] With `Show recording indicator` enabled, confirm the macOS menu bar status item changes from outline play to filled play while recording.
 - [ ] Choose Quit from menu bar or press Cmd+Q.
 - [ ] Confirmation appears: `Recording is active. Stop and quit?`
 - [ ] Cancel keeps recording active.
 - [ ] Stop and Quit stops recording before app exits.
+- [ ] After stopping, the macOS menu bar status item returns to outline play.
 
 ### No Permissions
 
 - [ ] Revoke Microphone permission.
 - [ ] Restart app.
-- [ ] Start is disabled or Fix Permissions is shown.
+- [ ] Main window opens automatically, the header says `Blocked`, and the red `Recording is blocked` panel explains the missing permission.
+- [ ] Start is disabled and `Fix Permissions` is shown.
 - [ ] No empty recording folder is created by failed preflight.
+- [ ] Menu bar item changes to a large red question mark.
+- [ ] Menu bar menu shows `Recording Blocked: Fix Permissions` at the top.
 - [ ] Diagnostics explains missing microphone permission.
 - [ ] Repeat with system audio permission revoked.
 
@@ -250,7 +285,7 @@ plutil -p metadata.json
 
 - [ ] AirPods + MacBook microphone available -> MacBook microphone selected.
 - [ ] AirPods + external mic available -> external mic selected.
-- [ ] Only AirPods available -> AirPods selected as fallback with warning.
+- [ ] Only AirPods available -> no recording input is selected; Start Recording is blocked.
 
 ### Output Folder Unavailable
 

@@ -395,6 +395,161 @@ struct FileSystemRecordingStoreTests {
     }
 
     @Test
+    func recordingsReindexesMetadataMissingFromNonEmptySQLite() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let firstSession = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let firstDraft = try store.stopSession(
+            firstSession,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_060),
+            duration: 60,
+            status: .needsTagging,
+            audioTracks: []
+        )
+        let secondSession = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_120),
+            source: RecordingSource(appName: "FaceTime", bundleID: "com.apple.FaceTime")
+        )
+        let secondDraft = try store.stopSession(
+            secondSession,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_180),
+            duration: 60,
+            status: .needsTagging,
+            audioTracks: []
+        )
+
+        try FileManager.default.removeItem(at: store.paths.dbURL)
+        let firstMetadata = try store.readMetadata(at: firstDraft.metadataURL)
+        try store.writeMetadata(
+            firstMetadata,
+            metadataURL: firstDraft.metadataURL,
+            sessionFolderURL: firstDraft.sessionFolderURL
+        )
+
+        let recordings = try store.recordings(filters: RecordingListFilters())
+
+        #expect(Set(recordings.map(\.id)) == Set([firstDraft.id, secondDraft.id]))
+    }
+
+    @Test
+    func recordingsPrunesDeletedSessionFoldersFromIndex() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let keptSession = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let keptDraft = try store.stopSession(
+            keptSession,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_060),
+            duration: 60,
+            status: .needsTagging,
+            audioTracks: []
+        )
+        let deletedSession = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_120),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        let deletedDraft = try store.stopSession(
+            deletedSession,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_180),
+            duration: 60,
+            status: .needsTagging,
+            audioTracks: []
+        )
+
+        try FileManager.default.removeItem(at: deletedDraft.sessionFolderURL)
+
+        let recordings = try store.recordings(filters: RecordingListFilters())
+
+        #expect(recordings.map(\.id) == [keptDraft.id])
+        #expect(!recordings.map(\.id).contains(deletedDraft.id))
+    }
+
+    @Test
+    func recordingsRepairsFailedStatusWhenRequiredAudioFilesExistWithWarnings() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let session = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        try Data([1, 2, 3]).write(to: session.sourceURL.appendingPathComponent("mic.m4a"))
+        try Data([4, 5, 6]).write(to: session.sourceURL.appendingPathComponent("system.m4a"))
+        try Data([7, 8, 9]).write(to: session.exportURL.appendingPathComponent("mixed.m4a"))
+
+        let draft = try store.stopSession(
+            session,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_120),
+            duration: 120,
+            status: .failed,
+            audioTracks: [
+                AudioTrackMetadata(kind: "microphone", relativePath: "source/mic.m4a", durationSec: 120, fileSizeBytes: 3, status: "completed"),
+                AudioTrackMetadata(
+                    kind: "system",
+                    relativePath: "source/system.m4a",
+                    durationSec: 30,
+                    fileSizeBytes: 3,
+                    status: "failed",
+                    error: "Failed to write system audio recording: ExtAudioFileWriteAsync failed with CoreAudio OSStatus -66570"
+                ),
+                AudioTrackMetadata(kind: "mixed", relativePath: "export/mixed.m4a", durationSec: 120, fileSizeBytes: 3, status: "completed")
+            ]
+        )
+
+        let repaired = try #require(store.recordings(filters: RecordingListFilters()).first)
+        let metadata = try store.readMetadata(at: draft.metadataURL)
+        let systemTrack = try #require(metadata.audioTracks.first { $0.kind == "system" })
+
+        #expect(repaired.status == .needsTagging)
+        #expect(metadata.status == .needsTagging)
+        #expect(systemTrack.status == "completed_with_warnings")
+        #expect(systemTrack.error?.contains("OSStatus -66570") == true)
+        #expect(metadata.qualityWarnings == ["System audio track ended before the recording stopped."])
+        #expect(metadata.audio.health.status == .warning)
+        #expect(metadata.audio.health.warnings == [.systemTrackTruncated])
+    }
+
+    @Test
+    func recordingsAddsTruncatedSystemWarningToExistingMetadata() throws {
+        let root = Self.testOutputFolder()
+        let store = FileSystemRecordingStore(rootURL: root)
+        let session = try store.startSession(
+            startedAt: Date(timeIntervalSince1970: 1_716_468_000),
+            source: RecordingSource(appName: "Zoom", bundleID: "us.zoom.xos")
+        )
+        try Data([1, 2, 3]).write(to: session.sourceURL.appendingPathComponent("mic.m4a"))
+        try Data([4, 5, 6]).write(to: session.sourceURL.appendingPathComponent("system.m4a"))
+        try Data([7, 8, 9]).write(to: session.exportURL.appendingPathComponent("mixed.m4a"))
+
+        let draft = try store.stopSession(
+            session,
+            endedAt: Date(timeIntervalSince1970: 1_716_468_420),
+            duration: 420,
+            status: .needsTagging,
+            audioTracks: [
+                AudioTrackMetadata(kind: "microphone", relativePath: "source/mic.m4a", durationSec: 420, fileSizeBytes: 3, status: "completed"),
+                AudioTrackMetadata(kind: "system", relativePath: "source/system.m4a", durationSec: 170, fileSizeBytes: 3, status: "completed_with_warnings"),
+                AudioTrackMetadata(kind: "mixed", relativePath: "export/mixed.m4a", durationSec: 420, fileSizeBytes: 3, status: "completed")
+            ],
+            audio: RecordingAudioMetadata(
+                processing: .skipped,
+                health: .good
+            )
+        )
+
+        _ = try store.recordings(filters: RecordingListFilters())
+        let metadata = try store.readMetadata(at: draft.metadataURL)
+
+        #expect(metadata.qualityWarnings == ["System audio track ended before the recording stopped."])
+        #expect(metadata.audio.health.status == .warning)
+        #expect(metadata.audio.health.warnings == [.systemTrackTruncated])
+    }
+
+    @Test
     func updatesTitleTagsAndDeletesLocalRecord() throws {
         let root = Self.testOutputFolder()
         let store = FileSystemRecordingStore(rootURL: root)
@@ -419,6 +574,39 @@ struct FileSystemRecordingStoreTests {
 
         #expect(!FileManager.default.fileExists(atPath: updated.sessionFolderURL.path(percentEncoded: false)))
         #expect(try store.recordings(filters: RecordingListFilters()).isEmpty)
+    }
+
+    @Test
+    func deleteLocalRecordRejectsSessionFolderOutsideStorageRoot() throws {
+        let root = Self.testOutputFolder()
+        let outsideFolder = Self.testOutputFolder()
+            .deletingLastPathComponent()
+            .appendingPathComponent("outside-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: outsideFolder,
+            withIntermediateDirectories: true
+        )
+
+        let store = FileSystemRecordingStore(rootURL: root)
+        let summary = RecordingSummary(
+            id: "tampered",
+            title: "Tampered",
+            category: "",
+            participant: "",
+            tags: [],
+            status: .needsTagging,
+            sourceApp: "Zoom",
+            startedAt: "2024-05-23T10:00:00Z",
+            endedAt: "2024-05-23T10:01:00Z",
+            durationSec: 60,
+            metadataURL: outsideFolder.appendingPathComponent("metadata.json"),
+            sessionFolderURL: outsideFolder
+        )
+
+        #expect(throws: FileSystemRecordingStoreError.pathOutsideStorageRoot) {
+            try store.deleteLocalRecord(summary)
+        }
+        #expect(FileManager.default.fileExists(atPath: outsideFolder.path(percentEncoded: false)))
     }
 
     @Test

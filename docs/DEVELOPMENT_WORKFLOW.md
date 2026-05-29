@@ -31,7 +31,7 @@ release/v0.1.0
 - Do not commit generated build artifacts except explicitly tracked lightweight docs such as `dist/INSTALL.md`.
 - Do not fake audio capture or mark unverified recording paths as working.
 - Keep MVP scope boundaries intact unless a task explicitly changes them:
-  - no AI
+  - no automatic/cloud AI
   - no cloud upload
   - no T-Orbit sync
   - no screen recording
@@ -52,6 +52,8 @@ When packaging or install flow changes, also run:
 ```sh
 DRY_RUN=1 ./scripts/install_macos.sh
 ```
+
+`scripts/install_macos.sh` refuses to replace `/Applications/TOrbitRecorder.app` while a running app has an active `recovery.json` with status `recording`. Stop the recording and wait for finalization before reinstalling. Use `ALLOW_INSTALL_WHILE_RECORDING=1` only for emergency debugging where losing the active recording is an explicit tradeoff.
 
 For recorder changes, include manual validation notes from:
 
@@ -85,7 +87,7 @@ Every PR should answer:
 - How was it tested?
 - Were docs updated?
 - Does it affect permissions, storage, recording, packaging, or metadata?
-- Does it preserve MVP exclusions: no AI, cloud, T-Orbit sync, screen recording, or Windows?
+- Does it preserve MVP exclusions: no automatic/cloud AI, cloud upload, T-Orbit sync, screen recording, or Windows?
 - Are generated artifacts excluded from the diff unless intentionally tracked?
 
 Required local checks before requesting review:

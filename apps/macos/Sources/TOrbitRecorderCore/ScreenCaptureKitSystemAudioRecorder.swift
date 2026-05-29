@@ -11,21 +11,111 @@ public struct SystemAudioRecordingResult: Equatable, Sendable {
     public let fileSize: Int64
 }
 
+struct SystemAudioPermissionProbeRunner: Sendable {
+    /// Default upper bound for polling real audio frames after `startCapture`
+    /// returns. macOS may show the TCC prompt asynchronously, so the probe
+    /// keeps polling until either real frames arrive or the bound elapses.
+    static let defaultMaxWaitNanoseconds: UInt64 = 8_000_000_000
+    /// Default polling interval while waiting for the first audio frame.
+    static let defaultPollIntervalNanoseconds: UInt64 = 200_000_000
+
+    let temporaryDirectory: URL
+    let startCapture: @Sendable (URL) throws -> Void
+    let stopCapture: @Sendable () -> Void
+    let cleanupOutput: @Sendable (URL) -> Void
+    let sleepNanoseconds: @Sendable (UInt64) async throws -> Void
+    let frameCount: @Sendable () -> Int64
+    let pollIntervalNanoseconds: UInt64
+    let maxWaitNanoseconds: UInt64
+
+    init(
+        temporaryDirectory: URL,
+        startCapture: @escaping @Sendable (URL) throws -> Void,
+        stopCapture: @escaping @Sendable () -> Void,
+        cleanupOutput: @escaping @Sendable (URL) -> Void,
+        sleepNanoseconds: @escaping @Sendable (UInt64) async throws -> Void,
+        frameCount: @escaping @Sendable () -> Int64,
+        pollIntervalNanoseconds: UInt64 = SystemAudioPermissionProbeRunner.defaultPollIntervalNanoseconds,
+        maxWaitNanoseconds: UInt64 = SystemAudioPermissionProbeRunner.defaultMaxWaitNanoseconds
+    ) {
+        self.temporaryDirectory = temporaryDirectory
+        self.startCapture = startCapture
+        self.stopCapture = stopCapture
+        self.cleanupOutput = cleanupOutput
+        self.sleepNanoseconds = sleepNanoseconds
+        self.frameCount = frameCount
+        self.pollIntervalNanoseconds = pollIntervalNanoseconds
+        self.maxWaitNanoseconds = maxWaitNanoseconds
+    }
+
+    func requestAccess() async throws {
+        let outputURL = temporaryDirectory
+            .appendingPathComponent("torbit-system-audio-permission-\(UUID().uuidString).m4a")
+        try startCapture(outputURL)
+        defer {
+            stopCapture()
+            cleanupOutput(outputURL)
+        }
+
+        // Poll for actual audio frames. Creating the tap can succeed (and
+        // even return cached TCC approval) before the user dismisses the
+        // system prompt, but macOS will not deliver real audio bytes until
+        // the user clicks Allow. Treat sample arrival as the only proof.
+        let interval = max(UInt64(1), pollIntervalNanoseconds)
+        var elapsedNanoseconds: UInt64 = 0
+        while elapsedNanoseconds < maxWaitNanoseconds {
+            try await sleepNanoseconds(interval)
+            elapsedNanoseconds &+= interval
+            if frameCount() > 0 {
+                return
+            }
+        }
+
+        throw RecordingControllerError.systemAudioPermissionDenied(
+            "Core Audio system audio permission probe captured no samples within \(maxWaitNanoseconds / 1_000_000) ms; macOS prompt may still be pending or permission was denied."
+        )
+    }
+}
+
 public final class ScreenCaptureKitSystemAudioRecorder: NSObject, @unchecked Sendable {
     public static let sampleRate: Double = 48_000
     public static let channels: Int = 2
     public static let bitrate: Int = 128_000
     public static let captureBackendName = "Core Audio process tap"
+    static let audioFileWriteOperationName = "ExtAudioFileWrite"
+    public static let requiresScreenCaptureKitPermissionRequest = false
 
     public static var isSystemAudioCaptureAvailable: Bool {
         true
     }
 
     public static func requestSystemAudioAccess() async throws {
-        try await requestScreenCaptureKitAccess()
-        try CoreAudioProcessTapSystemAudioRecorder.requestSystemAudioAccess()
+        let recorder = CoreAudioProcessTapSystemAudioRecorder()
+        let runner = SystemAudioPermissionProbeRunner(
+            temporaryDirectory: FileManager.default.temporaryDirectory,
+            startCapture: { outputURL in
+                try recorder.start(outputURL: outputURL, qualityPreset: .standard)
+            },
+            stopCapture: {
+                recorder.stopPermissionProbe()
+            },
+            cleanupOutput: { outputURL in
+                try? FileManager.default.removeItem(at: outputURL)
+            },
+            sleepNanoseconds: { nanoseconds in
+                try await Task.sleep(nanoseconds: nanoseconds)
+            },
+            frameCount: {
+                recorder.frameCountSnapshot()
+            }
+        )
+
+        try await runner.requestAccess()
+        AppLogger.file(.info, category: "permissions", "system audio permission capture probe succeeded backend=core_audio_process_tap frames=\(recorder.frameCountSnapshot())")
     }
 
+    // Kept for legacy diagnostics/tests. The MVP recorder uses Core Audio taps
+    // and must not require ScreenCaptureKit screen-recording permission.
     private static func requestScreenCaptureKitAccess() async throws {
         do {
             AppLogger.file(.info, category: "permissions", "system audio permission request via ScreenCaptureKit started")
@@ -115,24 +205,6 @@ private final class CoreAudioProcessTapSystemAudioRecorder: @unchecked Sendable 
     private var lastSampleWallClock: Date?
     private var writeError: OSStatus = noErr
 
-    static func requestSystemAudioAccess() throws {
-        var tapID = AudioObjectID(0)
-        let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
-        description.name = "\(tapName) Permission Probe"
-        description.isPrivate = true
-        description.muteBehavior = .unmuted
-
-        let status = AudioHardwareCreateProcessTap(description, &tapID)
-        guard status == noErr, tapID != 0 else {
-            throw RecordingControllerError.systemAudioPermissionDenied(
-                "Core Audio system audio access denied or unavailable: \(osStatusMessage(status, operation: "AudioHardwareCreateProcessTap"))"
-            )
-        }
-
-        AudioHardwareDestroyProcessTap(tapID)
-        AppLogger.file(.info, category: "permissions", "system audio permission probe succeeded backend=core_audio_process_tap")
-    }
-
     func start(
         outputURL: URL,
         qualityPreset: AudioQualityPreset
@@ -176,13 +248,6 @@ private final class CoreAudioProcessTapSystemAudioRecorder: @unchecked Sendable 
             }
             ioProcID = createdIOProcID
 
-            let startStatus = AudioDeviceStart(aggregateDeviceID, createdIOProcID)
-            guard startStatus == noErr else {
-                throw RecordingControllerError.systemAudioSetupFailed(
-                    Self.osStatusMessage(startStatus, operation: "AudioDeviceStart")
-                )
-            }
-
             lock.withLock {
                 self.outputURL = outputURL
                 self.writtenFrames = 0
@@ -190,6 +255,13 @@ private final class CoreAudioProcessTapSystemAudioRecorder: @unchecked Sendable 
                 self.lastSampleTime = nil
                 self.lastSampleWallClock = nil
                 self.writeError = noErr
+            }
+
+            let startStatus = AudioDeviceStart(aggregateDeviceID, createdIOProcID)
+            guard startStatus == noErr else {
+                throw RecordingControllerError.systemAudioSetupFailed(
+                    Self.osStatusMessage(startStatus, operation: "AudioDeviceStart")
+                )
             }
 
             AppLogger.recording.info("System audio capture started with Core Audio process tap: \(outputURL.path(percentEncoded: false), privacy: .public)")
@@ -231,7 +303,7 @@ private final class CoreAudioProcessTapSystemAudioRecorder: @unchecked Sendable 
 
         guard snapshot.3 == noErr else {
             throw RecordingControllerError.systemAudioWriteFailed(
-                Self.osStatusMessage(snapshot.3, operation: "ExtAudioFileWriteAsync")
+                Self.osStatusMessage(snapshot.3, operation: ScreenCaptureKitSystemAudioRecorder.audioFileWriteOperationName)
             )
         }
 
@@ -260,6 +332,23 @@ private final class CoreAudioProcessTapSystemAudioRecorder: @unchecked Sendable 
             sampleCount: Int(min(snapshot.0, Int64(Int.max))),
             fileSize: fileSize
         )
+    }
+
+    func stopPermissionProbe() {
+        if aggregateDeviceID != 0, let ioProcID {
+            let stopStatus = AudioDeviceStop(aggregateDeviceID, ioProcID)
+            if stopStatus != noErr {
+                AppLogger.file(.warning, category: "permissions", Self.osStatusMessage(stopStatus, operation: "AudioDeviceStop(permissionProbe)"))
+            }
+        }
+        cleanup(keepAudioFile: false)
+    }
+
+    /// Snapshot of how many audio frames have been written so far.
+    /// Used by the permission probe to verify that macOS is actually
+    /// delivering real samples (i.e. user clicked Allow on the TCC prompt).
+    func frameCountSnapshot() -> Int64 {
+        lock.withLock { writtenFrames }
     }
 
     func currentLevel() -> Float {
@@ -297,7 +386,9 @@ private final class CoreAudioProcessTapSystemAudioRecorder: @unchecked Sendable 
                 return
             }
 
-            let status = ExtAudioFileWriteAsync(audioFile, frameCount, inputData)
+            // Sync writes avoid kExtAudioFileError_AsyncWriteBufferOverflow on
+            // longer calls, where the async AAC encoder queue can lag behind.
+            let status = ExtAudioFileWrite(audioFile, frameCount, inputData)
             if status == noErr {
                 if firstSampleTime == nil,
                    inputTime.pointee.mFlags.contains(.sampleTimeValid) {

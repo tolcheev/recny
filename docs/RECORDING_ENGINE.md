@@ -28,6 +28,11 @@ The engine is a testable core package, not SwiftUI view logic.
 - System audio: Core Audio process tap where available and permitted by macOS.
 - Mixing/export: native AVFoundation tooling unless a specific blocker is documented.
 
+The system-audio tap writes AAC with synchronous `ExtAudioFileWrite`. Do not
+switch this path back to `ExtAudioFileWriteAsync`: on long calls the async queue
+can overflow (`kExtAudioFileError_AsyncWriteBufferOverflow`, OSStatus -66570)
+and truncate `source/system.m4a`.
+
 Any capture limitation must be represented as a real failure state. Tests may use fixtures for state and storage behavior, but they must not fake a successful production audio capture path.
 
 ## Microphone Input Policy
@@ -38,17 +43,17 @@ Default selection is `Auto, recommended`:
 
 1. Prefer external microphones: Shure, MV7, Hollyland, USB microphones, audio interfaces, and other non-built-in external microphone devices.
 2. Fall back to the built-in MacBook microphone: `MacBook Pro Microphone` or `Built-in Microphone`.
-3. Use AirPods, AirPods Pro, AirPods Max, Bluetooth headset, or hands-free profile microphones only when no other input device is available.
+3. Fall back to other non-Bluetooth input devices.
 
-If the selected input is the Bluetooth fallback, the app must show:
+AirPods, AirPods Pro, AirPods Max, Bluetooth headset, and hands-free profile microphones are blocked for recording. They must not be selected automatically, must not be honored as a manual preferred input, and must not be used as a restore target after recording. If no non-Bluetooth input is available, recording is blocked and the app must show:
 
 ```text
-Bluetooth microphone is used. Audio quality may be degraded.
+AirPods/Bluetooth microphone is blocked for recording. Connect the MacBook or USB microphone.
 ```
 
-The selected microphone name is visible in the main recorder UI and can be overridden from Settings > Recording > Preferred microphone. A preferred Bluetooth headset microphone is ignored while a non-Bluetooth microphone is available.
+The selected microphone name is visible in the main recorder UI and can be overridden from Settings > Recording > Preferred microphone. A preferred Bluetooth headset microphone is always ignored for recording.
 
-Settings labels each available input as `Recommended`, `Built-in`, `Bluetooth fallback`, or `Available`. Diagnostics shows the selected input, the recommended Auto input, and the reason for the current selection. Device changes are refreshed while the app runs; Auto can pick a newly connected external microphone for the next recording, but the active recording input is not changed mid-session.
+Settings labels each available input as `Recommended`, `Built-in`, `Blocked`, or `Available`. Diagnostics shows the selected input, the recommended Auto input, and the reason for the current selection. Device changes are refreshed while the app runs; Auto can pick a newly connected external microphone for the next recording, but the active recording input is not changed mid-session.
 
 ## Speech Quality Presets
 
@@ -97,11 +102,33 @@ State transitions must be logged with timestamps and session id.
 
 If preflight fails, the app must not create a recording folder or recoverable session. If writer startup fails after staging has begun, empty staged folders are discarded; only staged sessions with usable audio files or segments are left for recovery.
 
+## System Audio Permission Probe
+
+System audio permission is proven exclusively by the Core Audio process-tap capture probe; the legacy ScreenCaptureKit preflight is not consulted.
+
+The probe:
+
+1. Marks `AppState.isSystemAudioPermissionRequestInProgress = true` and clears any in-run verified flag so the snapshot cannot report `.granted` while the macOS TCC prompt is on screen.
+2. Starts a short Core Audio process tap into a temporary file in `NSTemporaryDirectory()`.
+3. Polls `frameCountSnapshot()` every 200 ms for up to 8 s.
+4. Returns success only after the recorder reports at least one written audio frame — proof that macOS is actually delivering bytes after the user clicked Allow.
+5. On timeout or capture error, marks the request failed and surfaces `systemAudioPermissionDenied`.
+
+While `isSystemAudioPermissionRequestInProgress` is set:
+
+- `permissionSnapshot.screenSystemAudio` cannot be promoted to `.granted`, even if a previous run cached a successful probe in `UserDefaults`.
+- `isRecordingStartAllowed` returns `false`.
+- `shouldShowPermissionsOnboarding` stays `true`.
+- The status summary renders `System audio: Checking permission`.
+- The header renders `Error`-toned `Permissions needed`, not `Ready`.
+
+Only after the probe verifies real audio frames are `noteSystemAudioPermissionRequestSucceeded()` and the persisted `systemAudioPermissionProbeSucceeded` flag set. The Ready state is therefore impossible to reach while the system-audio TCC prompt is still visible.
+
 ## Auto-Started Stop Guard
 
 Auto-started recordings are allowed to continue while the user switches away from Zoom or another call app. Foreground app changes are not a reliable signal that the call ended.
 
-The app stops an auto-started recording only after both microphone and system-audio activity have been absent for 30 seconds. If either signal returns during that grace period, the pending auto-stop is cancelled. Manual recordings do not use this guard and must be stopped by the user.
+The app stops an auto-started recording only after the call signal has been absent for the configured grace period. The default grace period is 10 seconds, and auto-start monitoring polls once per second so the real stop time stays close to that target. For Zoom, Core Audio process activity from `us.zoom.xos` is the preferred signal: active Zoom input or output keeps recording alive while the user works in another app. Meeting/home window titles are used when macOS exposes them. If both Zoom window titles and per-process audio activity are unavailable, global system-audio activity is the last fallback and microphone activity is ignored because the recorder can keep input devices marked as running. Manual recordings do not use this guard and must be stopped by the user.
 
 The guard logs:
 
@@ -127,6 +154,8 @@ When Stop is requested from the main window, menu bar, shortcut, or auto-stop gu
 9. Compute duration and file sizes where possible.
 10. Analyze completed source tracks for basic signal metadata: signal presence, approximate silence ratio, and clipping.
 11. Validate required outputs. A required source or mixed file that is missing, failed, or 0 bytes makes the recording status `failed` with reason `Empty audio file` or `Missing audio file`.
+    If a required track is non-empty but finished with a late writer warning, keep the recording usable and mark the track `completed_with_warnings`.
+    If `source/system.m4a` is much shorter than the recording duration, surface an `Audio warning` instead of silently reporting `Audio OK`.
 12. Classify short sessions when below the configured short-recording threshold.
 13. Write final `metadata.json`.
 14. Update the SQLite index.

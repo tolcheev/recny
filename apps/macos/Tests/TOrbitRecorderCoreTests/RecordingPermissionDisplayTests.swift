@@ -35,7 +35,7 @@ struct RecordingPermissionDisplayTests {
     }
 
     @Test
-    func screenCapturePreflightGrantedMapsToGrantedSystemAudio() {
+    func captureStartProbeGrantedMapsToGrantedSystemAudio() {
         let state = RecordingPermissionDisplay.screenSystemAudioState(
             processGranted: true,
             settingsOpened: false,
@@ -57,7 +57,7 @@ struct RecordingPermissionDisplayTests {
     }
 
     @Test
-    func grantedPreflightWinsOverStaleSystemAudioError() {
+    func captureStartProbeWinsOverStaleSystemAudioError() {
         let state = RecordingPermissionDisplay.screenSystemAudioState(
             processGranted: true,
             settingsOpened: false,
@@ -68,7 +68,7 @@ struct RecordingPermissionDisplayTests {
     }
 
     @Test
-    func screenCaptureKitPermissionErrorDoesNotOverrideGrantedPreflight() {
+    func captureStartProbeDoesNotTreatLegacyScreenCaptureKitErrorAsBlocking() {
         let state = RecordingPermissionDisplay.screenSystemAudioState(
             processGranted: true,
             settingsOpened: false,
@@ -215,9 +215,9 @@ struct RecordingPermissionDisplayTests {
     }
 
     @Test
-    func skipsMainWindowRefocusBetweenMicrophoneAndSystemAudioPrompts() {
+    func refocusesMainWindowAfterPermissionPrompts() {
         #expect(
-            !PermissionPromptSequencePolicy.shouldRefocusMainWindow(
+            PermissionPromptSequencePolicy.shouldRefocusMainWindow(
                 after: .microphone,
                 next: .systemAudio
             )
@@ -229,7 +229,7 @@ struct RecordingPermissionDisplayTests {
             )
         )
         #expect(
-            !PermissionPromptSequencePolicy.shouldRefocusMainWindow(
+            PermissionPromptSequencePolicy.shouldRefocusMainWindow(
                 after: .systemAudio,
                 next: nil
             )

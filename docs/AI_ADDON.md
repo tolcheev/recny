@@ -2,9 +2,9 @@
 
 ## Status
 
-Future design only. AI is not part of the macOS audio-only MVP.
+AI remains outside the automatic macOS audio-only MVP flow.
 
-Do not add AI dependencies, model downloads, cloud calls, or automatic transcription in MVP.
+The app now supports an explicit local-only transcription action from Records only after the optional setup in Settings is ready. Do not add cloud calls, bundled model downloads, model downloads from Records, automatic transcription, or background AI processing in MVP.
 
 ## Goal
 
@@ -12,7 +12,7 @@ Help the mentor review calls faster after recording while keeping audio local by
 
 ## Use Cases
 
-- Local transcription.
+- Explicit local transcription through optional Parakeet setup.
 - Optional diarization later.
 - Markdown call notes.
 - Sales call review.
@@ -62,7 +62,8 @@ Future AI folder:
 
 ```text
 ai/
-  transcript.md
+  transcript.txt
+  call_note.md
   transcript.json
   summary.md
   review.md
@@ -83,7 +84,7 @@ Future metadata fields:
 
 Future Library actions:
 
-- Run transcription.
+- Run local transcription.
 - Generate note.
 - View transcript.
 - Search transcript.

@@ -155,6 +155,8 @@ public enum RecordingDisplayFormatter {
             return "Balanced mix failed, original audio is available"
         case .onlyOneTrackAvailable:
             return "Only one audio track is available"
+        case .systemTrackTruncated:
+            return "System audio ended before recording stopped"
         }
     }
 
@@ -254,11 +256,25 @@ public enum RecordingDisplayFormatter {
 
     public static func systemAudioText(
         isEnabled: Bool,
+        permissionState: RecorderPermissionState = .granted,
         captureStatus: CaptureStatus,
-        recordingStatus: RecordingStatus
+        recordingStatus: RecordingStatus,
+        isPermissionRequestInProgress: Bool = false
     ) -> String {
         guard isEnabled else {
             return "Off"
+        }
+
+        if isPermissionRequestInProgress {
+            return "Checking permission"
+        }
+
+        guard permissionState == .granted else {
+            if permissionState == .restartRequired {
+                return "Needs restart"
+            }
+
+            return "Needs permission"
         }
 
         switch captureStatus {

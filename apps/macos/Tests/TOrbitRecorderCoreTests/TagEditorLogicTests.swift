@@ -31,6 +31,34 @@ struct TagEditorLogicTests {
     }
 
     @Test
+    func saveStatusPreservesTechnicalRecordingStatuses() {
+        #expect(
+            TagEditorLogic.resolvedSaveStatus(
+                originalStatus: .failed,
+                selectedStatus: .saved
+            ) == .failed
+        )
+        #expect(
+            TagEditorLogic.resolvedSaveStatus(
+                originalStatus: .shortRecording,
+                selectedStatus: .saved
+            ) == .shortRecording
+        )
+        #expect(
+            TagEditorLogic.resolvedSaveStatus(
+                originalStatus: .needsTagging,
+                selectedStatus: .saved
+            ) == .saved
+        )
+        #expect(
+            TagEditorLogic.resolvedSaveStatus(
+                originalStatus: .reviewed,
+                selectedStatus: .needsReview
+            ) == .needsReview
+        )
+    }
+
+    @Test
     func saveDraftNormalizesTagsInMetadataAndSQLite() throws {
         let root = Self.testOutputFolder()
         let store = FileSystemRecordingStore(rootURL: root)

@@ -77,6 +77,46 @@ struct AudioHealthTests {
     }
 
     @Test
+    func completedWithWarningsTrackIsAvailable() {
+        let health = AudioHealthEvaluator.evaluate(
+            audioTracks: [
+                Self.completedTrack(kind: "microphone", size: 120_000, hadSignal: true),
+                AudioTrackMetadata(
+                    kind: "system",
+                    relativePath: "source/system.m4a",
+                    fileSizeBytes: 160_000,
+                    status: "completed_with_warnings",
+                    signal: AudioSignalMetadata(
+                        hadSignal: true,
+                        approximateSilenceRatio: 0.3,
+                        clippingDetected: false
+                    ),
+                    error: "Recorder stop returned a late CoreAudio warning."
+                )
+            ],
+            processing: .skipped
+        )
+
+        #expect(health.status == .good)
+        #expect(health.warnings.isEmpty)
+    }
+
+    @Test
+    func truncatedSystemTrackCreatesWarning() {
+        let health = AudioHealthEvaluator.evaluate(
+            audioTracks: [
+                Self.completedTrack(kind: "microphone", size: 420_000, duration: 420, hadSignal: true),
+                Self.completedTrack(kind: "system", size: 170_000, duration: 170, hadSignal: true)
+            ],
+            processing: .skipped,
+            recordingDuration: 420
+        )
+
+        #expect(health.status == .warning)
+        #expect(health.warnings == [.systemTrackTruncated])
+    }
+
+    @Test
     func noUsableSourceTracksIsFailed() {
         let health = AudioHealthEvaluator.evaluate(
             audioTracks: [
@@ -119,6 +159,7 @@ struct AudioHealthTests {
     private static func completedTrack(
         kind: String,
         size: Int64,
+        duration: Double? = nil,
         hadSignal: Bool,
         silenceRatio: Double = 0.1,
         clipping: Bool = false
@@ -126,6 +167,7 @@ struct AudioHealthTests {
         AudioTrackMetadata(
             kind: kind,
             relativePath: kind == "system" ? "source/system.m4a" : "source/mic.m4a",
+            durationSec: duration,
             fileSizeBytes: size,
             status: "completed",
             signal: AudioSignalMetadata(

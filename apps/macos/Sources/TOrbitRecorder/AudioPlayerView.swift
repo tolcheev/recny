@@ -3,6 +3,24 @@ import SwiftUI
 import TOrbitRecorderCore
 
 @MainActor
+enum AudioPlaybackStopCenter {
+    static let notificationName = Notification.Name("TOrbitRecorderStopPlaybackInsideSessionFolder")
+    static let sessionFolderURLKey = "sessionFolderURL"
+
+    static func stopPlayback(inside sessionFolderURL: URL) {
+        NotificationCenter.default.post(
+            name: notificationName,
+            object: nil,
+            userInfo: [sessionFolderURLKey: sessionFolderURL]
+        )
+    }
+
+    static func sessionFolderURL(from notification: Notification) -> URL? {
+        notification.userInfo?[sessionFolderURLKey] as? URL
+    }
+}
+
+@MainActor
 final class AudioPlayerViewModel: ObservableObject {
     @Published var isPlaying = false
     @Published var currentTime: TimeInterval = 0
@@ -24,6 +42,10 @@ final class AudioPlayerViewModel: ObservableObject {
         if autoplays {
             play()
         }
+    }
+
+    deinit {
+        player.pause()
     }
 
     func togglePlayback() {
@@ -52,6 +74,24 @@ final class AudioPlayerViewModel: ObservableObject {
 
     func revealInFinder() {
         NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    func stopAndTearDown() {
+        pause()
+        if let timeObserver {
+            player.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
+        }
+    }
+
+    func stopIfPlaying(insideSessionFolder sessionFolderURL: URL) {
+        guard RecordingPlaybackResolver.isPlaybackURL(url, insideSessionFolder: sessionFolderURL) else {
+            return
+        }
+
+        pause()
+        player.seek(to: .zero)
+        currentTime = 0
     }
 
     private func configureDuration() {
@@ -156,6 +196,16 @@ struct AudioPlayerView: View {
         .padding(20)
         .frame(minWidth: 460, idealWidth: 520, minHeight: 160)
         .background(Color(nsColor: .windowBackgroundColor))
+        .onDisappear {
+            viewModel.stopAndTearDown()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AudioPlaybackStopCenter.notificationName)) { notification in
+            guard let sessionFolderURL = AudioPlaybackStopCenter.sessionFolderURL(from: notification) else {
+                return
+            }
+
+            viewModel.stopIfPlaying(insideSessionFolder: sessionFolderURL)
+        }
     }
 }
 
@@ -217,5 +267,15 @@ struct InlineAudioPlayerView: View {
             }
         }
         .padding(.top, 4)
+        .onDisappear {
+            viewModel.stopAndTearDown()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AudioPlaybackStopCenter.notificationName)) { notification in
+            guard let sessionFolderURL = AudioPlaybackStopCenter.sessionFolderURL(from: notification) else {
+                return
+            }
+
+            viewModel.stopIfPlaying(insideSessionFolder: sessionFolderURL)
+        }
     }
 }

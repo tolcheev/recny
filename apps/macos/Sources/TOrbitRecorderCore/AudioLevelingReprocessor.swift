@@ -174,7 +174,8 @@ public final class AudioLevelingReprocessor {
                 processing: processing,
                 audioTracks: metadata.audioTracks,
                 microphoneAnalysis: microphoneAnalysis,
-                systemAnalysis: systemAnalysis
+                systemAnalysis: systemAnalysis,
+                recordingDuration: metadata.durationSec
             )
             try writeAnalysis(
                 recordingID: metadata.id,
@@ -222,7 +223,8 @@ public final class AudioLevelingReprocessor {
                 processing: processing,
                 audioTracks: metadata.audioTracks,
                 microphoneAnalysis: microphoneAnalysis,
-                systemAnalysis: systemAnalysis
+                systemAnalysis: systemAnalysis,
+                recordingDuration: metadata.durationSec
             )
             try writeAnalysis(
                 recordingID: metadata.id,
@@ -278,7 +280,8 @@ public final class AudioLevelingReprocessor {
                 processing: processing,
                 audioTracks: metadata.audioTracks,
                 microphoneAnalysis: microphoneAnalysis,
-                systemAnalysis: systemAnalysis
+                systemAnalysis: systemAnalysis,
+                recordingDuration: metadata.durationSec
             )
             try? writeAnalysis(
                 recordingID: metadata.id,
@@ -309,7 +312,8 @@ public final class AudioLevelingReprocessor {
         processing: AudioProcessingMetadata,
         audioTracks: [AudioTrackMetadata],
         microphoneAnalysis: AudioLevelAnalysis,
-        systemAnalysis: AudioLevelAnalysis
+        systemAnalysis: AudioLevelAnalysis,
+        recordingDuration: TimeInterval? = nil
     ) -> RecordingAudioMetadata {
         RecordingAudioMetadata(
             processing: processing,
@@ -317,7 +321,8 @@ public final class AudioLevelingReprocessor {
                 audioTracks: audioTracks,
                 processing: processing,
                 microphoneAnalysis: microphoneAnalysis,
-                systemAnalysis: systemAnalysis
+                systemAnalysis: systemAnalysis,
+                recordingDuration: recordingDuration
             )
         )
     }

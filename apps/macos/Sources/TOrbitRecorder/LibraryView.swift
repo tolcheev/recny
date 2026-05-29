@@ -13,11 +13,15 @@ struct LibraryView: View {
     @State private var selectedRecordingID: String?
     @State private var tagDraft: PostCallDraft?
     @State private var deleteCandidate: RecordingSummary?
+    @State private var trimCandidate: RecordingSummary?
     @State private var reprocessCandidate: RecordingSummary?
     @State private var reprocessingRecordingIDs: Set<String> = []
+    @State private var transcribingRecordingIDs: Set<String> = []
+    @State private var screenshotRecordingIDs: Set<String> = []
     @State private var actionError: String?
     @State private var actionMessage: String?
     @State private var inlinePlayback: RecordingInlinePlaybackRequest?
+    @State private var localTranscriptionSetupStatus = LocalTranscriptionSetupInspector.status()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -44,14 +48,15 @@ struct LibraryView: View {
                 .frame(minWidth: 560, idealWidth: 680, maxWidth: .infinity)
 
                 detailsPanel
-                    .frame(width: 390)
+                    .frame(width: 430)
             }
         }
         .padding(20)
-        .frame(minWidth: 1060, minHeight: 660)
+        .frame(minWidth: 1_140, minHeight: 700)
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             reloadLibrary()
+            refreshLocalTranscriptionSetup()
         }
         .onChange(of: searchText) { _, _ in
             ensureSelectionVisible()
@@ -77,6 +82,23 @@ struct LibraryView: View {
                 ensureSelectionVisible()
             }
         }
+        .sheet(item: $trimCandidate) { recording in
+            AudioTrimSheet(
+                recording: recording,
+                displayTitle: displayTitle(for: recording),
+                onExported: { result, shareAfterExport in
+                    trimCandidate = nil
+                    actionError = nil
+                    actionMessage = "Clip exported: \(result.outputURL.lastPathComponent)."
+                    if shareAfterExport {
+                        NativeAudioSharing.share(url: result.outputURL)
+                    }
+                },
+                onCancel: {
+                    trimCandidate = nil
+                }
+            )
+        }
         .confirmationDialog(
             "Delete local recording?",
             isPresented: Binding(
@@ -93,7 +115,7 @@ struct LibraryView: View {
                 deleteCandidate = nil
             }
         } message: {
-            Text("This removes audio files and metadata.")
+            Text("This permanently deletes the recording folder and every file inside it, including source audio, mixed exports, analysis, and metadata. This cannot be undone.")
         }
         .confirmationDialog(
             "Balanced audio already exists",
@@ -339,10 +361,28 @@ struct LibraryView: View {
                                 onShowAnalysis: {
                                     revealIfExists(recording.audioAnalysisURL)
                                 },
+                                onShare: {
+                                    shareAudio(for: recording)
+                                },
+                                onCopyAudioPath: {
+                                    copyAudioPath(for: recording)
+                                },
+                                onTrim: {
+                                    trimCandidate = recording
+                                },
+                                onCaptureScreenshot: {
+                                    captureScreenshot(for: recording)
+                                },
+                                onTranscribe: {
+                                    transcribeLocally(for: recording)
+                                },
+                                canTranscribeLocally: localTranscriptionSetupStatus.canTranscribeWithoutSetup,
+                                transcriptionSetupHint: localTranscriptionSetupStatus.actionHint,
                                 onReprocess: {
                                     requestReprocess(for: recording)
                                 },
                                 isReprocessing: reprocessingRecordingIDs.contains(recording.id),
+                                isTranscribing: transcribingRecordingIDs.contains(recording.id),
                                 onEdit: {
                                     openTagEditor(for: recording)
                                 },
@@ -361,27 +401,48 @@ struct LibraryView: View {
     private var detailsPanel: some View {
         Group {
             if let selectedRecording {
-                LibraryRecordingDetailsPanel(
-                    recording: selectedRecording,
-                    displayTitle: displayTitle(for: selectedRecording),
-                    displaySource: displaySource(for: selectedRecording),
-                    metadata: metadata(for: selectedRecording),
-                    onPlay: {
-                        playMixedAudio(for: selectedRecording)
-                    },
-                    onOpen: {
-                        NSWorkspace.shared.open(selectedRecording.sessionFolderURL)
-                    },
-                    onEdit: {
-                        openTagEditor(for: selectedRecording)
-                    },
-                    onShowAnalysis: {
-                        revealIfExists(selectedRecording.audioAnalysisURL)
-                    },
-                    onDelete: {
-                        deleteCandidate = selectedRecording
-                    }
-                )
+                ScrollView {
+                    LibraryRecordingDetailsPanel(
+                        recording: selectedRecording,
+                        displayTitle: displayTitle(for: selectedRecording),
+                        displaySource: displaySource(for: selectedRecording),
+                        metadata: metadata(for: selectedRecording),
+                        onPlay: {
+                            playMixedAudio(for: selectedRecording)
+                        },
+                        onOpen: {
+                            NSWorkspace.shared.open(selectedRecording.sessionFolderURL)
+                        },
+                        onEdit: {
+                            openTagEditor(for: selectedRecording)
+                        },
+                        onShowAnalysis: {
+                            revealIfExists(selectedRecording.audioAnalysisURL)
+                        },
+                        onShare: { anchorView in
+                            shareAudio(for: selectedRecording, anchorView: anchorView)
+                        },
+                        onCopyAudioPath: {
+                            copyAudioPath(for: selectedRecording)
+                        },
+                        onTrim: {
+                            trimCandidate = selectedRecording
+                        },
+                        onCaptureScreenshot: {
+                            captureScreenshot(for: selectedRecording)
+                        },
+                        onTranscribe: {
+                            transcribeLocally(for: selectedRecording)
+                        },
+                        canTranscribeLocally: localTranscriptionSetupStatus.canTranscribeWithoutSetup,
+                        transcriptionSetupHint: localTranscriptionSetupStatus.actionHint,
+                        isTranscribing: transcribingRecordingIDs.contains(selectedRecording.id),
+                        onDelete: {
+                            deleteCandidate = selectedRecording
+                        }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
             } else {
                 RecorderCard {
                     VStack(spacing: 10) {
@@ -440,7 +501,7 @@ struct LibraryView: View {
             )
         }
 
-        return filtersAreActive ? filtered : Array(filtered.prefix(80))
+        return filtered
     }
 
     private var filtersAreActive: Bool {
@@ -455,10 +516,10 @@ struct LibraryView: View {
 
     private var librarySubtitle: String {
         if displayedRecordings.isEmpty {
-            return filtersAreActive ? "No matching local recordings" : "Recent local recordings"
+            return filtersAreActive ? "No matching local recordings" : "Local recordings"
         }
 
-        return "\(displayedRecordings.count) recent local recording\(displayedRecordings.count == 1 ? "" : "s")"
+        return "\(displayedRecordings.count) local recording\(displayedRecordings.count == 1 ? "" : "s")"
     }
 
     private func clearFilters() {
@@ -471,6 +532,7 @@ struct LibraryView: View {
     }
 
     private func reloadLibrary() {
+        refreshLocalTranscriptionSetup()
         try? appState.reloadRecordings()
         try? appState.reloadLastRecording()
         ensureSelectionVisible()
@@ -627,12 +689,134 @@ struct LibraryView: View {
         actionError = nil
     }
 
+    private func shareAudio(for recording: RecordingSummary, anchorView: NSView? = nil) {
+        guard let shareableAudio = RecordingPlaybackResolver.preferredShareableAudio(
+            sessionFolderURL: recording.sessionFolderURL
+        ) else {
+            actionError = "No shareable audio file found."
+            actionMessage = nil
+            return
+        }
+
+        NativeAudioSharing.share(url: shareableAudio.url, anchorView: anchorView)
+        actionError = nil
+        actionMessage = "Share sheet opened for \(shareableAudio.url.lastPathComponent)."
+        AppLogger.file(
+            .info,
+            category: "library",
+            "share audio requested recording=\(recording.id) kind=\(shareableAudio.kind.rawValue) path=\(shareableAudio.url.path(percentEncoded: false))"
+        )
+    }
+
+    private func copyAudioPath(for recording: RecordingSummary) {
+        guard let shareableAudio = RecordingPlaybackResolver.preferredShareableAudio(
+            sessionFolderURL: recording.sessionFolderURL
+        ) else {
+            actionError = "No shareable audio file found."
+            actionMessage = nil
+            return
+        }
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(shareableAudio.url.path(percentEncoded: false), forType: .string)
+        actionError = nil
+        actionMessage = "Audio path copied: \(shareableAudio.url.lastPathComponent)."
+        AppLogger.file(
+            .info,
+            category: "library",
+            "copied audio path recording=\(recording.id) kind=\(shareableAudio.kind.rawValue)"
+        )
+    }
+
+    private func captureScreenshot(for recording: RecordingSummary) {
+        guard !screenshotRecordingIDs.contains(recording.id) else {
+            return
+        }
+
+        screenshotRecordingIDs.insert(recording.id)
+        actionError = nil
+        actionMessage = "Capturing full-screen screenshot..."
+
+        Task {
+            do {
+                let screenshotURL = try await NativeScreenshotCapture.captureFullScreen(
+                    sessionFolderURL: recording.sessionFolderURL
+                )
+                actionError = nil
+                actionMessage = "Screenshot saved: \(screenshotURL.lastPathComponent)."
+            } catch NativeScreenshotError.cancelled {
+                actionMessage = nil
+            } catch {
+                actionError = String(describing: error)
+                actionMessage = nil
+            }
+            screenshotRecordingIDs.remove(recording.id)
+        }
+    }
+
+    private func transcribeLocally(for recording: RecordingSummary) {
+        guard !transcribingRecordingIDs.contains(recording.id) else {
+            return
+        }
+
+        refreshLocalTranscriptionSetup()
+        guard localTranscriptionSetupStatus.canTranscribeWithoutSetup else {
+            actionError = localTranscriptionSetupStatus.actionHint
+            actionMessage = nil
+            return
+        }
+
+        guard let audio = RecordingPlaybackResolver.preferredShareableAudio(
+            sessionFolderURL: recording.sessionFolderURL
+        ) else {
+            actionError = LocalTranscriptionError.noUsableAudio.description
+            actionMessage = nil
+            return
+        }
+
+        transcribingRecordingIDs.insert(recording.id)
+        selectedRecordingID = recording.id
+        actionError = nil
+        actionMessage = "Transcribing locally with prepared Parakeet model..."
+
+        Task {
+            do {
+                let result = try await LocalTranscriptionRunner().transcribe(
+                    recording: recording,
+                    audioURL: audio.url
+                )
+                actionError = nil
+                actionMessage = "Transcript note created: \(result.paths.noteMarkdownURL.lastPathComponent)."
+                NSWorkspace.shared.activateFileViewerSelecting([result.paths.noteMarkdownURL])
+                AppLogger.file(
+                    .info,
+                    category: "library",
+                    "local transcription requested recording=\(recording.id) provider=\(result.provider.rawValue)"
+                )
+            } catch let error as LocalTranscriptionError {
+                actionError = error.description
+                actionMessage = nil
+                AppLogger.file(.error, category: "library", "local transcription failed recording=\(recording.id) error=\(error.description)")
+            } catch {
+                actionError = String(describing: error)
+                actionMessage = nil
+                AppLogger.file(.error, category: "library", "local transcription failed recording=\(recording.id) error=\(String(describing: error))")
+            }
+            transcribingRecordingIDs.remove(recording.id)
+        }
+    }
+
+    private func refreshLocalTranscriptionSetup() {
+        localTranscriptionSetupStatus = LocalTranscriptionSetupInspector.status()
+    }
+
     private func deleteSelectedCandidate() {
         guard let recording = deleteCandidate else {
             return
         }
 
         do {
+            stopPlaybackBeforeDeleting(recording)
             try appState.deleteLocalRecord(recording)
             deleteCandidate = nil
             selectedRecordingID = displayedRecordings.first?.id
@@ -641,6 +825,23 @@ struct LibraryView: View {
         } catch {
             actionError = String(describing: error)
             actionMessage = nil
+        }
+    }
+
+    private func stopPlaybackBeforeDeleting(_ recording: RecordingSummary) {
+        AudioPlaybackStopCenter.stopPlayback(inside: recording.sessionFolderURL)
+
+        if RecordingPlaybackResolver.shouldStopPlaybackBeforeDeleting(
+            inlinePlayback: inlinePlayback,
+            deletedRecordingID: recording.id,
+            deletedSessionFolderURL: recording.sessionFolderURL
+        ) {
+            inlinePlayback = nil
+            AppLogger.file(.info, category: "playback", "closed inline player before deleting recording=\(recording.id)")
+        }
+
+        if AppWindows.closeAudioPlayer(ifPlayingInside: recording.sessionFolderURL) {
+            AppLogger.file(.info, category: "playback", "closed player window before deleting recording=\(recording.id)")
         }
     }
 
@@ -717,8 +918,16 @@ private struct LibraryRecordingRow: View {
     let onPlayOriginal: () -> Void
     let onClosePlayback: () -> Void
     let onShowAnalysis: () -> Void
+    let onShare: () -> Void
+    let onCopyAudioPath: () -> Void
+    let onTrim: () -> Void
+    let onCaptureScreenshot: () -> Void
+    let onTranscribe: () -> Void
+    let canTranscribeLocally: Bool
+    let transcriptionSetupHint: String
     let onReprocess: () -> Void
     let isReprocessing: Bool
+    let isTranscribing: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -796,6 +1005,31 @@ private struct LibraryRecordingRow: View {
                         Button(action: onOpen) {
                             Label("Open Folder", systemImage: "folder")
                         }
+
+                        Button(action: onShare) {
+                            Label("Share Audio...", systemImage: "square.and.arrow.up")
+                        }
+                        .disabled(shareableAudio == nil)
+
+                        Button(action: onCopyAudioPath) {
+                            Label("Copy Audio Path", systemImage: "doc.on.doc")
+                        }
+                        .disabled(shareableAudio == nil)
+
+                        Button(action: onTrim) {
+                            Label("Trim Audio...", systemImage: "scissors")
+                        }
+                        .disabled(shareableAudio == nil)
+
+                        Button(action: onCaptureScreenshot) {
+                            Label("Capture Full Screenshot", systemImage: "camera.viewfinder")
+                        }
+
+                        Button(action: onTranscribe) {
+                            Label(isTranscribing ? "Transcribing..." : "Transcribe Locally", systemImage: "text.quote")
+                        }
+                        .disabled(shareableAudio == nil || isTranscribing || !canTranscribeLocally)
+                        .help(transcriptionSetupHint)
 
                         Button(action: onShowAnalysis) {
                             Label("Reveal Audio Analysis", systemImage: "doc.text.magnifyingglass")
@@ -883,6 +1117,10 @@ private struct LibraryRecordingRow: View {
             return .neutral
         }
     }
+
+    private var shareableAudio: RecordingPlaybackCandidate? {
+        RecordingPlaybackResolver.preferredShareableAudio(sessionFolderURL: recording.sessionFolderURL)
+    }
 }
 
 private struct LibraryRecordingDetailsPanel: View {
@@ -894,6 +1132,14 @@ private struct LibraryRecordingDetailsPanel: View {
     let onOpen: () -> Void
     let onEdit: () -> Void
     let onShowAnalysis: () -> Void
+    let onShare: (NSView?) -> Void
+    let onCopyAudioPath: () -> Void
+    let onTrim: () -> Void
+    let onCaptureScreenshot: () -> Void
+    let onTranscribe: () -> Void
+    let canTranscribeLocally: Bool
+    let transcriptionSetupHint: String
+    let isTranscribing: Bool
     let onDelete: () -> Void
 
     var body: some View {
@@ -914,6 +1160,10 @@ private struct LibraryRecordingDetailsPanel: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                actionsSection
+
+                Divider()
 
                 if recording.category != "unsorted" {
                     VStack(alignment: .leading, spacing: 6) {
@@ -941,34 +1191,133 @@ private struct LibraryRecordingDetailsPanel: View {
                 filesSection
                 audioProcessingSection
                 metadataSection
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+    }
 
-                Spacer(minLength: 0)
-
+    private var actionsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
-                    Button(action: onPlay) {
-                        Label("Play", systemImage: "play.fill")
-                    }
-                    .disabled(playbackState == .missing)
-
-                    Button(action: onOpen) {
-                        Label("Open", systemImage: "folder")
-                    }
-
-                    Button(action: onEdit) {
-                        Label("Edit / Tag", systemImage: "tag")
-                    }
+                    playButton
+                    openButton
+                    editButton
                 }
 
-                Button(action: onShowAnalysis) {
-                    Label("Reveal Audio Analysis", systemImage: "doc.text.magnifyingglass")
-                }
-                .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
-
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
+                VStack(alignment: .leading, spacing: 8) {
+                    playButton
+                    openButton
+                    editButton
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    shareButton
+                    trimButton
+                    screenshotButton
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    shareButton
+                    trimButton
+                    screenshotButton
+                }
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    transcribeButton
+                    copyPathButton
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    transcribeButton
+                    copyPathButton
+                }
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    analysisButton
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    analysisButton
+                }
+            }
+
+            deleteButton
+        }
+        .controlSize(.regular)
+    }
+
+    private var playButton: some View {
+        Button(action: onPlay) {
+            Label("Play", systemImage: "play.fill")
+        }
+        .disabled(playbackState == .missing)
+    }
+
+    private var openButton: some View {
+        Button(action: onOpen) {
+            Label("Open", systemImage: "folder")
+        }
+    }
+
+    private var editButton: some View {
+        Button(action: onEdit) {
+            Label("Edit / Tag", systemImage: "tag")
+        }
+    }
+
+    private var shareButton: some View {
+        AnchoredShareButton(
+            title: "Share",
+            isDisabled: shareableAudio == nil,
+            onShare: onShare
+        )
+    }
+
+    private var trimButton: some View {
+        Button(action: onTrim) {
+            Label("Trim", systemImage: "scissors")
+        }
+        .disabled(shareableAudio == nil)
+    }
+
+    private var screenshotButton: some View {
+        Button(action: onCaptureScreenshot) {
+            Label("Full Screenshot", systemImage: "camera.viewfinder")
+        }
+    }
+
+    private var transcribeButton: some View {
+        Button(action: onTranscribe) {
+            Label(isTranscribing ? "Transcribing..." : "Transcribe Locally", systemImage: "text.quote")
+        }
+        .disabled(shareableAudio == nil || isTranscribing || !canTranscribeLocally)
+        .help(transcriptionSetupHint)
+    }
+
+    private var copyPathButton: some View {
+        Button(action: onCopyAudioPath) {
+            Label("Copy Audio Path", systemImage: "doc.on.doc")
+        }
+        .disabled(shareableAudio == nil)
+    }
+
+    private var analysisButton: some View {
+        Button(action: onShowAnalysis) {
+            Label("Reveal Audio Analysis", systemImage: "doc.text.magnifyingglass")
+        }
+        .disabled(RecordingPlaybackResolver.nonEmptyFileSize(at: recording.audioAnalysisURL) == nil)
+    }
+
+    private var deleteButton: some View {
+        Button(role: .destructive, action: onDelete) {
+            Label("Delete", systemImage: "trash")
         }
     }
 
@@ -1077,6 +1426,10 @@ private struct LibraryRecordingDetailsPanel: View {
         )
     }
 
+    private var shareableAudio: RecordingPlaybackCandidate? {
+        RecordingPlaybackResolver.preferredShareableAudio(sessionFolderURL: recording.sessionFolderURL)
+    }
+
     private var audioWarnings: [String] {
         let qualityWarnings = metadata?.qualityWarnings ?? []
         let processingWarnings = metadata?.audio.processing.warnings ?? []
@@ -1146,6 +1499,77 @@ private struct LibraryRecordingDetailsPanel: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+@MainActor
+private enum NativeAudioSharing {
+    static func share(url: URL, anchorView: NSView? = nil) {
+        if let anchorView, anchorView.window != nil {
+            let picker = NSSharingServicePicker(items: [url])
+            picker.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .minY)
+            return
+        }
+
+        guard let contentView = activeContentView else {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+            return
+        }
+
+        let picker = NSSharingServicePicker(items: [url])
+        let anchorRect = NSRect(
+            x: contentView.bounds.midX,
+            y: contentView.bounds.midY,
+            width: 1,
+            height: 1
+        )
+        picker.show(relativeTo: anchorRect, of: contentView, preferredEdge: .minY)
+    }
+
+    private static var activeContentView: NSView? {
+        NSApp.keyWindow?.contentView
+            ?? NSApp.mainWindow?.contentView
+            ?? NSApp.windows.first(where: { $0.isVisible })?.contentView
+    }
+}
+
+private struct AnchoredShareButton: NSViewRepresentable {
+    let title: String
+    let isDisabled: Bool
+    let onShare: (NSView?) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onShare: onShare)
+    }
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton(title: title, target: context.coordinator, action: #selector(Coordinator.share(_:)))
+        button.bezelStyle = .rounded
+        button.controlSize = .regular
+        button.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: nil)
+        button.imagePosition = .imageLeading
+        button.setButtonType(.momentaryPushIn)
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        context.coordinator.onShare = onShare
+        button.title = title
+        button.isEnabled = !isDisabled
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.share(_:))
+    }
+
+    final class Coordinator: NSObject {
+        var onShare: (NSView?) -> Void
+
+        init(onShare: @escaping (NSView?) -> Void) {
+            self.onShare = onShare
+        }
+
+        @objc func share(_ sender: NSButton) {
+            onShare(sender)
         }
     }
 }
