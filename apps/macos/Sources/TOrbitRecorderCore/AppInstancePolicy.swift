@@ -43,15 +43,15 @@ public enum AppInstancePolicy {
             return 0
         }
 
-        if bundlePath.hasPrefix("/Applications/TOrbitRecorder.app") {
+        if bundlePath.hasPrefix("/Applications/ToRec.app") {
             return 30
         }
 
-        if bundlePath.contains("/dist/TOrbitRecorder.app") {
+        if bundlePath.contains("/dist/ToRec.app") {
             return 20
         }
 
-        if bundlePath.contains("/.build/app/TOrbitRecorder.app") {
+        if bundlePath.contains("/.build/app/ToRec.app") {
             return 10
         }
 

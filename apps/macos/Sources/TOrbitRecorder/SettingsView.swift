@@ -279,7 +279,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("Optional add-on. T-Orbit Recorder does not bundle models and does not download them from Records. Prepare Parakeet here first; after that Records can transcribe locally without a first-run model download.")
+            Text("Optional add-on. ToRec does not bundle models and does not download them from Records. Prepare Parakeet here first; after that Records can transcribe locally without a first-run model download.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -408,7 +408,7 @@ struct SettingsView: View {
                     .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
             }
 
-            Text("Recording, Library, Diagnostics, and app-active Screenshot shortcuts work when T-Orbit Recorder is active. Show Window and full-screen Screenshot also have global shortcuts for call moments.")
+            Text("Recording, Library, Diagnostics, and app-active Screenshot shortcuts work when ToRec is active. Show Window and full-screen Screenshot also have global shortcuts for call moments.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -443,7 +443,7 @@ struct SettingsView: View {
                 )
             )
 
-            Text("Off by default. T-Orbit Recorder stays in the menu bar; use the menu bar item to show the window again.")
+            Text("Off by default. ToRec stays in the menu bar; use the menu bar item to show the window again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

@@ -146,7 +146,7 @@ struct RecordingPermissionDisplayTests {
             PermissionOnboardingFormatter.explanation(
                 for: .screenSystemAudio,
                 state: .restartRequired
-            ) == "Permission is enabled. Restart T-Orbit Recorder to apply it."
+            ) == "Permission is enabled. Restart ToRec to apply it."
         )
         #expect(
             PermissionOnboardingFormatter.actionTitle(
@@ -209,8 +209,8 @@ struct RecordingPermissionDisplayTests {
         #expect(PermissionOnboardingFormatter.requiresRestart(snapshot))
         #expect(
             PermissionOnboardingFormatter.reopenInstruction(
-                bundlePath: "/Applications/TOrbitRecorder.app"
-            ).contains("open \"/Applications/TOrbitRecorder.app\"")
+                bundlePath: "/Applications/ToRec.app"
+            ).contains("open \"/Applications/ToRec.app\"")
         )
     }
 
@@ -240,10 +240,10 @@ struct RecordingPermissionDisplayTests {
     func restartCommandWaitsForCurrentProcessToExitBeforeOpeningBundle() {
         let command = AppRestartCommand.shellCommand(
             currentProcessID: 12345,
-            bundlePath: "/Applications/TOrbitRecorder.app"
+            bundlePath: "/Applications/ToRec.app"
         )
 
         #expect(command.contains("while /bin/kill -0 12345"))
-        #expect(command.contains("/usr/bin/open -n '/Applications/TOrbitRecorder.app'"))
+        #expect(command.contains("/usr/bin/open -n '/Applications/ToRec.app'"))
     }
 }

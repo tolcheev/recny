@@ -24,7 +24,7 @@ The main window deliberately avoids database controls, raw technical status, rec
 
 ## Menu Bar Behavior
 
-T-Orbit Recorder is controlled primarily from the macOS menu bar. The menu exposes:
+ToRec is controlled primarily from the macOS menu bar. The menu exposes:
 
 - Show Window
 - Start Recording / Stop Recording
@@ -37,9 +37,9 @@ T-Orbit Recorder is controlled primarily from the macOS menu bar. The menu expos
 
 `Show Window` activates the app and brings the existing main window forward instead of creating duplicate windows. Closing the main window with the red close button does not quit the app; it keeps running in the menu bar and can be reopened from `Show Window`.
 
-The menu bar item is a compact text-free play icon that can be hidden with Hidden Bar or similar menu bar utilities. On first launch, T-Orbit Recorder writes a default saved status-item position so Hidden Bar does not immediately place the new item in its hidden section. The idle and error states use an outline play icon. If microphone or system-audio recording permission is missing, idle/error uses a large red question mark and a red `Recording Blocked: Fix Permissions` menu item. When `Show recording indicator` is enabled, the recording state uses a filled play icon. Recorder state is also exposed through the menu tooltip and the main app windows.
+The menu bar item is a compact text-free play icon that can be hidden with Hidden Bar or similar menu bar utilities. On first launch, ToRec writes a default saved status-item position so Hidden Bar does not immediately place the new item in its hidden section. The idle and error states use an outline play icon. If microphone or system-audio recording permission is missing, idle/error uses a large red question mark and a red `Recording Blocked: Fix Permissions` menu item. When `Show recording indicator` is enabled, the recording state uses a filled play icon. Recorder state is also exposed through the menu tooltip and the main app windows.
 
-T-Orbit Recorder does not request macOS Notifications permission. Auto-start, screenshot, and recorder lifecycle feedback stay in the app UI and local logs so first launch only asks for recording-related permissions.
+ToRec does not request macOS Notifications permission. Auto-start, screenshot, and recorder lifecycle feedback stay in the app UI and local logs so first launch only asks for recording-related permissions.
 
 If Quit is selected while recording is active, the app asks for confirmation before stopping the recording and quitting.
 

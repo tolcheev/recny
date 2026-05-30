@@ -19,7 +19,7 @@ struct MenuBarDisplayStateTests {
         #expect(state.symbolName == "play")
         #expect(state.statusItemTitle.isEmpty)
         #expect(state.tint == .none)
-        #expect(state.accessibilityDescription == "T-Orbit Recorder idle")
+        #expect(state.accessibilityDescription == "ToRec idle")
     }
 
     @Test
@@ -39,7 +39,7 @@ struct MenuBarDisplayStateTests {
         #expect(state.symbolName == "play.fill")
         #expect(state.statusItemTitle.isEmpty)
         #expect(state.tint == .none)
-        #expect(state.accessibilityDescription == "T-Orbit Recorder is recording")
+        #expect(state.accessibilityDescription == "ToRec is recording")
     }
 
     @Test
@@ -55,7 +55,7 @@ struct MenuBarDisplayStateTests {
         #expect(state.symbolName == "play")
         #expect(state.statusItemTitle.isEmpty)
         #expect(state.tint == .none)
-        #expect(state.accessibilityDescription == "T-Orbit Recorder is recording")
+        #expect(state.accessibilityDescription == "ToRec is recording")
     }
 
     @Test
@@ -75,7 +75,7 @@ struct MenuBarDisplayStateTests {
         #expect(state.symbolName == "play")
         #expect(state.statusItemTitle.isEmpty)
         #expect(state.tint == .none)
-        #expect(state.accessibilityDescription == "T-Orbit Recorder error")
+        #expect(state.accessibilityDescription == "ToRec error")
     }
 
     @Test
@@ -93,7 +93,7 @@ struct MenuBarDisplayStateTests {
         #expect(state.symbolName == "permission.question")
         #expect(state.statusItemTitle.isEmpty)
         #expect(state.tint == .error)
-        #expect(state.accessibilityDescription == "T-Orbit Recorder recording unavailable: permissions needed")
+        #expect(state.accessibilityDescription == "ToRec recording unavailable: permissions needed")
     }
 
     @Test
@@ -111,7 +111,7 @@ struct MenuBarDisplayStateTests {
         #expect(state.symbolName == "permission.question")
         #expect(state.statusItemTitle.isEmpty)
         #expect(state.tint == .error)
-        #expect(state.accessibilityDescription == "T-Orbit Recorder recording unavailable: permissions needed")
+        #expect(state.accessibilityDescription == "ToRec recording unavailable: permissions needed")
     }
 
     @Test
@@ -129,6 +129,6 @@ struct MenuBarDisplayStateTests {
         #expect(state.symbolName == "play.fill")
         #expect(state.statusItemTitle.isEmpty)
         #expect(state.tint == .none)
-        #expect(state.accessibilityDescription == "T-Orbit Recorder is recording")
+        #expect(state.accessibilityDescription == "ToRec is recording")
     }
 }

@@ -2,7 +2,7 @@
 
 ## Product Goal
 
-T-Orbit Recorder is a lightweight native macOS app for automatic audio recording of calls without OBS.
+ToRec is a lightweight native macOS app for automatic audio recording of calls without OBS.
 
 The MVP must solve one problem: when an important call happens, Vlad should get a reliable local audio recording without manually configuring OBS, routing tools, cloud services, or AI workflows.
 

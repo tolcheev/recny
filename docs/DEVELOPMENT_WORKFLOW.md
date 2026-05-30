@@ -53,7 +53,7 @@ When packaging or install flow changes, also run:
 DRY_RUN=1 ./scripts/install_macos.sh
 ```
 
-`scripts/install_macos.sh` refuses to replace `/Applications/TOrbitRecorder.app` while a running app has an active `recovery.json` with status `recording`. Stop the recording and wait for finalization before reinstalling. Use `ALLOW_INSTALL_WHILE_RECORDING=1` only for emergency debugging where losing the active recording is an explicit tradeoff.
+`scripts/install_macos.sh` refuses to replace `/Applications/ToRec.app` while a running app has an active `recovery.json` with status `recording`. Stop the recording and wait for finalization before reinstalling. Use `ALLOW_INSTALL_WHILE_RECORDING=1` only for emergency debugging where losing the active recording is an explicit tradeoff.
 
 For recorder changes, include manual validation notes from:
 
@@ -137,7 +137,7 @@ swift test --package-path apps/macos
 DRY_RUN=1 ./scripts/install_macos.sh
 ```
 
-- Confirm `dist/TOrbitRecorder-vX.Y.Z-macOS.zip` exists.
+- Confirm `dist/ToRec-vX.Y.Z-macOS.zip` exists.
 - Create a draft GitHub release first.
 - Publish only after manual QA passes on a real Mac.
 

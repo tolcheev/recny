@@ -12,7 +12,7 @@ enum AppWindows {
 
     static func openLibrary(appState: AppState) {
         let window = libraryWindow ?? makeWindow(
-            title: "T-Orbit Recorder Records",
+            title: "ToRec Records",
             width: 1_280,
             height: 760,
             rootView: LibraryView(appState: appState)
@@ -23,7 +23,7 @@ enum AppWindows {
 
     static func openDiagnostics(appState: AppState) {
         let window = diagnosticsWindow ?? makeWindow(
-            title: "T-Orbit Recorder Diagnostics",
+            title: "ToRec Diagnostics",
             width: 760,
             height: 620,
             rootView: DiagnosticsView(appState: appState)
@@ -34,7 +34,7 @@ enum AppWindows {
 
     static func openSettings(appState: AppState) {
         let window = settingsWindow ?? makeWindow(
-            title: "T-Orbit Recorder Settings",
+            title: "ToRec Settings",
             width: 700,
             height: 720,
             rootView: SettingsView(appState: appState)
@@ -46,7 +46,7 @@ enum AppWindows {
     static func openAudioPlayer(url: URL, title: String) {
         audioPlayerWindow?.close()
         let window = makeWindow(
-            title: "T-Orbit Recorder Player",
+            title: "ToRec Player",
             width: 520,
             height: 180,
             rootView: AudioPlayerView(url: url, title: title)

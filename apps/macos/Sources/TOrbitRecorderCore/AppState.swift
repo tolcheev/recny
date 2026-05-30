@@ -262,7 +262,7 @@ public final class AppState: ObservableObject {
     public func startRecording() async throws {
         try await startRecording(
             source: RecordingSource(
-                appName: "TOrbitRecorder",
+                appName: "ToRec",
                 bundleID: "com.torbit.recorder",
                 trigger: "manual",
                 ruleID: "manual.audio"

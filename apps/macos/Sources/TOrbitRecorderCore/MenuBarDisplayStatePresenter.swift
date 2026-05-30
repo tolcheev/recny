@@ -61,7 +61,7 @@ public enum MenuBarDisplayStatePresenter {
                 symbolName: showRecordingIndicator ? "play.fill" : "play",
                 statusItemTitle: "",
                 tint: .none,
-                accessibilityDescription: "T-Orbit Recorder is recording"
+                accessibilityDescription: "ToRec is recording"
             )
         case .error:
             if needsRecordingPermissions {
@@ -79,7 +79,7 @@ public enum MenuBarDisplayStatePresenter {
                 symbolName: "play",
                 statusItemTitle: "",
                 tint: .none,
-                accessibilityDescription: "T-Orbit Recorder error"
+                accessibilityDescription: "ToRec error"
             )
         case .idle:
             if needsRecordingPermissions {
@@ -97,7 +97,7 @@ public enum MenuBarDisplayStatePresenter {
                 symbolName: "play",
                 statusItemTitle: "",
                 tint: .none,
-                accessibilityDescription: "T-Orbit Recorder idle"
+                accessibilityDescription: "ToRec idle"
             )
         }
     }
@@ -114,7 +114,7 @@ public enum MenuBarDisplayStatePresenter {
             symbolName: "permission.question",
             statusItemTitle: "",
             tint: .error,
-            accessibilityDescription: "T-Orbit Recorder recording unavailable: permissions needed"
+            accessibilityDescription: "ToRec recording unavailable: permissions needed"
         )
     }
 }

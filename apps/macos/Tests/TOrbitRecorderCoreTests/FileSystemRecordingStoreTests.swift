@@ -239,7 +239,7 @@ struct FileSystemRecordingStoreTests {
 
         let session = try store.startSession(
             startedAt: startedAt,
-            source: RecordingSource(appName: "TOrbitRecorder", bundleID: "com.torbit.recorder")
+            source: RecordingSource(appName: "ToRec", bundleID: "com.torbit.recorder")
         )
         let micURL = session.sourceURL.appendingPathComponent("mic.m4a")
         try Data([1, 2, 3, 4]).write(to: micURL)
@@ -286,7 +286,7 @@ struct FileSystemRecordingStoreTests {
 
         let session = try store.startSession(
             startedAt: startedAt,
-            source: RecordingSource(appName: "TOrbitRecorder", bundleID: "com.torbit.recorder")
+            source: RecordingSource(appName: "ToRec", bundleID: "com.torbit.recorder")
         )
         let systemURL = session.sourceURL.appendingPathComponent("system.m4a")
         try Data([1, 2, 3, 4]).write(to: systemURL)

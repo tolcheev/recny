@@ -120,7 +120,7 @@ struct DiagnosticsView: View {
                     value: Bundle.main.bundlePath
                 )
 
-                Text("Starts TOrbitRecorder when you log in.")
+                Text("Starts ToRec when you log in.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

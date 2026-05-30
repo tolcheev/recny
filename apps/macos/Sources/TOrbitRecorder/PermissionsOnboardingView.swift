@@ -25,8 +25,8 @@ struct PermissionsOnboardingView: View {
                 .foregroundStyle(toneColor)
 
             Text(isBlocked
-                 ? "T-Orbit Recorder needs local access before Start Recording is available."
-                 : "T-Orbit Recorder has the local access required for recording.")
+                 ? "ToRec needs local access before Start Recording is available."
+                 : "ToRec has the local access required for recording.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 

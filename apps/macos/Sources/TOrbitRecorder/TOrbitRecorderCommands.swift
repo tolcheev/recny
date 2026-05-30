@@ -6,7 +6,7 @@ struct TOrbitRecorderCommands: Commands {
     let appDelegate: AppDelegate
 
     var body: some Commands {
-        CommandMenu("T-Orbit Recorder") {
+        CommandMenu("ToRec") {
             Button(recordingToggleTitle) {
                 appDelegate.toggleRecordingFromShortcut()
             }

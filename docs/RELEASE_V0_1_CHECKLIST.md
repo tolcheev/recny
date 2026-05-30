@@ -1,13 +1,13 @@
-# Release v0.1.0 Checklist
+# Release v0.1.2 Checklist
 
 ## Scope
 
-Release target: TOrbitRecorder v0.1.0 macOS audio-only MVP.
+Release target: ToRec v0.1.2 macOS audio-only MVP.
 
 Artifact:
 
 ```text
-dist/TOrbitRecorder-v0.1.0-macOS.zip
+dist/ToRec-v0.1.2-macOS.zip
 ```
 
 Do not create or publish the GitHub release from this checklist alone. GitHub tag and release draft require a separate explicit command.
@@ -17,8 +17,8 @@ Do not create or publish the GitHub release from this checklist alone. GitHub ta
 - [ ] `swift test --package-path apps/macos` passes.
 - [ ] `./scripts/build_macos.sh` passes.
 - [ ] `./scripts/package_macos.sh` passes.
-- [ ] `dist/TOrbitRecorder.app` exists.
-- [ ] `dist/TOrbitRecorder-v0.1.0-macOS.zip` exists.
+- [ ] `dist/ToRec.app` exists.
+- [ ] `dist/ToRec-v0.1.2-macOS.zip` exists.
 - [ ] Package output shows expected app version.
 - [ ] Package output shows expected git commit hash.
 - [ ] `git status --short --branch` is clean before final tagging/release draft.
@@ -29,23 +29,23 @@ Commands:
 swift test --package-path apps/macos
 ./scripts/build_macos.sh
 ./scripts/package_macos.sh
-test -d dist/TOrbitRecorder.app
-test -f dist/TOrbitRecorder-v0.1.0-macOS.zip
+test -d dist/ToRec.app
+test -f dist/ToRec-v0.1.2-macOS.zip
 git status --short --branch
 ```
 
 ## 2. Install
 
 - [ ] Install app to `/Applications`.
-- [ ] Launch app from `/Applications/TOrbitRecorder.app`.
-- [ ] Do not test release permissions with `.build/app/TOrbitRecorder.app`.
+- [ ] Launch app from `/Applications/ToRec.app`.
+- [ ] Do not test release permissions with `.build/app/ToRec.app`.
 - [ ] Do not mix `.build/app`, `dist/`, and `/Applications` while validating permissions.
 - [ ] Microphone permission is granted.
 - [ ] System audio permission is granted through the Core Audio tap permission path.
-- [ ] If macOS shows `Only System Audio Recording`, TOrbitRecorder is enabled there.
+- [ ] If macOS shows `Only System Audio Recording`, ToRec is enabled there.
 - [ ] `Fix Permissions` requests microphone access and runs the Core Audio capture-start permission probe before Start Recording is enabled.
 - [ ] During the system-audio macOS prompt, the app remains in the yellow permissions-needed/onboarding state, not `Ready`.
-- [ ] After the microphone prompt, TOrbit Recorder is frontmost again before the system-audio prompt appears.
+- [ ] After the microphone prompt, ToRec is frontmost again before the system-audio prompt appears.
 - [ ] App does not request macOS Notifications permission.
 - [ ] App is restarted after changing permissions in System Settings.
 - [ ] macOS menu bar shows the compact text-free outline play status item while idle.
@@ -58,7 +58,7 @@ Commands:
 
 ```sh
 ./scripts/install_macos.sh
-open /Applications/TOrbitRecorder.app
+open /Applications/ToRec.app
 ```
 
 Permission locations:
@@ -284,8 +284,8 @@ plutil -p metadata.json
 
 ## 9. Release Artifact
 
-- [ ] Final artifact path is `dist/TOrbitRecorder-v0.1.0-macOS.zip`.
-- [ ] Zip contains `TOrbitRecorder.app`.
+- [ ] Final artifact path is `dist/ToRec-v0.1.2-macOS.zip`.
+- [ ] Zip contains `ToRec.app`.
 - [ ] Zip opens on a clean local unpack.
 - [ ] App launches from unpacked artifact or `/Applications`.
 - [ ] Artifact is attached to draft GitHub release only after checks pass.
@@ -293,8 +293,8 @@ plutil -p metadata.json
 Artifact check:
 
 ```sh
-ls -lh dist/TOrbitRecorder-v0.1.0-macOS.zip
-zipinfo -1 dist/TOrbitRecorder-v0.1.0-macOS.zip | head
+ls -lh dist/ToRec-v0.1.2-macOS.zip
+zipinfo -1 dist/ToRec-v0.1.2-macOS.zip | head
 ```
 
 ## 10. GitHub
@@ -302,26 +302,26 @@ zipinfo -1 dist/TOrbitRecorder-v0.1.0-macOS.zip | head
 - [ ] Confirm target release commit.
 - [ ] Confirm branch status is clean.
 - [ ] Confirm no uncommitted artifacts are required.
-- [ ] Create tag `v0.1.0` only after release decision.
+- [ ] Create tag `v0.1.2` only after release decision.
 - [ ] Create GitHub release notes draft only after release decision.
 - [ ] Do not publish release without explicit command.
 - [ ] Release notes include what works, local-only behavior, install steps, permissions, known limitations, and next steps.
-- [ ] Attach `dist/TOrbitRecorder-v0.1.0-macOS.zip` to draft release.
+- [ ] Attach `dist/ToRec-v0.1.2-macOS.zip` to draft release.
 
 Suggested tag command after explicit approval:
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.2
+git push origin v0.1.2
 ```
 
 Suggested draft release command after explicit approval:
 
 ```sh
-gh release create v0.1.0 \
-  dist/TOrbitRecorder-v0.1.0-macOS.zip \
+gh release create v0.1.2 \
+  dist/ToRec-v0.1.2-macOS.zip \
   --draft \
-  --title "TOrbitRecorder v0.1.0 macOS audio-only MVP" \
+  --title "ToRec v0.1.2 macOS audio-only MVP" \
   --notes-file RELEASE_NOTES.md
 ```
 

@@ -34,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appState.startMicrophoneDeviceMonitoring()
         startGlobalHotKey()
         startScreenshotHotKey()
-        AppLogger.app.info("T-Orbit Recorder launched")
+        AppLogger.app.info("ToRec launched")
         AppLogger.file(.info, category: "app", "app start version=\(BuildInfo.appVersion) commit=\(BuildInfo.gitCommit)")
         surfaceRecordingPermissionProblemIfNeeded(reason: "launch")
     }
@@ -79,11 +79,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = statusItem.button {
             button.image = menuBarImage(
                 symbolName: "play",
-                accessibilityDescription: "T-Orbit Recorder"
+                accessibilityDescription: "ToRec"
             )
             button.title = ""
             button.imagePosition = .imageOnly
-            button.toolTip = "T-Orbit Recorder (\(KeyboardShortcutCatalog.showWindowGlobal.displayText))"
+            button.toolTip = "ToRec (\(KeyboardShortcutCatalog.showWindowGlobal.displayText))"
         }
 
         let menu = NSMenu()
@@ -483,14 +483,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Another T-Orbit Recorder copy is already running"
+        alert.messageText = "Another ToRec copy is already running"
         let pathText = existingPaths.isEmpty
-            ? "A previous T-Orbit Recorder process is still active."
+            ? "A previous ToRec process is still active."
             : "Running copy:\n\(existingPaths.joined(separator: "\n"))"
         alert.informativeText = """
         \(pathText)
 
-        Quit all T-Orbit Recorder copies, then open /Applications/TOrbitRecorder.app. Running .build, dist, and /Applications copies at the same time can make macOS ask for audio permissions again.
+        Quit all ToRec copies, then open /Applications/ToRec.app. Running .build, dist, and /Applications copies at the same time can make macOS ask for audio permissions again.
         """
         alert.addButton(withTitle: "Quit This Copy")
         alert.runModal()
@@ -683,7 +683,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
         let mainWindow = NSApp.windows.first { window in
-            window.identifier == .torbitMainWindow || window.title == "T-Orbit Recorder" || window.title == "TOrbit Recorder"
+            window.identifier == .torbitMainWindow || window.title == "ToRec" || window.title == "T-Orbit Recorder" || window.title == "TOrbit Recorder"
         } ?? fallbackMainWindow ?? makeFallbackMainWindow()
 
         mainWindow.identifier = .torbitMainWindow
@@ -700,7 +700,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "T-Orbit Recorder"
+        window.title = "ToRec"
         window.identifier = .torbitMainWindow
         window.contentViewController = NSHostingController(rootView: MainRecorderView(appState: appState))
         window.isReleasedWhenClosed = false
@@ -717,7 +717,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func quit() {
-        AppLogger.app.info("T-Orbit Recorder quit requested")
+        AppLogger.app.info("ToRec quit requested")
         AppLogger.file(.info, category: "app", "quit requested")
         NSApp.terminate(nil)
     }
@@ -728,7 +728,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Recording is active. Stop and quit?"
-        alert.informativeText = "T-Orbit Recorder will stop the current recording before quitting."
+        alert.informativeText = "ToRec will stop the current recording before quitting."
         alert.addButton(withTitle: "Stop and Quit")
         alert.addButton(withTitle: "Cancel")
 

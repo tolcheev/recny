@@ -11,7 +11,7 @@ enum LaunchAtLoginController {
         if LaunchAgentLoginItemStore.isRegistered {
             return LaunchAtLoginSnapshot(
                 isOn: true,
-                message: "Enabled via local login agent. TOrbitRecorder starts when you log in."
+                message: "Enabled via local login agent. ToRec starts when you log in."
             )
         }
 
@@ -19,7 +19,7 @@ enum LaunchAtLoginController {
         case .enabled:
             return LaunchAtLoginSnapshot(
                 isOn: true,
-                message: "Enabled. TOrbitRecorder starts when you log in."
+                message: "Enabled. ToRec starts when you log in."
             )
         case .requiresApproval:
             return LaunchAtLoginSnapshot(
@@ -29,7 +29,7 @@ enum LaunchAtLoginController {
         case .notRegistered:
             return LaunchAtLoginSnapshot(
                 isOn: false,
-                message: "Off. T-Orbit Recorder will not start automatically."
+                message: "Off. ToRec will not start automatically."
             )
         case .notFound:
             return LaunchAtLoginSnapshot(
@@ -87,7 +87,7 @@ private enum LaunchAgentLoginItemStore {
     }
 
     private static var launchAppURL: URL {
-        let installedURL = URL(fileURLWithPath: "/Applications/TOrbitRecorder.app")
+        let installedURL = URL(fileURLWithPath: "/Applications/ToRec.app")
         if FileManager.default.fileExists(atPath: installedURL.path),
            Bundle(url: installedURL)?.bundleIdentifier == Bundle.main.bundleIdentifier {
             return installedURL

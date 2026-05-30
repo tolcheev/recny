@@ -1,6 +1,6 @@
-# T-Orbit Recorder
+# ToRec
 
-T-Orbit Recorder is a lightweight native macOS app for automatic audio recording of calls without OBS.
+ToRec is a lightweight native macOS app by T-Orbit for automatic audio recording of calls without OBS.
 
 The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable recordings of student calls, lead sales calls, interview debriefs, and important or sensitive conversations.
 
@@ -50,6 +50,8 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 ```
 
 `db/app.sqlite` stores the local recordings index for list filtering and quick library actions. The recording folder and `metadata.json` remain the canonical record.
+
+The storage folder intentionally keeps the historical `TOrbitRecorder` name so existing local recordings keep working after the user-facing rename to ToRec.
 
 Records refreshes that index from disk before listing: metadata folders under `Library/` and `Inbox/` are added back to the app, and rows whose session folder or `metadata.json` was deleted manually are removed from the app list.
 
@@ -103,11 +105,11 @@ tests/              Integration fixtures and test assets
 ./scripts/build_macos.sh
 ```
 
-The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/TOrbitRecorder.app`. This `.build/app` bundle is a development artifact, not the normal launch location.
+The current shell is a SwiftPM-based macOS app target. The build script compiles it and assembles a local app bundle at `apps/macos/.build/app/ToRec.app`. This `.build/app` bundle is a development artifact, not the normal launch location.
 
 The build script injects app metadata into the bundle:
 
-- app version: `v0.1.1-mvp`
+- app version: `v0.1.2-mvp`
 - build date
 - git commit hash
 
@@ -122,8 +124,8 @@ Create a shareable local package in `dist/`:
 This creates:
 
 ```text
-dist/TOrbitRecorder.app
-dist/TOrbitRecorder-v0.1.1-macOS.zip
+dist/ToRec.app
+dist/ToRec-v0.1.2-macOS.zip
 dist/INSTALL.md
 dist/RELEASE_NOTES.md
 ```
@@ -140,7 +142,7 @@ Install the packaged app into `/Applications` and open it:
 ./scripts/install_macos.sh
 ```
 
-The installer packages the app, asks a running TOrbitRecorder process to quit before replacement, copies the app bundle to `/Applications/TOrbitRecorder.app`, opens it, and prints next steps.
+The installer packages the app, asks a running ToRec (`TOrbitRecorder` executable) process to quit before replacement, copies the app bundle to `/Applications/ToRec.app`, opens it, and prints next steps.
 
 Dry-run the installer without copying or opening the app:
 
@@ -153,10 +155,10 @@ DRY_RUN=1 ./scripts/install_macos.sh
 Use the installed app for normal manual testing:
 
 ```sh
-open /Applications/TOrbitRecorder.app
+open /Applications/ToRec.app
 ```
 
-Use `dist/` for shareable local artifacts and `/Applications/TOrbitRecorder.app` for a normal macOS launch. Do not use `apps/macos/.build/app/TOrbitRecorder.app` except when debugging the build script output directly.
+Use `dist/` for shareable local artifacts and `/Applications/ToRec.app` for a normal macOS launch. Do not use `apps/macos/.build/app/ToRec.app` except when debugging the build script output directly.
 
 Current recording implementation starts from the menu bar UI or Auto-start Engine v2 and writes the required MVP outputs: `source/mic.m4a`, `source/system.m4a`, and a quick-listen `export/mixed.m4a` preview. System audio and mixed export are always on in the MVP so each normal recording keeps the required artifact contract. When Volume leveling is enabled, it also creates `export/mixed_balanced.m4a` plus `analysis/audio_analysis.json`, and stores `audio.health` warnings in `metadata.json`. System audio uses a Core Audio process tap; no screen video is written. The main window is a compact recorder surface with one primary Start/Stop action plus a post-stop summary for the last completed recording; Library and Diagnostics open as separate windows. Marker metadata still exists, but marker controls are hidden from the default recorder UI until the workflow is clearer.
 
@@ -166,7 +168,7 @@ Records can hand off a local audio file through macOS native sharing from `More 
 
 Records can also create non-destructive local clips from `Trim Audio...`. A clip is exported as `export/clip_*.m4a` in the same recording folder and can be shared immediately through the same macOS share sheet. The original source and mixed files are not modified.
 
-Screenshots are manual still images, not screen recordings. `Full Screenshot` on the main window, `Capture Full Screenshot` in Records, `Cmd+Shift+S` while T-Orbit Recorder is active, or global `Ctrl+Option+S` immediately captures the full screen and saves a PNG under `screenshots/` inside the active recording folder, or the latest recording folder if no recording is active. There is no area/window selector in the MVP screenshot flow.
+Screenshots are manual still images, not screen recordings. `Full Screenshot` on the main window, `Capture Full Screenshot` in Records, `Cmd+Shift+S` while ToRec is active, or global `Ctrl+Option+S` immediately captures the full screen and saves a PNG under `screenshots/` inside the active recording folder, or the latest recording folder if no recording is active. There is no area/window selector in the MVP screenshot flow.
 
 Local transcription is an optional add-on. The base recorder stays fast: it does not bundle transcription models and `Records -> Transcribe Locally` does not perform a first-run model download. Open `Settings -> Local transcription`, install the optional tools if needed, and run `Prepare Parakeet Model` once. After the setup status is `Ready`, Records can write `transcript/transcript.*` plus `transcript/call_note.md` inside the selected recording folder. The note includes metadata, full transcript, and a Codex review prompt. Nothing is uploaded by the app.
 
@@ -179,7 +181,7 @@ uv tool install parakeet-mlx -U
 
 Settings currently cover preferred microphone selection, required MVP output indicators, optional local transcription setup, auto-start rules, storage actions, hotkeys, Dock/menu-bar behavior, and local privacy controls. Unimplemented controls are disabled in the UI.
 
-Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, required system audio and mixed export enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. T-Orbit Recorder is menu-bar-first by default; use the menu bar icon or global `Ctrl+Option+R` to show the app window when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
+Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, required system audio and mixed export enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. ToRec is menu-bar-first by default; use the menu bar icon or global `Ctrl+Option+R` to show the app window when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
 Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path.
 
@@ -195,23 +197,24 @@ The app first uses the modern macOS `SMAppService.mainApp` login item API. If a 
 
 ```sh
 ./scripts/install_macos.sh
-open /Applications/TOrbitRecorder.app
+open /Applications/ToRec.app
 ```
 
-If macOS reports that approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder. Diagnostics shows the current login item status, the running bundle path, and the last Launch at Login error if registration fails. For development builds, avoid switching between `.build/app`, `dist/`, and `/Applications` while testing Launch at Login because macOS tracks login items by app bundle identity and path.
+If macOS reports that approval is required, open System Settings -> General -> Login Items and enable ToRec. Diagnostics shows the current login item status, the running bundle path, and the last Launch at Login error if registration fails. For development builds, avoid switching between `.build/app`, `dist/`, and `/Applications` while testing Launch at Login because macOS tracks login items by app bundle identity and path.
 
 ## Auto-Start And Auto-Stop
 
 Auto-started Zoom recordings are not tied to Zoom being the foreground window. You can switch to browser, notes, IDE, or slides during a call and the app keeps the recording active.
 
-For Zoom, auto-start and auto-stop now prefer Core Audio process activity from `us.zoom.xos`: if the Zoom process is using input or output audio, the app treats the call as active even while Zoom is in the background. A visible meeting/conference window also keeps recording active. If Zoom process audio is idle and only the home/workplace window remains, the stop timer starts. The default auto-stop grace period is 10 seconds, and auto-start monitoring polls once per second so the stop happens close to that 10 second target. If macOS does not expose process audio or window titles, the fallback ignores microphone activity from T-Orbit Recorder itself and keeps recording only while global system audio is still active. Manual recordings do not auto-stop; they only stop from the Stop button, menu item, or app-active shortcut.
+For Zoom, auto-start and auto-stop now prefer Core Audio process activity from `us.zoom.xos`: if the Zoom process is using input or output audio, the app treats the call as active even while Zoom is in the background. A visible meeting/conference window also keeps recording active. If Zoom process audio is idle and only the home/workplace window remains, the stop timer starts. The default auto-stop grace period is 10 seconds, and auto-start monitoring polls once per second so the stop happens close to that 10 second target. If macOS does not expose process audio or window titles, the fallback ignores microphone activity from ToRec itself and keeps recording only while global system audio is still active. Manual recordings do not auto-stop; they only stop from the Stop button, menu item, or app-active shortcut.
 
 ## Uninstall
 
 Quit the app and remove the installed bundle:
 
 ```sh
-osascript -e 'tell application "TOrbitRecorder" to quit' || true
+osascript -e 'tell application id "com.torbit.recorder" to quit' || true
+rm -rf /Applications/ToRec.app
 rm -rf /Applications/TOrbitRecorder.app
 ```
 
@@ -227,10 +230,10 @@ Permissions are tied to the app bundle and code-signing identity that macOS sees
 
 ```sh
 ./scripts/install_macos.sh
-open /Applications/TOrbitRecorder.app
+open /Applications/ToRec.app
 ```
 
-Do not keep multiple copies running from `.build`, `dist`, and `/Applications`. macOS permissions are applied to the app bundle, current process, and code-signing requirement, so a second copy or freshly rebuilt ad-hoc binary can trigger a macOS permission prompt even when another `TOrbitRecorder` entry is already enabled.
+Do not keep multiple copies running from `.build`, `dist`, and `/Applications`. macOS permissions are applied to the app bundle, current process, and code-signing requirement, so a second copy or freshly rebuilt ad-hoc binary can trigger a macOS permission prompt even when another `ToRec` entry is already enabled.
 
 Check for duplicate running copies:
 
@@ -238,26 +241,26 @@ Check for duplicate running copies:
 pgrep -fl TOrbitRecorder
 ```
 
-System audio is captured with a Core Audio process tap. It should not require screen video capture. If the app still reports missing system audio permission or shows the macOS prompt again, quit every TOrbitRecorder copy and reopen only the installed app:
+System audio is captured with a Core Audio process tap. It should not require screen video capture. If the app still reports missing system audio permission or shows the macOS prompt again, quit every ToRec copy and reopen only the installed app:
 
 ```sh
 osascript -e 'tell application id "com.torbit.recorder" to quit' || true
-open /Applications/TOrbitRecorder.app
+open /Applications/ToRec.app
 ```
 
-macOS often requires a process restart after this permission changes. Use the in-app `Restart App` button when it is shown; the app waits for the current process to exit and then reopens `/Applications/TOrbitRecorder.app`.
+macOS often requires a process restart after this permission changes. Use the in-app `Restart App` button when it is shown; the app waits for the current process to exit and then reopens `/Applications/ToRec.app`.
 
-If you approved an older unsigned/hash-signed dev build before this fix, toggle `TOrbitRecorder` off and on again in the system-audio section once, then restart `/Applications/TOrbitRecorder.app`.
+If you approved an older unsigned/hash-signed dev build before this fix, toggle `ToRec` off and on again in the system-audio section once, then restart `/Applications/ToRec.app`.
 
 On first launch, use `Fix Permissions` before recording. It requests microphone access and then verifies system audio through the same Core Audio process tap path used by the recorder. Apple's Core Audio tap permission prompt appears when an aggregate tap device starts recording, so `Fix Permissions` runs a short temporary capture probe to trigger that prompt during onboarding. On macOS Sequoia, this maps to the `Only System Audio Recording` permission when macOS shows it separately. The prompt appears before `Start Recording` is available and before any real recording folder is created. If macOS has already granted system-audio access for the current bundle, the app stores that successful capture-start verification for the current build and marks system audio as ready on relaunch. After the microphone prompt, the app brings the Recorder window back to the front before starting the system-audio probe, so the system-audio prompt appears over the yellow permissions panel. It does not refocus immediately after the system-audio request, which prevents the macOS prompt or Settings flow from being covered.
 
-After the Core Audio capture-start probe succeeds, T-Orbit Recorder treats system-audio capture as ready for the current bundle. A real recorder permission failure clears the remembered state and sends the user back to onboarding. If an ad-hoc rebuild changes the code-signing hash, macOS can require approval again even when an older `TOrbitRecorder` entry is still visible in System Settings.
+After the Core Audio capture-start probe succeeds, ToRec treats system-audio capture as ready for the current bundle. A real recorder permission failure clears the remembered state and sends the user back to onboarding. If an ad-hoc rebuild changes the code-signing hash, macOS can require approval again even when an older `ToRec` entry is still visible in System Settings.
 
 Grant permissions in:
 
 - System Settings -> Privacy & Security -> Microphone
-- System Settings -> Privacy & Security -> Screen & System Audio Recording -> `TOrbitRecorder`
-- If macOS shows a separate `Only System Audio Recording` section, enable `TOrbitRecorder` there too.
+- System Settings -> Privacy & Security -> Screen & System Audio Recording -> `ToRec`
+- If macOS shows a separate `Only System Audio Recording` section, enable `ToRec` there too.
 
 Recordings are stored locally in `~/Recordings/TOrbitRecorder/`.
 
@@ -283,7 +286,7 @@ From the repository root:
 
 ```sh
 scripts/build_macos.sh
-open -n apps/macos/.build/app/TOrbitRecorder.app
+open -n apps/macos/.build/app/ToRec.app
 ```
 
 The app runs as a menu bar app with a compact text-free play status item in the macOS status area: an outline play icon while idle or errored, a large red question mark when microphone or system-audio recording permission is missing, and a filled play icon while recording when `Show recording indicator` is enabled. If recording is blocked by missing permissions, the app opens the main window on launch, marks the header as `Blocked`, shows a red `Recording is blocked` panel, and changes the menu-bar recording action to `Fix Recording Permissions`. On first launch the app gives that status item a default saved position so Hidden Bar does not immediately hide it; users can still drag it or hide it later like any other macOS status item. Use that menu bar item for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Library, Open Records, Settings, Diagnostics, and Quit, or press global `Ctrl+Option+R` to bring the main window forward. App windows are centered inside the current screen's visible area when opened, so Records/Settings/Diagnostics do not reopen half off-screen after a previous moved position. `Cmd+,`, the app menu Settings command, the menu bar Settings item, and the main window Settings button all open the same controlled Settings window. `Open Library` opens the user-facing `Library/` folder, not the internal root with `db`, `logs`, and `Inbox`. `Open Records` opens the in-app searchable records list.
@@ -294,10 +297,10 @@ For normal dev usage prefer:
 
 ```sh
 ./scripts/install_macos.sh
-open /Applications/TOrbitRecorder.app
+open /Applications/ToRec.app
 ```
 
-The install script refuses to replace `/Applications/TOrbitRecorder.app` while the running app has an active recording recovery file. Stop recording and wait for finalization before reinstalling. `ALLOW_INSTALL_WHILE_RECORDING=1` exists only for emergency debugging where losing the active recording is acceptable.
+The install script refuses to replace `/Applications/ToRec.app` while the running app has an active recording recovery file. Stop recording and wait for finalization before reinstalling. `ALLOW_INSTALL_WHILE_RECORDING=1` exists only for emergency debugging where losing the active recording is acceptable.
 
 The menu bar app provides Show Window, Start Recording or Stop Recording, Play Last Recording, Capture Full Screenshot, Open Library, Open Records, Settings, Diagnostics, and Quit.
 
@@ -312,7 +315,7 @@ Before the first recording, click `Fix Permissions` in the app. The onboarding f
 - Microphone
 - Screen & System Audio Recording -> Only System Audio Recording, if macOS shows the separate section
 
-If a permission is already denied, the app opens the matching System Settings pane so you can enable `TOrbitRecorder`, then restart the same app bundle if the UI shows `Restart required`.
+If a permission is already denied, the app opens the matching System Settings pane so you can enable `ToRec`, then restart the same app bundle if the UI shows `Restart required`.
 
 Manual full recording pass:
 
@@ -343,7 +346,7 @@ metadata.json
 17. Use More -> Trim Audio... and confirm `export/clip_*.m4a` is created without modifying source files.
 18. Use Full Screenshot or `Ctrl+Option+S` and confirm `screenshots/screenshot_*.png` is created in the recording folder without opening an area/window selector.
 19. Open Settings -> Local transcription and confirm the optional setup status is clear. If tools are installed but the model is missing, use Prepare Parakeet Model first; then use More -> Transcribe Locally and confirm `transcript/transcript.txt` and `transcript/call_note.md` are created.
-20. Press `Ctrl+Option+R` while another app is active and confirm the main T-Orbit Recorder window comes to front.
+20. Press `Ctrl+Option+R` while another app is active and confirm the main ToRec window comes to front.
 
 Short recording check:
 
@@ -354,7 +357,7 @@ Short recording check:
 YouTube plus voice check:
 
 1. Open a YouTube video in a browser and keep the browser audible through the normal Mac output device.
-2. Start recording in T-Orbit Recorder.
+2. Start recording in ToRec.
 3. Speak into the selected microphone while the YouTube audio is playing.
 4. Stop recording, open Records, and use Play on the new row.
 5. Confirm playback expands the inline Records player and prefers `export/mixed_balanced.m4a` when it exists, otherwise falls back to `export/mixed.m4a`.

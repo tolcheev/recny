@@ -47,8 +47,8 @@ enum PermissionActionHandler {
 
     static func restartApp() {
         let bundlePath = Bundle.main.bundleURL.path(percentEncoded: false)
-        let reopenedBundlePath = FileManager.default.fileExists(atPath: "/Applications/TOrbitRecorder.app")
-            ? "/Applications/TOrbitRecorder.app"
+        let reopenedBundlePath = FileManager.default.fileExists(atPath: "/Applications/ToRec.app")
+            ? "/Applications/ToRec.app"
             : bundlePath
         let shellCommand = AppRestartCommand.shellCommand(
             currentProcessID: ProcessInfo.processInfo.processIdentifier,

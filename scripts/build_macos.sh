@@ -4,25 +4,27 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_DIR="$ROOT_DIR/apps/macos"
 CONFIGURATION="${CONFIGURATION:-release}"
-APP_DISPLAY_VERSION="${APP_DISPLAY_VERSION:-v0.1.1-mvp}"
-MARKETING_VERSION="${MARKETING_VERSION:-0.1.1}"
-BUILD_NUMBER="${BUILD_NUMBER:-2}"
+APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-ToRec}"
+EXECUTABLE_NAME="TOrbitRecorder"
+APP_DISPLAY_VERSION="${APP_DISPLAY_VERSION:-v0.1.2-mvp}"
+MARKETING_VERSION="${MARKETING_VERSION:-0.1.2}"
+BUILD_NUMBER="${BUILD_NUMBER:-3}"
 GIT_COMMIT="${GIT_COMMIT:-$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 BUILD_DATE="${BUILD_DATE:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
 
 swift build --package-path "$PACKAGE_DIR" -c "$CONFIGURATION"
 
 BIN_DIR="$(swift build --package-path "$PACKAGE_DIR" -c "$CONFIGURATION" --show-bin-path)"
-APP_DIR="$PACKAGE_DIR/.build/app/TOrbitRecorder.app"
+APP_DIR="$PACKAGE_DIR/.build/app/$APP_DISPLAY_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR"
 
-cp "$BIN_DIR/TOrbitRecorder" "$MACOS_DIR/TOrbitRecorder"
+cp "$BIN_DIR/$EXECUTABLE_NAME" "$MACOS_DIR/$EXECUTABLE_NAME"
 cp "$PACKAGE_DIR/Sources/TOrbitRecorder/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
-chmod +x "$MACOS_DIR/TOrbitRecorder"
+chmod +x "$MACOS_DIR/$EXECUTABLE_NAME"
 
 set_plist_value() {
     local key="$1"
@@ -33,6 +35,8 @@ set_plist_value() {
         || /usr/libexec/PlistBuddy -c "Add :$key $type $value" "$CONTENTS_DIR/Info.plist"
 }
 
+set_plist_value "CFBundleDisplayName" "string" "$APP_DISPLAY_NAME"
+set_plist_value "CFBundleName" "string" "$APP_DISPLAY_NAME"
 set_plist_value "CFBundleShortVersionString" "string" "$MARKETING_VERSION"
 set_plist_value "CFBundleVersion" "string" "$BUILD_NUMBER"
 set_plist_value "TORbitAppVersion" "string" "$APP_DISPLAY_VERSION"

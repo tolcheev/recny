@@ -7,7 +7,7 @@ public enum PermissionRequirement: String, CaseIterable, Sendable {
 }
 
 public enum PermissionOnboardingFormatter {
-    public static let restartMessage = "Permission is enabled. Restart T-Orbit Recorder to apply it."
+    public static let restartMessage = "Permission is enabled. Restart ToRec to apply it."
 
     public static func title(for requirement: PermissionRequirement) -> String {
         switch requirement {
@@ -36,7 +36,7 @@ public enum PermissionOnboardingFormatter {
         case (.microphone, .missing):
             return "Microphone access is required for source/mic.m4a."
         case (.microphone, .unknown):
-            return "T-Orbit Recorder cannot determine microphone permission."
+            return "ToRec cannot determine microphone permission."
 
         case (.screenSystemAudio, .granted):
             return "System audio recording is available."
@@ -49,7 +49,7 @@ public enum PermissionOnboardingFormatter {
         case (.screenSystemAudio, .notDetermined):
             return "Use Fix Permissions to request system audio access before recording. macOS may ask you to enable it in System Settings."
         case (.screenSystemAudio, .unknown):
-            return "T-Orbit Recorder cannot determine system audio permission."
+            return "ToRec cannot determine system audio permission."
 
         case (.storage, .granted):
             return "The local recordings folder is writable."
@@ -62,7 +62,7 @@ public enum PermissionOnboardingFormatter {
         case (.storage, .notDetermined):
             return "The app has not confirmed write access to the recordings folder yet."
         case (.storage, .unknown):
-            return "T-Orbit Recorder cannot determine output folder access."
+            return "ToRec cannot determine output folder access."
         }
     }
 
@@ -111,7 +111,7 @@ public enum PermissionOnboardingFormatter {
 
     public static func reopenInstruction(bundlePath: String) -> String {
         let trimmedPath = bundlePath.trimmingCharacters(in: .whitespacesAndNewlines)
-        let path = trimmedPath.isEmpty ? "/Applications/TOrbitRecorder.app" : trimmedPath
+        let path = trimmedPath.isEmpty ? "/Applications/ToRec.app" : trimmedPath
         return "After quitting, reopen the same app bundle you approved in System Settings:\nopen \"\(path)\""
     }
 }

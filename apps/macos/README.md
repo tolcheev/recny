@@ -1,6 +1,6 @@
-# TOrbitRecorder macOS App
+# ToRec macOS App
 
-Minimal native macOS menu bar app for the MVP shell.
+Native macOS menu bar app for the MVP shell.
 
 ## Build
 
@@ -13,7 +13,7 @@ scripts/build_macos.sh
 The script uses SwiftPM because the current MVP shell has no Xcode project yet. It builds the `TOrbitRecorder` executable and assembles a local app bundle at:
 
 ```text
-apps/macos/.build/app/TOrbitRecorder.app
+apps/macos/.build/app/ToRec.app
 ```
 
 ## Current Scope

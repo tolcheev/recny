@@ -7,7 +7,7 @@ struct AppInstancePolicyTests {
         let decision = AppInstancePolicy.decision(
             currentProcessID: 100,
             runningInstances: [
-                RunningAppInstance(processID: 100, bundlePath: "/Applications/TOrbitRecorder.app")
+                RunningAppInstance(processID: 100, bundlePath: "/Applications/ToRec.app")
             ]
         )
 
@@ -18,13 +18,13 @@ struct AppInstancePolicyTests {
     func terminatesDuplicateAndPrefersApplicationsInstance() {
         let applicationsInstance = RunningAppInstance(
             processID: 200,
-            bundlePath: "/Applications/TOrbitRecorder.app"
+            bundlePath: "/Applications/ToRec.app"
         )
         let decision = AppInstancePolicy.decision(
             currentProcessID: 100,
             runningInstances: [
-                RunningAppInstance(processID: 100, bundlePath: "/Users/vladislavtolcheev/Projects/t-orbit-recorder/dist/TOrbitRecorder.app"),
-                RunningAppInstance(processID: 300, bundlePath: "/Users/vladislavtolcheev/Projects/t-orbit-recorder/apps/macos/.build/app/TOrbitRecorder.app"),
+                RunningAppInstance(processID: 100, bundlePath: "/Users/vladislavtolcheev/Projects/t-orbit-recorder/dist/ToRec.app"),
+                RunningAppInstance(processID: 300, bundlePath: "/Users/vladislavtolcheev/Projects/t-orbit-recorder/apps/macos/.build/app/ToRec.app"),
                 applicationsInstance
             ]
         )
@@ -37,12 +37,12 @@ struct AppInstancePolicyTests {
         let paths = AppInstancePolicy.userFacingBundlePathList(
             currentProcessID: 100,
             runningInstances: [
-                RunningAppInstance(processID: 100, bundlePath: "/Applications/TOrbitRecorder.app"),
-                RunningAppInstance(processID: 200, bundlePath: "/tmp/TOrbitRecorder.app"),
+                RunningAppInstance(processID: 100, bundlePath: "/Applications/ToRec.app"),
+                RunningAppInstance(processID: 200, bundlePath: "/tmp/ToRec.app"),
                 RunningAppInstance(processID: 300, bundlePath: nil)
             ]
         )
 
-        #expect(paths == ["/tmp/TOrbitRecorder.app"])
+        #expect(paths == ["/tmp/ToRec.app"])
     }
 }

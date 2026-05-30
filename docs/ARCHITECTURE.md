@@ -2,7 +2,7 @@
 
 ## Repository Boundary
 
-This repository contains the standalone T-Orbit Recorder desktop client.
+This repository contains the standalone ToRec desktop client.
 
 The T-Orbit backend is not part of this repository. The MVP does not upload recordings, sync metadata, call cloud AI services, or depend on T-Orbit availability.
 

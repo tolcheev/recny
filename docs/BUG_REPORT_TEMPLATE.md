@@ -14,9 +14,9 @@ Short one-line description:
 - macOS version:
 - Mac model:
 - App path:
-  - [ ] /Applications/TOrbitRecorder.app
-  - [ ] dist/TOrbitRecorder.app
-  - [ ] apps/macos/.build/app/TOrbitRecorder.app
+  - [ ] /Applications/ToRec.app
+  - [ ] dist/ToRec.app
+  - [ ] apps/macos/.build/app/ToRec.app
   - [ ] Other:
 
 ## Permissions Status

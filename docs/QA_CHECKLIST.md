@@ -8,7 +8,7 @@ Use this checklist for manual macOS MVP validation. Prefer testing the installed
 - [ ] macOS version:
 - [ ] App version:
 - [ ] Git commit:
-- [ ] App path: `/Applications/TOrbitRecorder.app`
+- [ ] App path: `/Applications/ToRec.app`
 - [ ] Recording root: `~/Recordings/TOrbitRecorder/`
 
 ## 1. Install
@@ -28,8 +28,8 @@ Use this checklist for manual macOS MVP validation. Prefer testing the installed
 - [ ] Package exists:
 
 ```sh
-test -d dist/TOrbitRecorder.app
-test -f dist/TOrbitRecorder-v0.1.0-macOS.zip
+test -d dist/ToRec.app
+test -f dist/ToRec-v0.1.2-macOS.zip
 test -f dist/INSTALL.md
 ```
 
@@ -42,7 +42,7 @@ test -f dist/INSTALL.md
 - [ ] App opens from `/Applications`:
 
 ```sh
-open /Applications/TOrbitRecorder.app
+open /Applications/ToRec.app
 ```
 
 - [ ] Menu bar item is visible.
@@ -56,18 +56,18 @@ open /Applications/TOrbitRecorder.app
 ## 2. Permissions
 
 - [ ] Microphone permission is granted:
-  - System Settings -> Privacy & Security -> Microphone -> TOrbitRecorder enabled
+  - System Settings -> Privacy & Security -> Microphone -> ToRec enabled
 - [ ] System audio permission is granted through the Core Audio tap path:
-  - System Settings -> Privacy & Security -> Screen & System Audio Recording -> Only System Audio Recording -> TOrbitRecorder enabled, if macOS shows the separate section
-  - Otherwise, System Settings -> Privacy & Security -> Screen & System Audio Recording -> TOrbitRecorder enabled
+  - System Settings -> Privacy & Security -> Screen & System Audio Recording -> Only System Audio Recording -> ToRec enabled, if macOS shows the separate section
+  - Otherwise, System Settings -> Privacy & Security -> Screen & System Audio Recording -> ToRec enabled
 - [ ] `Fix Permissions` triggers the system-audio macOS prompt while the yellow permissions panel is still visible.
 - [ ] The app does not show `Ready` or enable `Start Recording` until the Core Audio capture-start probe has completed.
 - [ ] After the microphone prompt is accepted, the Recorder window returns to the front before the system-audio prompt appears.
 - [ ] App was restarted after permission changes:
 
 ```sh
-osascript -e 'tell application "TOrbitRecorder" to quit' || true
-open /Applications/TOrbitRecorder.app
+osascript -e 'tell application id "com.torbit.recorder" to quit' || true
+open /Applications/ToRec.app
 ```
 
 - [ ] Click `Fix Permissions` and confirm both required macOS prompts are handled before Start is enabled:

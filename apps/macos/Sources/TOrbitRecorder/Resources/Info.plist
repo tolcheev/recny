@@ -9,9 +9,9 @@
 	<key>CFBundleIdentifier</key>
 	<string>com.torbit.recorder</string>
 	<key>CFBundleDisplayName</key>
-	<string>T-Orbit Recorder</string>
+	<string>ToRec</string>
 	<key>CFBundleName</key>
-	<string>T-Orbit Recorder</string>
+	<string>ToRec</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,9 +29,9 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>T-Orbit Recorder needs system audio access to record call audio played by macOS apps.</string>
+	<string>ToRec needs system audio access to record call audio played by macOS apps.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>T-Orbit Recorder needs microphone access to record your side of calls.</string>
+	<string>ToRec needs microphone access to record your side of calls.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

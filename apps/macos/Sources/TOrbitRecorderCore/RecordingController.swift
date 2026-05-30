@@ -138,7 +138,7 @@ public extension RecordingController {
         try await startRecording(
             outputFolder: outputFolder,
             source: RecordingSource(
-                appName: "TOrbitRecorder",
+                appName: "ToRec",
                 bundleID: "com.torbit.recorder",
                 trigger: "manual",
                 ruleID: "manual.audio"
