@@ -82,7 +82,8 @@ public sealed class AutoStartDecisionEngine
             return new AutoStartDecision(
                 AutoStartActionKind.StartRecording,
                 snapshot.SourceApp,
-                $"{snapshot.Reason} Stable for {_policy.StartDetectionDuration.TotalSeconds:0} seconds.");
+                $"{snapshot.Reason} Stable for {_policy.StartDetectionDuration.TotalSeconds:0} seconds.",
+                snapshot.ProcessId);
         }
 
         return AutoStartDecision.None;

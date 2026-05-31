@@ -10,7 +10,8 @@ public enum AutoStartActionKind
 public sealed record AutoStartDecision(
     AutoStartActionKind Action,
     string SourceApp,
-    string Reason
+    string Reason,
+    int? ProcessId = null
 )
 {
     public static AutoStartDecision None { get; } = new(AutoStartActionKind.None, "none", "No action.");

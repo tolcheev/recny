@@ -14,7 +14,9 @@ internal static class Program
             ("metadata writer persists json", MetadataWriterPersistsJson),
             ("recording scanner sorts newest first", RecordingScannerSortsNewestFirst),
             ("auto-start starts only after stable activity", AutoStartStartsOnlyAfterStableActivity),
+            ("auto-start start decision carries source process id", AutoStartStartDecisionCarriesSourceProcessId),
             ("auto-start resets when activity is interrupted", AutoStartResetsWhenActivityIsInterrupted),
+            ("auto-start keeps recording while source audio continues", AutoStartKeepsRecordingWhileSourceAudioContinues),
             ("auto-start stops auto recordings after inactive grace", AutoStartStopsAutoRecordingsAfterInactiveGrace)
         };
 
@@ -143,6 +145,21 @@ internal static class Program
         Assert(afterReset.Action == AutoStartActionKind.None);
     }
 
+    private static void AutoStartStartDecisionCarriesSourceProcessId()
+    {
+        var engine = new AutoStartDecisionEngine(new AutoStartPolicy(
+            StartDetectionDuration: TimeSpan.FromSeconds(10),
+            StopGraceDuration: TimeSpan.FromSeconds(10)));
+        var t0 = new DateTimeOffset(2026, 5, 31, 18, 0, 0, TimeSpan.Zero);
+
+        engine.Evaluate(CallActivitySnapshot.Active(t0, "Google Chrome", "Google Chrome has a call-like window title: Meet", 4242), RecordingState.Idle, null);
+        var atThreshold = engine.Evaluate(CallActivitySnapshot.Active(t0.AddSeconds(10), "Google Chrome", "Google Chrome has a call-like window title: Meet", 4242), RecordingState.Idle, null);
+
+        Assert(atThreshold.Action == AutoStartActionKind.StartRecording);
+        Assert(atThreshold.SourceApp == "Google Chrome");
+        Assert(atThreshold.ProcessId == 4242);
+    }
+
     private static void AutoStartStopsAutoRecordingsAfterInactiveGrace()
     {
         var engine = new AutoStartDecisionEngine(new AutoStartPolicy(
@@ -160,6 +177,21 @@ internal static class Program
 
         var manualRecording = engine.Evaluate(CallActivitySnapshot.Inactive(t0.AddSeconds(25), "No call-like audio"), RecordingState.Recording, "manual");
         Assert(manualRecording.Action == AutoStartActionKind.None);
+    }
+
+    private static void AutoStartKeepsRecordingWhileSourceAudioContinues()
+    {
+        var engine = new AutoStartDecisionEngine(new AutoStartPolicy(
+            StartDetectionDuration: TimeSpan.FromSeconds(10),
+            StopGraceDuration: TimeSpan.FromSeconds(10)));
+        var t0 = new DateTimeOffset(2026, 5, 31, 18, 0, 0, TimeSpan.Zero);
+
+        var afterWindowSwitch = engine.Evaluate(
+            CallActivitySnapshot.Active(t0.AddSeconds(30), "Google Chrome", "Google Chrome is still using system audio for the active recording.", 4242),
+            RecordingState.Recording,
+            "autostart");
+
+        Assert(afterWindowSwitch.Action == AutoStartActionKind.None);
     }
 
     private static string TempRoot()

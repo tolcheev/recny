@@ -61,28 +61,18 @@ public sealed class WindowsCallActivityDetector
 
         try
         {
-            using var enumerator = new MMDeviceEnumerator();
-            using var renderDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            var sessions = renderDevice.AudioSessionManager.Sessions;
-
-            for (var index = 0; index < sessions.Count; index++)
+            foreach (var candidate in CaptureAudioCandidates())
             {
-                using var session = sessions[index];
-                if (session.State != AudioSessionState.AudioSessionStateActive || session.IsSystemSoundsSession)
+                if (DesktopCallApps.Contains(candidate.ProcessName))
                 {
-                    continue;
+                    return candidate.ToSnapshot(now, $"{candidate.SourceApp} is using system audio.");
                 }
 
-                var processId = unchecked((int)session.GetProcessID);
-                if (processId <= 0 || processId == Environment.ProcessId)
+                if (Browsers.Contains(candidate.ProcessName) && LooksLikeCallWindow(candidate.WindowTitle))
                 {
-                    continue;
-                }
-
-                var candidate = TryBuildCandidate(now, processId);
-                if (candidate is not null)
-                {
-                    return candidate;
+                    return candidate.ToSnapshot(
+                        now,
+                        $"{candidate.SourceApp} has a call-like window title: {candidate.WindowTitle}");
                 }
             }
         }
@@ -94,7 +84,78 @@ public sealed class WindowsCallActivityDetector
         return CallActivitySnapshot.Inactive(now, "No call-like audio session.");
     }
 
-    private static CallActivitySnapshot? TryBuildCandidate(DateTimeOffset now, int processId)
+    public CallActivitySnapshot CaptureForActiveRecording(string? sourceApp, int? sourceProcessId)
+    {
+        var now = DateTimeOffset.Now;
+
+        if (string.IsNullOrWhiteSpace(sourceApp))
+        {
+            return Capture();
+        }
+
+        try
+        {
+            var candidates = CaptureAudioCandidates();
+            if (sourceProcessId is > 0)
+            {
+                var sameProcess = candidates.FirstOrDefault(candidate => candidate.ProcessId == sourceProcessId.Value);
+                if (sameProcess is not null)
+                {
+                    return sameProcess.ToSnapshot(
+                        now,
+                        $"{sameProcess.SourceApp} is still using system audio for the active recording.");
+                }
+            }
+
+            var sameSource = candidates.FirstOrDefault(candidate =>
+                string.Equals(candidate.SourceApp, sourceApp, StringComparison.OrdinalIgnoreCase));
+            if (sameSource is not null)
+            {
+                return sameSource.ToSnapshot(
+                    now,
+                    $"{sameSource.SourceApp} is still using system audio for the active recording.");
+            }
+        }
+        catch (Exception ex)
+        {
+            return CallActivitySnapshot.Inactive(now, $"Active recording detection failed: {ex.Message}");
+        }
+
+        return CallActivitySnapshot.Inactive(now, $"No active audio session for {sourceApp}.");
+    }
+
+    private static List<AudioSessionCandidate> CaptureAudioCandidates()
+    {
+        using var enumerator = new MMDeviceEnumerator();
+        using var renderDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        var sessions = renderDevice.AudioSessionManager.Sessions;
+        var candidates = new List<AudioSessionCandidate>();
+
+        for (var index = 0; index < sessions.Count; index++)
+        {
+            using var session = sessions[index];
+            if (session.State != AudioSessionState.AudioSessionStateActive || session.IsSystemSoundsSession)
+            {
+                continue;
+            }
+
+            var processId = unchecked((int)session.GetProcessID);
+            if (processId <= 0 || processId == Environment.ProcessId)
+            {
+                continue;
+            }
+
+            var candidate = TryBuildCandidate(processId);
+            if (candidate is not null)
+            {
+                candidates.Add(candidate);
+            }
+        }
+
+        return candidates;
+    }
+
+    private static AudioSessionCandidate? TryBuildCandidate(int processId)
     {
         try
         {
@@ -102,28 +163,16 @@ public sealed class WindowsCallActivityDetector
             var processName = process.ProcessName;
             var title = process.MainWindowTitle ?? "";
 
-            if (DesktopCallApps.Contains(processName))
-            {
-                return CallActivitySnapshot.Active(
-                    now,
-                    NormalizeAppName(processName),
-                    $"{NormalizeAppName(processName)} is using system audio.");
-            }
-
-            if (Browsers.Contains(processName) && LooksLikeCallWindow(title))
-            {
-                return CallActivitySnapshot.Active(
-                    now,
-                    NormalizeAppName(processName),
-                    $"{NormalizeAppName(processName)} has a call-like window title: {title}");
-            }
+            return new AudioSessionCandidate(
+                processId,
+                processName,
+                NormalizeAppName(processName),
+                title);
         }
         catch
         {
             return null;
         }
-
-        return null;
     }
 
     private static bool LooksLikeCallWindow(string title)
@@ -145,4 +194,14 @@ public sealed class WindowsCallActivityDetector
         processName.Equals("discord", StringComparison.OrdinalIgnoreCase) ? "Discord" :
         processName.Equals("teams", StringComparison.OrdinalIgnoreCase) ? "Microsoft Teams" :
         processName;
+
+    private sealed record AudioSessionCandidate(
+        int ProcessId,
+        string ProcessName,
+        string SourceApp,
+        string WindowTitle)
+    {
+        public CallActivitySnapshot ToSnapshot(DateTimeOffset now, string reason) =>
+            CallActivitySnapshot.Active(now, SourceApp, reason, ProcessId);
+    }
 }

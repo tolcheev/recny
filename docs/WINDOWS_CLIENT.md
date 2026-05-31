@@ -2,7 +2,7 @@
 
 ## Status
 
-Active v0.2.1 beta scope.
+Active v0.2.2 beta scope.
 
 Windows is still outside the shipped macOS v0.1.2 MVP, but the repository now contains a separate experimental Windows client under `apps/windows`. Keep it isolated from the macOS Swift app.
 
@@ -23,7 +23,7 @@ Provide a lightweight student-side recorder for Windows:
 
 - Lives in the Windows tray.
 - Can auto-start on likely calls.
-- Can auto-stop auto-started recordings when call-like activity disappears.
+- Can auto-stop auto-started recordings when the active call audio session disappears.
 - Can start/stop manually.
 - Records microphone input.
 - Records system audio with WASAPI loopback.
@@ -63,10 +63,11 @@ Rules:
 
 - Poll once per second.
 - Start after 10 seconds of stable call-like activity.
-- Stop only auto-started recordings after 10 seconds without call-like activity.
+- Stop only auto-started recordings after 10 seconds without the active call/source audio session.
 - Manual recordings never auto-stop.
 - Known call apps can trigger from active audio sessions: Zoom, Teams, Telegram, Discord, Slack, Skype, Webex, KTalk.
 - Browser apps require call-like title hints: Meet, Google Meet, Zoom, Teams, KTalk, call, huddle, interview, Jitsi, Whereby, Russian call/interview words.
+- After auto-start, ToRec keeps recording by the same source process/app audio session. Switching active windows, apps, or tabs must not stop recording.
 - Ignore ToRec's own process audio.
 
 No browser extension in the first Windows version.

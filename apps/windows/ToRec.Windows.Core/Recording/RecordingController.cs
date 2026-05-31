@@ -24,6 +24,7 @@ public sealed class RecordingController : IDisposable
     public string? CurrentTrigger { get; private set; }
     public string? CurrentSourceApp { get; private set; }
     public string? CurrentReason { get; private set; }
+    public int? CurrentSourceProcessId { get; private set; }
     public string? LastError { get; private set; }
     public TimeSpan Elapsed => _elapsed.Elapsed;
 
@@ -33,6 +34,7 @@ public sealed class RecordingController : IDisposable
         string trigger = "manual",
         string sourceApp = "Manual",
         string reason = "Manual start.",
+        int? sourceProcessId = null,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -66,9 +68,10 @@ public sealed class RecordingController : IDisposable
                 CurrentTrigger = trigger;
                 CurrentSourceApp = sourceApp;
                 CurrentReason = reason;
+                CurrentSourceProcessId = sourceProcessId;
                 State = RecordingState.Recording;
                 _elapsed.Restart();
-                _log($"recording started id={session.Id} trigger={trigger} source={sourceApp} reason={reason} dir={session.SessionDirectory}");
+                _log($"recording started id={session.Id} trigger={trigger} source={sourceApp} processId={sourceProcessId?.ToString() ?? "none"} reason={reason} dir={session.SessionDirectory}");
             }
             catch (Exception ex)
             {
@@ -78,6 +81,7 @@ public sealed class RecordingController : IDisposable
                 CurrentTrigger = null;
                 CurrentSourceApp = null;
                 CurrentReason = null;
+                CurrentSourceProcessId = null;
                 State = RecordingState.Idle;
                 throw;
             }
@@ -164,6 +168,7 @@ public sealed class RecordingController : IDisposable
             CurrentTrigger = null;
             CurrentSourceApp = null;
             CurrentReason = null;
+            CurrentSourceProcessId = null;
             State = RecordingState.Idle;
         }
 

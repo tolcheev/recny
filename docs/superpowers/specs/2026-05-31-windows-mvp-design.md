@@ -77,7 +77,7 @@ GitHub Actions builds on `windows-latest`:
 3. Run the lightweight Windows console tests.
 4. Publish a self-contained `win-x64` single-file app.
 5. Zip the published folder.
-6. Upload `ToRec-Windows-v0.2.1-beta.zip` as an Actions artifact.
+6. Upload `ToRec-Windows-v0.2.2-beta.zip` as an Actions artifact.
 
 The zip can then be attached to a prerelease after the build passes.
 

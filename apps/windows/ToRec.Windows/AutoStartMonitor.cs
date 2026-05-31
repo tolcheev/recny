@@ -32,21 +32,25 @@ public sealed class AutoStartMonitor : IDisposable
 
         try
         {
-            var snapshot = _detector.Capture();
+            var snapshot = _controller.State == RecordingState.Recording &&
+                string.Equals(_controller.CurrentTrigger, "autostart", StringComparison.OrdinalIgnoreCase)
+                    ? _detector.CaptureForActiveRecording(_controller.CurrentSourceApp, _controller.CurrentSourceProcessId)
+                    : _detector.Capture();
             if (!string.Equals(_lastReason, snapshot.Reason, StringComparison.Ordinal))
             {
                 _lastReason = snapshot.Reason;
-                _logger.Write($"autostart observation active={snapshot.IsActive} source={snapshot.SourceApp} reason={snapshot.Reason}");
+                _logger.Write($"autostart observation active={snapshot.IsActive} source={snapshot.SourceApp} processId={snapshot.ProcessId?.ToString() ?? "none"} reason={snapshot.Reason}");
             }
 
             var decision = _engine.Evaluate(snapshot, _controller.State, _controller.CurrentTrigger);
             if (decision.Action == AutoStartActionKind.StartRecording)
             {
-                _logger.Write($"autostart start decision source={decision.SourceApp} reason={decision.Reason}");
+                _logger.Write($"autostart start decision source={decision.SourceApp} processId={decision.ProcessId?.ToString() ?? "none"} reason={decision.Reason}");
                 await _controller.StartAsync(
                     trigger: "autostart",
                     sourceApp: decision.SourceApp,
-                    reason: decision.Reason).ConfigureAwait(false);
+                    reason: decision.Reason,
+                    sourceProcessId: decision.ProcessId).ConfigureAwait(false);
             }
             else if (decision.Action == AutoStartActionKind.StopRecording && _controller.State == RecordingState.Recording)
             {
