@@ -6,3 +6,5 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 *.swp
+bin/
+obj/

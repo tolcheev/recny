@@ -1,10 +1,12 @@
 # ToRec
 
-ToRec is a lightweight native macOS app by T-Orbit for automatic audio recording of calls without OBS.
+ToRec is a lightweight native app by T-Orbit for local audio recording of calls without OBS.
+
+The stable MVP is the native macOS client. An experimental Windows beta now lives under `apps/windows` for manual student-side testing.
 
 The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable recordings of student calls, lead sales calls, interview debriefs, and important or sensitive conversations.
 
-## MVP
+## macOS MVP
 
 - macOS only.
 - Target machine: MacBook M4 Pro.
@@ -24,7 +26,36 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 - Tag dialog supports quick tags, custom tags, and status selection without permanent tag controls on the main screen.
 - Local recordings list with filters by date, status, source app, title, and tag.
 - No Electron.
-- No screen recording, cloud upload, T-Orbit sync, cloud AI, automatic AI, or Windows support in MVP. Records also has an explicit local-only transcription add-on after optional Parakeet setup in Settings.
+- No screen recording, cloud upload, T-Orbit sync, cloud AI, or automatic AI in the macOS MVP. Records also has an explicit local-only transcription add-on after optional Parakeet setup in Settings.
+
+## Windows Beta
+
+Windows support is an experimental v0.2 beta, not feature-parity with macOS yet.
+
+Implemented:
+
+- native Windows tray app;
+- manual Start/Stop recording;
+- microphone recording;
+- system-audio recording through WASAPI loopback;
+- local records list;
+- local diagnostics and logs.
+
+Not implemented yet:
+
+- automatic Zoom/Google Meet/KTalk start;
+- installer/MSIX;
+- cloud upload;
+- T-Orbit sync;
+- AI transcription.
+
+Windows source:
+
+```text
+apps/windows/
+```
+
+Windows artifact is built on GitHub Actions by `.github/workflows/windows-build.yml` because the current development machine is macOS and does not have local Windows audio APIs.
 
 ## Default Storage
 
