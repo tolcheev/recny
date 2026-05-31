@@ -143,7 +143,7 @@ The current shell is a SwiftPM-based macOS app target. The build script compiles
 
 The build script injects app metadata into the bundle:
 
-- app version: `v0.1.3-install-fix`
+- app version: `v0.1.4-dmg-icon-fix`
 - build date
 - git commit hash
 
@@ -159,11 +159,11 @@ This creates:
 
 ```text
 dist/ToRec.app
-dist/ToRec-v0.1.3-macOS.zip
-dist/ToRec-v0.1.3-macOS.dmg
+dist/ToRec-v0.1.4-macOS.zip
+dist/ToRec-v0.1.4-macOS.dmg
 ```
 
-The zip is app-only and contains just `ToRec.app`. The DMG contains `ToRec.app` and an `Applications` shortcut so non-technical testers have one clear install action.
+The zip is app-only and contains just `ToRec.app`. The DMG contains `ToRec.app`, an `Applications` shortcut, and a visual arrow from the app to Applications so non-technical testers have one clear install action.
 
 The current package is an internal ad-hoc signed build. It is suitable for controlled testing on trusted Macs, but it is not a public notarized macOS release yet. For a frictionless external install, add Developer ID signing and Apple notarization.
 

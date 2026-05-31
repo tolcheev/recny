@@ -1,14 +1,14 @@
-# Release v0.1.3 Checklist
+# Release v0.1.4 Checklist
 
 ## Scope
 
-Release target: ToRec v0.1.3 macOS install-fix build.
+Release target: ToRec v0.1.4 macOS dmg-icon-fix build.
 
 Artifact:
 
 ```text
-dist/ToRec-v0.1.3-macOS.zip
-dist/ToRec-v0.1.3-macOS.dmg
+dist/ToRec-v0.1.4-macOS.zip
+dist/ToRec-v0.1.4-macOS.dmg
 ```
 
 Do not create or publish the GitHub release from this checklist alone. GitHub tag and release draft require a separate explicit command.
@@ -19,8 +19,8 @@ Do not create or publish the GitHub release from this checklist alone. GitHub ta
 - [ ] `./scripts/build_macos.sh` passes.
 - [ ] `./scripts/package_macos.sh` passes.
 - [ ] `dist/ToRec.app` exists.
-- [ ] `dist/ToRec-v0.1.3-macOS.zip` exists.
-- [ ] `dist/ToRec-v0.1.3-macOS.dmg` exists.
+- [ ] `dist/ToRec-v0.1.4-macOS.zip` exists.
+- [ ] `dist/ToRec-v0.1.4-macOS.dmg` exists.
 - [ ] Package output shows expected app version.
 - [ ] Package output shows expected git commit hash.
 - [ ] `git status --short --branch` is clean before final tagging/release draft.
@@ -32,8 +32,8 @@ swift test --package-path apps/macos
 ./scripts/build_macos.sh
 ./scripts/package_macos.sh
 test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.3-macOS.zip
-test -f dist/ToRec-v0.1.3-macOS.dmg
+test -f dist/ToRec-v0.1.4-macOS.zip
+test -f dist/ToRec-v0.1.4-macOS.dmg
 git status --short --branch
 ```
 
@@ -287,11 +287,12 @@ plutil -p metadata.json
 
 ## 9. Release Artifact
 
-- [ ] Final zip artifact path is `dist/ToRec-v0.1.3-macOS.zip`.
-- [ ] Final DMG artifact path is `dist/ToRec-v0.1.3-macOS.dmg`.
+- [ ] Final zip artifact path is `dist/ToRec-v0.1.4-macOS.zip`.
+- [ ] Final DMG artifact path is `dist/ToRec-v0.1.4-macOS.dmg`.
 - [ ] Zip contains `ToRec.app`.
 - [ ] Zip does not contain `INSTALL.md` or `RELEASE_NOTES.md`.
-- [ ] DMG contains `ToRec.app` and an `Applications` shortcut.
+- [ ] DMG contains `ToRec.app`, an `Applications` shortcut, and a visible arrow from app to Applications.
+- [ ] `ToRec.app` has the play-triangle app icon.
 - [ ] Zip opens on a clean local unpack.
 - [ ] App launches from unpacked artifact or `/Applications`.
 - [ ] Artifact is attached to draft GitHub release only after checks pass.
@@ -299,9 +300,9 @@ plutil -p metadata.json
 Artifact check:
 
 ```sh
-ls -lh dist/ToRec-v0.1.3-macOS.zip dist/ToRec-v0.1.3-macOS.dmg
-zipinfo -1 dist/ToRec-v0.1.3-macOS.zip | head
-! zipinfo -1 dist/ToRec-v0.1.3-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+ls -lh dist/ToRec-v0.1.4-macOS.zip dist/ToRec-v0.1.4-macOS.dmg
+zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | head
+! zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
 ```
 
 ## 10. GitHub
@@ -309,28 +310,28 @@ zipinfo -1 dist/ToRec-v0.1.3-macOS.zip | head
 - [ ] Confirm target release commit.
 - [ ] Confirm branch status is clean.
 - [ ] Confirm no uncommitted artifacts are required.
-- [ ] Create tag `v0.1.3` only after release decision.
+- [ ] Create tag `v0.1.4` only after release decision.
 - [ ] Create GitHub release notes draft only after release decision.
 - [ ] Do not publish release without explicit command.
 - [ ] Release notes include what works, local-only behavior, install steps, permissions, known limitations, and next steps.
-- [ ] Attach `dist/ToRec-v0.1.3-macOS.zip` and `dist/ToRec-v0.1.3-macOS.dmg` to draft release.
+- [ ] Attach `dist/ToRec-v0.1.4-macOS.zip` and `dist/ToRec-v0.1.4-macOS.dmg` to draft release.
 
 Suggested tag command after explicit approval:
 
 ```sh
-git tag v0.1.3
-git push origin v0.1.3
+git tag v0.1.4
+git push origin v0.1.4
 ```
 
 Suggested draft release command after explicit approval:
 
 ```sh
-gh release create v0.1.3 \
-  dist/ToRec-v0.1.3-macOS.zip \
-  dist/ToRec-v0.1.3-macOS.dmg \
+gh release create v0.1.4 \
+  dist/ToRec-v0.1.4-macOS.zip \
+  dist/ToRec-v0.1.4-macOS.dmg \
   --draft \
-  --title "ToRec v0.1.3 macOS install-fix build" \
-  --notes-file docs/RELEASE_NOTES_V0_1_3.md
+  --title "ToRec v0.1.4 macOS dmg-icon-fix build" \
+  --notes-file docs/RELEASE_NOTES_V0_1_4.md
 ```
 
 ## Go/No-Go
