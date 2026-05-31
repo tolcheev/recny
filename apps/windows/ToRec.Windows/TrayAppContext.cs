@@ -88,9 +88,10 @@ public sealed class TrayAppContext : ApplicationContext
 
     private void OnStateChanged(object? sender, EventArgs args)
     {
-        if (Application.OpenForms.Count > 0)
+        var form = Application.OpenForms.Count > 0 ? Application.OpenForms[0] : null;
+        if (form is not null && !form.IsDisposed)
         {
-            Application.OpenForms[0].BeginInvoke((MethodInvoker)UpdateMenu);
+            form.BeginInvoke((MethodInvoker)UpdateMenu);
         }
         else
         {
