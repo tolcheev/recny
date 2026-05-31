@@ -160,6 +160,16 @@ public enum AppLogger {
         fileLogStoreLock.unlock()
     }
 
+    public static func resetFileLoggingForTesting() {
+        guard isRunningTests else {
+            return
+        }
+
+        fileLogStoreLock.lock()
+        currentFileLogStore = makeDefaultFileLogStore()
+        fileLogStoreLock.unlock()
+    }
+
     public static func file(_ level: FileLogLevel, category: String, _ message: @autoclosure () -> String) {
         do {
             try fileLogStore.write(level: level, category: category, message: message())

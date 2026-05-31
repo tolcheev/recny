@@ -5,6 +5,7 @@ import Testing
 struct FileLogStoreTests {
     @Test
     func appLoggerDefaultFileStoreAvoidsUserRecordingLogsDuringTests() {
+        AppLogger.resetFileLoggingForTesting()
         let defaultPath = AppLogger.fileLogStore.logDirectoryURL.path(percentEncoded: false)
 
         #expect(defaultPath.contains(FileManager.default.temporaryDirectory.path(percentEncoded: false)))
