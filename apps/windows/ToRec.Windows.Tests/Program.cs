@@ -1,5 +1,6 @@
 using ToRec.Windows.Core.Recording;
 using ToRec.Windows.Core.Storage;
+using ToRec.Windows.Core.AutoStart;
 
 namespace ToRec.Windows.Tests;
 
@@ -11,7 +12,10 @@ internal static class Program
         {
             ("recording paths create expected layout", RecordingPathsCreateExpectedLayout),
             ("metadata writer persists json", MetadataWriterPersistsJson),
-            ("recording scanner sorts newest first", RecordingScannerSortsNewestFirst)
+            ("recording scanner sorts newest first", RecordingScannerSortsNewestFirst),
+            ("auto-start starts only after stable activity", AutoStartStartsOnlyAfterStableActivity),
+            ("auto-start resets when activity is interrupted", AutoStartResetsWhenActivityIsInterrupted),
+            ("auto-start stops auto recordings after inactive grace", AutoStartStopsAutoRecordingsAfterInactiveGrace)
         };
 
         foreach (var test in tests)
@@ -106,6 +110,56 @@ internal static class Program
             null);
         MetadataWriter.Write(session.MetadataPath, metadata);
         return session;
+    }
+
+    private static void AutoStartStartsOnlyAfterStableActivity()
+    {
+        var engine = new AutoStartDecisionEngine(new AutoStartPolicy(
+            StartDetectionDuration: TimeSpan.FromSeconds(10),
+            StopGraceDuration: TimeSpan.FromSeconds(10)));
+        var t0 = new DateTimeOffset(2026, 5, 31, 18, 0, 0, TimeSpan.Zero);
+
+        var first = engine.Evaluate(CallActivitySnapshot.Active(t0, "Zoom", "Zoom is using audio"), RecordingState.Idle, null);
+        var beforeThreshold = engine.Evaluate(CallActivitySnapshot.Active(t0.AddSeconds(9), "Zoom", "Zoom is using audio"), RecordingState.Idle, null);
+        var atThreshold = engine.Evaluate(CallActivitySnapshot.Active(t0.AddSeconds(10), "Zoom", "Zoom is using audio"), RecordingState.Idle, null);
+
+        Assert(first.Action == AutoStartActionKind.None);
+        Assert(beforeThreshold.Action == AutoStartActionKind.None);
+        Assert(atThreshold.Action == AutoStartActionKind.StartRecording);
+        Assert(atThreshold.SourceApp == "Zoom");
+    }
+
+    private static void AutoStartResetsWhenActivityIsInterrupted()
+    {
+        var engine = new AutoStartDecisionEngine(new AutoStartPolicy(
+            StartDetectionDuration: TimeSpan.FromSeconds(10),
+            StopGraceDuration: TimeSpan.FromSeconds(10)));
+        var t0 = new DateTimeOffset(2026, 5, 31, 18, 0, 0, TimeSpan.Zero);
+
+        engine.Evaluate(CallActivitySnapshot.Active(t0, "Zoom", "Zoom is using audio"), RecordingState.Idle, null);
+        engine.Evaluate(CallActivitySnapshot.Inactive(t0.AddSeconds(5), "No call-like audio"), RecordingState.Idle, null);
+        var afterReset = engine.Evaluate(CallActivitySnapshot.Active(t0.AddSeconds(12), "Zoom", "Zoom is using audio"), RecordingState.Idle, null);
+
+        Assert(afterReset.Action == AutoStartActionKind.None);
+    }
+
+    private static void AutoStartStopsAutoRecordingsAfterInactiveGrace()
+    {
+        var engine = new AutoStartDecisionEngine(new AutoStartPolicy(
+            StartDetectionDuration: TimeSpan.FromSeconds(10),
+            StopGraceDuration: TimeSpan.FromSeconds(10)));
+        var t0 = new DateTimeOffset(2026, 5, 31, 18, 0, 0, TimeSpan.Zero);
+
+        var firstInactive = engine.Evaluate(CallActivitySnapshot.Inactive(t0, "No call-like audio"), RecordingState.Recording, "autostart");
+        var beforeGrace = engine.Evaluate(CallActivitySnapshot.Inactive(t0.AddSeconds(9), "No call-like audio"), RecordingState.Recording, "autostart");
+        var atGrace = engine.Evaluate(CallActivitySnapshot.Inactive(t0.AddSeconds(10), "No call-like audio"), RecordingState.Recording, "autostart");
+
+        Assert(firstInactive.Action == AutoStartActionKind.None);
+        Assert(beforeGrace.Action == AutoStartActionKind.None);
+        Assert(atGrace.Action == AutoStartActionKind.StopRecording);
+
+        var manualRecording = engine.Evaluate(CallActivitySnapshot.Inactive(t0.AddSeconds(25), "No call-like audio"), RecordingState.Recording, "manual");
+        Assert(manualRecording.Action == AutoStartActionKind.None);
     }
 
     private static string TempRoot()
