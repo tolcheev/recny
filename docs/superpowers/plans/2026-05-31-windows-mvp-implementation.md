@@ -19,7 +19,7 @@ Create a separate Windows beta client that builds a shareable `ToRec.exe` zip on
 
 - Windows app source lives under `apps/windows`.
 - macOS app source is unchanged by the Windows implementation.
-- The Windows app has manual Start/Stop for microphone plus system audio.
+- The Windows app has automatic call start/stop plus manual Start/Stop fallback for microphone plus system audio.
 - A recording creates `source/`, `export/`, and `metadata.json`.
 - Diagnostics exposes storage path and last error.
 - Local tests verify path layout, metadata writing, and metadata scanning.

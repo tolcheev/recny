@@ -21,12 +21,19 @@ public sealed class RecordingController : IDisposable
 
     public RecordingState State { get; private set; } = RecordingState.Idle;
     public RecordingSession? CurrentSession { get; private set; }
+    public string? CurrentTrigger { get; private set; }
+    public string? CurrentSourceApp { get; private set; }
+    public string? CurrentReason { get; private set; }
     public string? LastError { get; private set; }
     public TimeSpan Elapsed => _elapsed.Elapsed;
 
     public event EventHandler? StateChanged;
 
-    public Task<RecordingSession> StartAsync(CancellationToken cancellationToken = default)
+    public Task<RecordingSession> StartAsync(
+        string trigger = "manual",
+        string sourceApp = "Manual",
+        string reason = "Manual start.",
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -56,15 +63,21 @@ public sealed class RecordingController : IDisposable
                 _systemRecorder.Start(session.SystemWavPath);
 
                 CurrentSession = session;
+                CurrentTrigger = trigger;
+                CurrentSourceApp = sourceApp;
+                CurrentReason = reason;
                 State = RecordingState.Recording;
                 _elapsed.Restart();
-                _log($"recording started id={session.Id} dir={session.SessionDirectory}");
+                _log($"recording started id={session.Id} trigger={trigger} source={sourceApp} reason={reason} dir={session.SessionDirectory}");
             }
             catch (Exception ex)
             {
                 LastError = ex.Message;
                 _log($"recording start failed error={ex}");
                 DisposeTrackRecorders();
+                CurrentTrigger = null;
+                CurrentSourceApp = null;
+                CurrentReason = null;
                 State = RecordingState.Idle;
                 throw;
             }
@@ -138,13 +151,19 @@ public sealed class RecordingController : IDisposable
             duration,
             status,
             postProcess,
-            error);
+            error,
+            CurrentTrigger ?? "manual",
+            CurrentSourceApp ?? "Manual",
+            CurrentReason ?? "");
         MetadataWriter.Write(session.MetadataPath, metadata);
         _log($"metadata written id={session.Id} status={status}");
 
         lock (_sync)
         {
             CurrentSession = null;
+            CurrentTrigger = null;
+            CurrentSourceApp = null;
+            CurrentReason = null;
             State = RecordingState.Idle;
         }
 

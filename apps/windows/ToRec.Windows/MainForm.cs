@@ -168,7 +168,7 @@ public sealed class MainForm : Form
         {
             RecordingState.Recording => "Recording microphone + system audio",
             RecordingState.Stopping => "Stopping and finalizing audio files",
-            _ => "Ready. Start manually before the call."
+            _ => "Auto-start is watching calls. Manual Start is also available."
         };
         _elapsedLabel.Text = _controller.State == RecordingState.Idle
             ? "00:00:00"

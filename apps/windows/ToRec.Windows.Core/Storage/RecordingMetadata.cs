@@ -14,13 +14,19 @@ public sealed class RecordingMetadata
     public string Platform { get; set; } = "windows";
 
     [JsonPropertyName("version")]
-    public string Version { get; set; } = "0.2.0-beta";
+    public string Version { get; set; } = "0.2.1-beta";
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = "completed";
 
     [JsonPropertyName("trigger")]
     public string Trigger { get; set; } = "manual";
+
+    [JsonPropertyName("sourceApp")]
+    public string SourceApp { get; set; } = "Manual";
+
+    [JsonPropertyName("reason")]
+    public string Reason { get; set; } = "";
 
     [JsonPropertyName("startedAt")]
     public DateTimeOffset StartedAt { get; set; }

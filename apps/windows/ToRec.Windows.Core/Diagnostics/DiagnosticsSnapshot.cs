@@ -15,7 +15,7 @@ public sealed record DiagnosticsSnapshot(
 {
     public static DiagnosticsSnapshot Create(string storageRoot, string? lastError)
     {
-        var appVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "0.2.0";
+        var appVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "0.2.1";
         var nAudioVersion = typeof(WaveInEvent).Assembly.GetName().Version?.ToString() ?? "unknown";
         return new DiagnosticsSnapshot(
             appVersion,

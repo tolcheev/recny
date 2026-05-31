@@ -2,7 +2,7 @@
 
 ToRec is a lightweight native app by T-Orbit for local audio recording of calls without OBS.
 
-The stable MVP is the native macOS client. An experimental Windows beta now lives under `apps/windows` for manual student-side testing.
+The stable MVP is the native macOS client. An experimental Windows beta now lives under `apps/windows` for student-side testing.
 
 The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable recordings of student calls, lead sales calls, interview debriefs, and important or sensitive conversations.
 
@@ -35,7 +35,9 @@ Windows support is an experimental v0.2 beta, not feature-parity with macOS yet.
 Implemented:
 
 - native Windows tray app;
-- manual Start/Stop recording;
+- automatic call recording start for likely Zoom/Meet/KTalk/Teams/Telegram/Discord calls;
+- automatic stop for auto-started recordings after call-like audio disappears;
+- manual Start/Stop recording as a fallback;
 - microphone recording;
 - system-audio recording through WASAPI loopback;
 - local records list;
@@ -43,7 +45,6 @@ Implemented:
 
 Not implemented yet:
 
-- automatic Zoom/Google Meet/KTalk start;
 - installer/MSIX;
 - cloud upload;
 - T-Orbit sync;
@@ -56,6 +57,8 @@ apps/windows/
 ```
 
 Windows artifact is built on GitHub Actions by `.github/workflows/windows-build.yml` because the current development machine is macOS and does not have local Windows audio APIs.
+
+Windows auto-start watches Windows audio sessions once per second. Known call apps such as Zoom, Teams, Telegram, Discord, Slack, Webex, Skype, and KTalk can start after 10 seconds of stable audio-session activity. Browser processes such as Chrome, Edge, Firefox, Brave, Opera, Yandex, and Arc require a call-like window title containing hints such as Meet, Zoom, Teams, KTalk, call, interview, or Russian call/interview words. Auto-started recordings auto-stop after 10 seconds without a call-like audio session. Manual recordings do not auto-stop.
 
 ## Default Storage
 

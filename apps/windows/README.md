@@ -4,11 +4,13 @@ This is the experimental Windows client for ToRec.
 
 ## Current Scope
 
-Version: `0.2.0-beta`
+Version: `0.2.1-beta`
 
 Implemented:
 
 - Tray app.
+- Automatic start for likely Zoom/Meet/KTalk/Teams/Telegram/Discord calls.
+- Automatic stop for auto-started recordings after call-like audio disappears.
 - Manual Start/Stop recording.
 - Microphone capture.
 - System audio capture through WASAPI loopback.
@@ -19,7 +21,6 @@ Implemented:
 
 Not implemented in this beta:
 
-- Automatic Zoom/Meet/KTalk start.
 - Installer.
 - Cloud upload.
 - T-Orbit sync.
@@ -63,10 +64,12 @@ dotnet publish apps/windows/ToRec.Windows/ToRec.Windows.csproj -c Release -r win
 
 1. Run `ToRec.exe`.
 2. Confirm a ToRec icon appears in the Windows tray.
-3. Open ToRec and click `Start Recording` before a call.
-4. Speak and play some system audio.
-5. Click `Stop Recording`.
+3. Start a Zoom/Meet/KTalk/Teams/Telegram/Discord call and wait at least 10 seconds.
+4. Confirm ToRec starts recording automatically.
+5. End the call and confirm ToRec stops after about 10 seconds.
 6. Open `Records` and play the latest recording.
 7. Open the recording folder and confirm `metadata.json`, `source/mic.wav`, `source/system.wav`, and `export/mixed.wav` exist.
+
+Manual `Start Recording` / `Stop Recording` remains available as a fallback if auto-start misses a call.
 
 If recording fails, open `Diagnostics` and send the storage root, last error, and `logs/app.log`.

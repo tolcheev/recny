@@ -8,6 +8,7 @@ public sealed class TrayAppContext : ApplicationContext
     private readonly RecordingController _controller;
     private readonly string _storageRoot;
     private readonly FileLogger _logger;
+    private readonly AutoStartMonitor _autoStartMonitor;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _startItem;
     private readonly ToolStripMenuItem _stopItem;
@@ -19,6 +20,7 @@ public sealed class TrayAppContext : ApplicationContext
         _storageRoot = storageRoot;
         _logger = logger;
         _controller.StateChanged += OnStateChanged;
+        _autoStartMonitor = new AutoStartMonitor(_controller, _logger);
 
         _startItem = new ToolStripMenuItem("Start Recording", null, async (_, _) => await StartRecordingAsync());
         _stopItem = new ToolStripMenuItem("Stop Recording", null, async (_, _) => await StopRecordingAsync());
@@ -26,6 +28,7 @@ public sealed class TrayAppContext : ApplicationContext
         var menu = new ContextMenuStrip();
         menu.Items.Add("Show", null, (_, _) => ShowMainWindow());
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Auto-start: On", null, (_, _) => ShowMainWindow()).Enabled = false;
         menu.Items.Add(_startItem);
         menu.Items.Add(_stopItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -138,6 +141,7 @@ public sealed class TrayAppContext : ApplicationContext
 
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
+        _autoStartMonitor.Dispose();
         _mainForm?.AllowClose();
         Application.Exit();
     }

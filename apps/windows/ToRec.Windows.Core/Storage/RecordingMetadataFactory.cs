@@ -10,12 +10,18 @@ public static class RecordingMetadataFactory
         TimeSpan duration,
         string status,
         AudioPostProcessResult? postProcess,
-        string? error)
+        string? error,
+        string trigger = "manual",
+        string sourceApp = "Manual",
+        string reason = "")
     {
         var metadata = new RecordingMetadata
         {
             Id = session.Id,
             Status = status,
+            Trigger = trigger,
+            SourceApp = sourceApp,
+            Reason = reason,
             StartedAt = session.StartedAt,
             StoppedAt = stoppedAt,
             DurationSeconds = Math.Round(duration.TotalSeconds, 3),

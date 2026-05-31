@@ -2,11 +2,11 @@
 
 ## Status
 
-Active v0.2 beta scope.
+Active v0.2.1 beta scope.
 
 Windows is still outside the shipped macOS v0.1.2 MVP, but the repository now contains a separate experimental Windows client under `apps/windows`. Keep it isolated from the macOS Swift app.
 
-The first Windows beta is manual-recording-first. Auto-start for Zoom/Meet/KTalk is a later Windows milestone after basic audio capture is validated on real student machines.
+The first useful Windows beta must be auto-recording-first. Manual recording remains available as a fallback, but the core scenario is: launch ToRec once, leave it in the tray, and let it start/stop around likely calls.
 
 ## Goal
 
@@ -22,6 +22,8 @@ Provide a lightweight student-side recorder for Windows:
 ## Core Requirements
 
 - Lives in the Windows tray.
+- Can auto-start on likely calls.
+- Can auto-stop auto-started recordings when call-like activity disappears.
 - Can start/stop manually.
 - Records microphone input.
 - Records system audio with WASAPI loopback.
@@ -31,8 +33,6 @@ Provide a lightweight student-side recorder for Windows:
 
 Deferred:
 
-- Auto-start on likely calls.
-- Browser title/window heuristics.
 - Installer/MSIX.
 - Cloud upload or T-Orbit sync.
 
@@ -54,16 +54,22 @@ Deferred:
 
 ## Auto-Start
 
-Future rules should mirror macOS v2:
+Windows auto-start uses two signals:
 
-- whitelist/blacklist apps
-- cooldown
-- minimum detection duration
-- browser title hints for calls/interviews
-- known call apps like Zoom/Teams
-- avoid browser + YouTube false positives where possible
+- active Windows audio sessions from WASAPI;
+- process names and browser window-title hints.
 
-No browser extension in first Windows version.
+Rules:
+
+- Poll once per second.
+- Start after 10 seconds of stable call-like activity.
+- Stop only auto-started recordings after 10 seconds without call-like activity.
+- Manual recordings never auto-stop.
+- Known call apps can trigger from active audio sessions: Zoom, Teams, Telegram, Discord, Slack, Skype, Webex, KTalk.
+- Browser apps require call-like title hints: Meet, Google Meet, Zoom, Teams, KTalk, call, huddle, interview, Jitsi, Whereby, Russian call/interview words.
+- Ignore ToRec's own process audio.
+
+No browser extension in the first Windows version.
 
 ## Storage
 

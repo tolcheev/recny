@@ -4,7 +4,7 @@
 
 The shipped macOS MVP remains the primary ToRec client. Windows support is now a separate beta client so a student on Windows can test call recording without OBS.
 
-This design intentionally does not port the full macOS feature set in one step. The first Windows artifact must prove reliable local microphone plus system-audio capture and produce a shareable `.exe` package from GitHub Actions.
+Superseded scope note: the first manual-only Windows artifact was not enough for the product. Windows beta now includes automatic call start/stop in `docs/superpowers/specs/2026-05-31-windows-autostart-design.md`.
 
 ## Goals
 
@@ -12,12 +12,11 @@ This design intentionally does not port the full macOS feature set in one step. 
 - Produce a Windows zip artifact that contains a runnable `ToRec.exe`.
 - Record microphone input and system audio locally.
 - Save source tracks, a mixed export, and metadata per recording.
-- Provide a tray-first UI with manual Start/Stop and basic diagnostics.
+- Provide a tray-first UI with auto-start, manual Start/Stop fallback, and basic diagnostics.
 - Keep macOS code and release artifacts untouched.
 
 ## Non-Goals For v0.2 Beta
 
-- No Windows auto-start by Zoom/Meet/KTalk detection.
 - No installer/MSIX.
 - No cloud upload.
 - No T-Orbit backend sync.
@@ -78,7 +77,7 @@ GitHub Actions builds on `windows-latest`:
 3. Run the lightweight Windows console tests.
 4. Publish a self-contained `win-x64` single-file app.
 5. Zip the published folder.
-6. Upload `ToRec-Windows-v0.2.0-beta.zip` as an Actions artifact.
+6. Upload `ToRec-Windows-v0.2.1-beta.zip` as an Actions artifact.
 
 The zip can then be attached to a prerelease after the build passes.
 
@@ -87,4 +86,4 @@ The zip can then be attached to a prerelease after the build passes.
 - Windows audio devices vary more than the current macOS test machine.
 - Bluetooth headset microphone quality can be poor; v0.2 does not implement hard Bluetooth mic blocking.
 - Some Windows installations may lack Media Foundation AAC encoder behavior needed for `.m4a`; `.wav` remains the fallback.
-- Auto-start is intentionally absent in v0.2, so the student must start recording manually.
+- Auto-start is heuristic and must be tested on real student Windows machines.
