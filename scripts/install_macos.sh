@@ -110,4 +110,4 @@ echo "2. Grant system audio permission in System Settings -> Privacy & Security 
 echo "   If macOS shows Only System Audio Recording, enable ToRec there too."
 echo "3. Quit and reopen ToRec after changing audio permissions."
 echo "4. Recordings are stored in ~/Recordings/TOrbitRecorder/."
-echo "5. Install guide: $ROOT_DIR/dist/INSTALL.md"
+echo "5. Shareable packages are in $ROOT_DIR/dist/."

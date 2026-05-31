@@ -28,7 +28,7 @@ release/v0.1.0
 - Keep commits small and reviewable.
 - One commit should explain one product or engineering change.
 - Update docs when behavior, storage, permissions, packaging, or QA flow changes.
-- Do not commit generated build artifacts except explicitly tracked lightweight docs such as `dist/INSTALL.md`.
+- Do not commit generated build artifacts.
 - Do not fake audio capture or mark unverified recording paths as working.
 - Keep MVP scope boundaries intact unless a task explicitly changes them:
   - no automatic/cloud AI

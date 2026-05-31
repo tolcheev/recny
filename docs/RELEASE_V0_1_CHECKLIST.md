@@ -1,13 +1,14 @@
-# Release v0.1.2 Checklist
+# Release v0.1.3 Checklist
 
 ## Scope
 
-Release target: ToRec v0.1.2 macOS audio-only MVP.
+Release target: ToRec v0.1.3 macOS install-fix build.
 
 Artifact:
 
 ```text
-dist/ToRec-v0.1.2-macOS.zip
+dist/ToRec-v0.1.3-macOS.zip
+dist/ToRec-v0.1.3-macOS.dmg
 ```
 
 Do not create or publish the GitHub release from this checklist alone. GitHub tag and release draft require a separate explicit command.
@@ -18,7 +19,8 @@ Do not create or publish the GitHub release from this checklist alone. GitHub ta
 - [ ] `./scripts/build_macos.sh` passes.
 - [ ] `./scripts/package_macos.sh` passes.
 - [ ] `dist/ToRec.app` exists.
-- [ ] `dist/ToRec-v0.1.2-macOS.zip` exists.
+- [ ] `dist/ToRec-v0.1.3-macOS.zip` exists.
+- [ ] `dist/ToRec-v0.1.3-macOS.dmg` exists.
 - [ ] Package output shows expected app version.
 - [ ] Package output shows expected git commit hash.
 - [ ] `git status --short --branch` is clean before final tagging/release draft.
@@ -30,7 +32,8 @@ swift test --package-path apps/macos
 ./scripts/build_macos.sh
 ./scripts/package_macos.sh
 test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.2-macOS.zip
+test -f dist/ToRec-v0.1.3-macOS.zip
+test -f dist/ToRec-v0.1.3-macOS.dmg
 git status --short --branch
 ```
 
@@ -276,16 +279,19 @@ plutil -p metadata.json
 - [ ] No Telegram integration in v0.1.0.
 - [ ] No direct Telegram bot/API upload in v0.1.0; native macOS sharing is only a local OS handoff.
 - [ ] No waveform editor, destructive audio editing, or multi-clip timeline in v0.1.0.
-- [ ] No Windows client in v0.1.0.
-- [ ] No DMG, signing, or notarization unless added separately.
+- [ ] Windows client remains packaged separately.
+- [ ] DMG exists; Developer ID signing and notarization are still separate.
 - [ ] Global hotkey scope is limited to Show Window and screenshot capture; recording/library/diagnostics shortcuts are app-active only.
 - [ ] Auto-start browser heuristic can still have false positives/negatives.
 - [ ] Permission changes may require restarting the same app bundle.
 
 ## 9. Release Artifact
 
-- [ ] Final artifact path is `dist/ToRec-v0.1.2-macOS.zip`.
+- [ ] Final zip artifact path is `dist/ToRec-v0.1.3-macOS.zip`.
+- [ ] Final DMG artifact path is `dist/ToRec-v0.1.3-macOS.dmg`.
 - [ ] Zip contains `ToRec.app`.
+- [ ] Zip does not contain `INSTALL.md` or `RELEASE_NOTES.md`.
+- [ ] DMG contains `ToRec.app` and an `Applications` shortcut.
 - [ ] Zip opens on a clean local unpack.
 - [ ] App launches from unpacked artifact or `/Applications`.
 - [ ] Artifact is attached to draft GitHub release only after checks pass.
@@ -293,8 +299,9 @@ plutil -p metadata.json
 Artifact check:
 
 ```sh
-ls -lh dist/ToRec-v0.1.2-macOS.zip
-zipinfo -1 dist/ToRec-v0.1.2-macOS.zip | head
+ls -lh dist/ToRec-v0.1.3-macOS.zip dist/ToRec-v0.1.3-macOS.dmg
+zipinfo -1 dist/ToRec-v0.1.3-macOS.zip | head
+! zipinfo -1 dist/ToRec-v0.1.3-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
 ```
 
 ## 10. GitHub
@@ -302,27 +309,28 @@ zipinfo -1 dist/ToRec-v0.1.2-macOS.zip | head
 - [ ] Confirm target release commit.
 - [ ] Confirm branch status is clean.
 - [ ] Confirm no uncommitted artifacts are required.
-- [ ] Create tag `v0.1.2` only after release decision.
+- [ ] Create tag `v0.1.3` only after release decision.
 - [ ] Create GitHub release notes draft only after release decision.
 - [ ] Do not publish release without explicit command.
 - [ ] Release notes include what works, local-only behavior, install steps, permissions, known limitations, and next steps.
-- [ ] Attach `dist/ToRec-v0.1.2-macOS.zip` to draft release.
+- [ ] Attach `dist/ToRec-v0.1.3-macOS.zip` and `dist/ToRec-v0.1.3-macOS.dmg` to draft release.
 
 Suggested tag command after explicit approval:
 
 ```sh
-git tag v0.1.2
-git push origin v0.1.2
+git tag v0.1.3
+git push origin v0.1.3
 ```
 
 Suggested draft release command after explicit approval:
 
 ```sh
-gh release create v0.1.2 \
-  dist/ToRec-v0.1.2-macOS.zip \
+gh release create v0.1.3 \
+  dist/ToRec-v0.1.3-macOS.zip \
+  dist/ToRec-v0.1.3-macOS.dmg \
   --draft \
-  --title "ToRec v0.1.2 macOS audio-only MVP" \
-  --notes-file RELEASE_NOTES.md
+  --title "ToRec v0.1.3 macOS install-fix build" \
+  --notes-file docs/RELEASE_NOTES_V0_1_3.md
 ```
 
 ## Go/No-Go

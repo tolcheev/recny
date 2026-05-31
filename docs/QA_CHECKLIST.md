@@ -29,8 +29,10 @@ Use this checklist for manual macOS MVP validation. Prefer testing the installed
 
 ```sh
 test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.2-macOS.zip
-test -f dist/INSTALL.md
+test -f dist/ToRec-v0.1.3-macOS.zip
+test -f dist/ToRec-v0.1.3-macOS.dmg
+zipinfo -1 dist/ToRec-v0.1.3-macOS.zip | grep -Fx ToRec.app/
+! zipinfo -1 dist/ToRec-v0.1.3-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
 ```
 
 - [ ] Install passes:
