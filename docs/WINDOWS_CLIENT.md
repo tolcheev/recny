@@ -2,9 +2,11 @@
 
 ## Status
 
-Future design only. Windows support is not part of the macOS audio-only MVP.
+Active v0.2 beta scope.
 
-Do not add Windows code, packaging, CI, or dependencies in the MVP repo step.
+Windows is still outside the shipped macOS v0.1.2 MVP, but the repository now contains a separate experimental Windows client under `apps/windows`. Keep it isolated from the macOS Swift app.
+
+The first Windows beta is manual-recording-first. Auto-start for Zoom/Meet/KTalk is a later Windows milestone after basic audio capture is validated on real student machines.
 
 ## Goal
 
@@ -21,12 +23,18 @@ Provide a lightweight student-side recorder for Windows:
 
 - Lives in the Windows tray.
 - Can start/stop manually.
-- Can auto-start on likely calls.
 - Records microphone input.
 - Records system audio with WASAPI loopback.
 - Saves locally without internet.
 - Shows simple recording status.
 - Provides Diagnostics for support.
+
+Deferred:
+
+- Auto-start on likely calls.
+- Browser title/window heuristics.
+- Installer/MSIX.
+- Cloud upload or T-Orbit sync.
 
 ## Audio Architecture
 
@@ -63,12 +71,17 @@ Same conceptual model as macOS:
 
 ```text
 source/
+  mic.wav
+  system.wav
   mic.m4a
   system.m4a
 export/
+  mixed.wav
   mixed.m4a
 metadata.json
 ```
+
+In Windows v0.2, `.wav` is the reliable canonical recording format. `.m4a` is exported best-effort through Windows Media Foundation when available.
 
 Suggested root:
 
@@ -110,12 +123,17 @@ Avoid mentor/admin features in the student app.
 
 ## Stack Options
 
-Recommended first evaluation:
+Selected for v0.2 beta:
 
-- C#/.NET with WinUI or WPF for native Windows UX.
+- C#/.NET 8.
+- Windows Forms tray app.
+- NAudio for microphone and WASAPI loopback capture.
+
+Rejected for this step:
+
 - Rust/Tauri shell only if native audio integration stays clean and lightweight.
 
-Default recommendation: C#/.NET first because WASAPI, tray behavior, installer tooling, and Windows diagnostics are straightforward.
+C#/.NET is the default because WASAPI, tray behavior, diagnostics, and GitHub Actions Windows packaging are straightforward.
 
 ## Risks
 
