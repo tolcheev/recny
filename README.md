@@ -163,7 +163,7 @@ dist/ToRec-v0.1.4-macOS.zip
 dist/ToRec-v0.1.4-macOS.dmg
 ```
 
-The zip is app-only and contains just `ToRec.app`. The DMG contains `ToRec.app`, an `Applications` shortcut, and a visual arrow from the app to Applications so non-technical testers have one clear install action.
+The zip is app-only and contains just `ToRec.app`. The DMG contains `ToRec.app`, an `Applications` shortcut, a visual arrow from the app to Applications, and an `Open Privacy Settings` shortcut so non-technical testers have the install and Gatekeeper recovery steps in one place.
 
 The current package is an internal ad-hoc signed build. It is suitable for controlled testing on trusted Macs, but it is not a public notarized macOS release yet. For a frictionless external install, add Developer ID signing and Apple notarization.
 
@@ -177,7 +177,8 @@ For trusted internal testing:
 2. Drag `ToRec.app` into `Applications`.
 3. Open Finder -> Applications.
 4. Right-click `ToRec` -> Open.
-5. If macOS still blocks it, open System Settings -> Privacy & Security -> Security and click `Open Anyway` / `Все равно открыть`.
+5. If macOS still blocks it, double-click `Open Privacy Settings` in the DMG or open System Settings -> Privacy & Security -> Security manually.
+6. Click `Open Anyway` / `Все равно открыть`.
 
 ![macOS Gatekeeper Open Anyway](docs/assets/gatekeeper-open-anyway.png)
 
@@ -191,7 +192,7 @@ Install the packaged app into `/Applications` and open it:
 ./scripts/install_macos.sh
 ```
 
-The installer packages the app, asks a running ToRec (`TOrbitRecorder` executable) process to quit before replacement, copies the app bundle to `/Applications/ToRec.app`, opens it, and prints next steps.
+The installer packages the app, asks a running ToRec (`TOrbitRecorder` executable) process to quit before replacement, copies the app bundle to `/Applications/ToRec.app`, clears quarantine attributes for this local install path, opens it, and prints next steps.
 
 Dry-run the installer without copying or opening the app:
 

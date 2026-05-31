@@ -99,6 +99,7 @@ fi
 rm -rf "$INSTALL_APP"
 rm -rf "$LEGACY_INSTALL_APP"
 cp -R "$DIST_APP" "$INSTALL_APP"
+xattr -cr "$INSTALL_APP"
 open "$INSTALL_APP"
 
 echo "Installed: $INSTALL_APP"

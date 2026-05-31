@@ -291,7 +291,7 @@ plutil -p metadata.json
 - [ ] Final DMG artifact path is `dist/ToRec-v0.1.4-macOS.dmg`.
 - [ ] Zip contains `ToRec.app`.
 - [ ] Zip does not contain `INSTALL.md` or `RELEASE_NOTES.md`.
-- [ ] DMG contains `ToRec.app`, an `Applications` shortcut, and a visible arrow from app to Applications.
+- [ ] DMG contains `ToRec.app`, an `Applications` shortcut, an `Open Privacy Settings` shortcut, and visible install/Gatekeeper instructions.
 - [ ] `ToRec.app` has the play-triangle app icon.
 - [ ] Zip opens on a clean local unpack.
 - [ ] App launches from unpacked artifact or `/Applications`.

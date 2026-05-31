@@ -14,8 +14,12 @@ DIST_DMG="$DIST_DIR/$APP_NAME-$PACKAGE_VERSION-macOS.dmg"
 DIST_SHA256="$DIST_ZIP.sha256"
 DIST_DMG_SHA256="$DIST_DMG.sha256"
 DMG_ROOT="$DIST_DIR/dmg-root"
-DMG_BACKGROUND="$DIST_DIR/dmg-background.png"
+DMG_BACKGROUND="$DIST_DIR/dmg-background.tiff"
+DMG_BACKGROUND_PREFIX="$DIST_DIR/dmg-background"
+DMG_BACKGROUND_GENERATOR="$DIST_DIR/dmg-background-generator"
 DMG_RW="$DIST_DIR/$APP_NAME-$PACKAGE_VERSION-macOS-rw.dmg"
+PRIVACY_SETTINGS_NAME="Open Privacy Settings"
+PRIVACY_SETTINGS_TARGET="/System/Library/PreferencePanes/Security.prefPane"
 MOUNT_DIR=""
 
 cleanup_mount() {
@@ -43,7 +47,10 @@ rm -rf \
     "$DIST_DIR/$APP_NAME-macOS-MVP.zip" \
     "$DIST_DIR/$LEGACY_APP_NAME.app" \
     "$DMG_ROOT" \
-    "$DMG_BACKGROUND"
+    "$DMG_BACKGROUND" \
+    "$DMG_BACKGROUND_PREFIX"_1x.png \
+    "$DMG_BACKGROUND_PREFIX"_2x.png \
+    "$DMG_BACKGROUND_GENERATOR"
 
 cp -R "$BUILD_APP" "$DIST_APP"
 
@@ -55,7 +62,14 @@ cp -R "$BUILD_APP" "$DIST_APP"
 mkdir -p "$DMG_ROOT"
 cp -R "$DIST_APP" "$DMG_ROOT/$APP_NAME.app"
 ln -s /Applications "$DMG_ROOT/Applications"
-python3 "$ROOT_DIR/scripts/make_macos_assets.py" dmg-background "$DMG_BACKGROUND"
+ln -s "$PRIVACY_SETTINGS_TARGET" "$DMG_ROOT/$PRIVACY_SETTINGS_NAME"
+swiftc "$ROOT_DIR/scripts/dmg_background.swift" -o "$DMG_BACKGROUND_GENERATOR"
+"$DMG_BACKGROUND_GENERATOR" "$DMG_BACKGROUND_PREFIX" >/dev/null
+tiffutil \
+    -cathidpicheck \
+    "$DMG_BACKGROUND_PREFIX"_1x.png \
+    "$DMG_BACKGROUND_PREFIX"_2x.png \
+    -out "$DMG_BACKGROUND" >/dev/null
 hdiutil create \
     -volname "$DMG_VOLUME_NAME" \
     -srcfolder "$DMG_ROOT" \
@@ -71,11 +85,11 @@ if [[ -z "$MOUNT_DIR" || ! -d "$MOUNT_DIR" ]]; then
     exit 1
 fi
 mkdir -p "$MOUNT_DIR/.background"
-cp "$DMG_BACKGROUND" "$MOUNT_DIR/.background/background.png"
+cp "$DMG_BACKGROUND" "$MOUNT_DIR/.background/background.tiff"
 
 /usr/bin/osascript <<APPLESCRIPT
 set volumeAlias to POSIX file "$MOUNT_DIR" as alias
-set backgroundAlias to POSIX file "$MOUNT_DIR/.background/background.png" as alias
+set backgroundAlias to POSIX file "$MOUNT_DIR/.background/background.tiff" as alias
 
 tell application "Finder"
     open volumeAlias
@@ -83,13 +97,14 @@ tell application "Finder"
     set current view of containerWindow to icon view
     set toolbar visible of containerWindow to false
     set statusbar visible of containerWindow to false
-    set bounds of containerWindow to {120, 120, 760, 480}
+    set bounds of containerWindow to {100, 100, 760, 664}
     set viewOptions to icon view options of containerWindow
     set arrangement of viewOptions to not arranged
     set icon size of viewOptions to 96
     set background picture of viewOptions to backgroundAlias
-    set position of item "$APP_NAME.app" of volumeAlias to {185, 170}
-    set position of item "Applications" of volumeAlias to {455, 170}
+    set position of item "$APP_NAME.app" of volumeAlias to {175, 108}
+    set position of item "Applications" of volumeAlias to {485, 108}
+    set position of item "$PRIVACY_SETTINGS_NAME" of volumeAlias to {330, 368}
     update volumeAlias without registering applications
     delay 3
     close containerWindow

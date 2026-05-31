@@ -33,6 +33,8 @@ test -f dist/ToRec-v0.1.4-macOS.zip
 test -f dist/ToRec-v0.1.4-macOS.dmg
 zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -Fx ToRec.app/
 ! zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+hdiutil attach -readonly dist/ToRec-v0.1.4-macOS.dmg
+# DMG should show ToRec.app, Applications, Open Privacy Settings, and install/Gatekeeper instructions.
 ```
 
 - [ ] Install passes:
