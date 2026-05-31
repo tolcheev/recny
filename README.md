@@ -167,6 +167,22 @@ The zip is app-only and contains just `ToRec.app`. The DMG contains `ToRec.app`,
 
 The current package is an internal ad-hoc signed build. It is suitable for controlled testing on trusted Macs, but it is not a public notarized macOS release yet. For a frictionless external install, add Developer ID signing and Apple notarization.
 
+### Gatekeeper on Test Builds
+
+macOS can block the first launch with a message that Apple cannot verify `ToRec`. This cannot be silently bypassed for testers while the app is ad-hoc signed and not notarized. The proper product fix is Apple Developer ID signing plus notarization.
+
+For trusted internal testing:
+
+1. Open `ToRec-v0.1.4-macOS.dmg`.
+2. Drag `ToRec.app` into `Applications`.
+3. Open Finder -> Applications.
+4. Right-click `ToRec` -> Open.
+5. If macOS still blocks it, open System Settings -> Privacy & Security -> Security and click `Open Anyway` / `Все равно открыть`.
+
+![macOS Gatekeeper Open Anyway](docs/assets/gatekeeper-open-anyway.png)
+
+Do not ask testers to disable Gatekeeper globally. The terminal workaround `xattr -dr com.apple.quarantine /Applications/ToRec.app` exists, but it is not the recommended student install path.
+
 ## Install
 
 Install the packaged app into `/Applications` and open it:

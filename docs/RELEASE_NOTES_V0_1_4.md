@@ -21,6 +21,14 @@ Use the DMG:
 
 ## Gatekeeper Note
 
-This build is still ad-hoc signed and not notarized with Apple Developer ID. A normal double-click can show a scary Gatekeeper dialog. The expected workaround for trusted internal testing is Finder -> Applications -> right-click `ToRec` -> Open.
+This build is still ad-hoc signed and not notarized with Apple Developer ID. A normal double-click can show a scary Gatekeeper dialog.
+
+This cannot be silently bypassed for other people's Macs in the test build. The proper product fix is Developer ID signing plus Apple notarization. Until then, use the explicit trusted-testing path:
+
+1. Finder -> Applications -> right-click `ToRec` -> Open.
+2. If macOS still blocks it, open System Settings -> Privacy & Security -> Security.
+3. Click `Open Anyway` / `Все равно открыть` for `ToRec`.
+
+![macOS Gatekeeper Open Anyway](assets/gatekeeper-open-anyway.png)
 
 The real long-term fix is Developer ID signing and Apple notarization.
