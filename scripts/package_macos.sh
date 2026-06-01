@@ -18,10 +18,7 @@ DMG_BACKGROUND="$DIST_DIR/dmg-background.tiff"
 DMG_BACKGROUND_PREFIX="$DIST_DIR/dmg-background"
 DMG_BACKGROUND_GENERATOR="$DIST_DIR/dmg-background-generator"
 DMG_RW="$DIST_DIR/$APP_NAME-$PACKAGE_VERSION-macOS-rw.dmg"
-INSTALL_COMMAND_NAME="Install ToRec.command"
-INSTALL_COMMAND_SOURCE="$ROOT_DIR/scripts/install_from_dmg.command"
-PRIVACY_SETTINGS_NAME="Open Privacy Settings"
-PRIVACY_SETTINGS_TARGET="/System/Library/PreferencePanes/Security.prefPane"
+DMG_MOUNT="$DIST_DIR/dmg-mount"
 MOUNT_DIR=""
 
 cleanup_mount() {
@@ -49,6 +46,7 @@ rm -rf \
     "$DIST_DIR/$APP_NAME-macOS-MVP.zip" \
     "$DIST_DIR/$LEGACY_APP_NAME.app" \
     "$DMG_ROOT" \
+    "$DMG_MOUNT" \
     "$DMG_BACKGROUND" \
     "$DMG_BACKGROUND_PREFIX"_1x.png \
     "$DMG_BACKGROUND_PREFIX"_2x.png \
@@ -63,10 +61,7 @@ cp -R "$BUILD_APP" "$DIST_APP"
 
 mkdir -p "$DMG_ROOT"
 cp -R "$DIST_APP" "$DMG_ROOT/$APP_NAME.app"
-cp "$INSTALL_COMMAND_SOURCE" "$DMG_ROOT/$INSTALL_COMMAND_NAME"
-chmod +x "$DMG_ROOT/$INSTALL_COMMAND_NAME"
 ln -s /Applications "$DMG_ROOT/Applications"
-ln -s "$PRIVACY_SETTINGS_TARGET" "$DMG_ROOT/$PRIVACY_SETTINGS_NAME"
 swiftc "$ROOT_DIR/scripts/dmg_background.swift" -o "$DMG_BACKGROUND_GENERATOR"
 "$DMG_BACKGROUND_GENERATOR" "$DMG_BACKGROUND_PREFIX" >/dev/null
 tiffutil \
@@ -81,9 +76,10 @@ hdiutil create \
     -format UDRW \
     "$DMG_RW" >/dev/null
 
-ATTACH_OUTPUT="$(hdiutil attach -readwrite -noverify -noautoopen "$DMG_RW")"
-MOUNT_DIR="$(printf '%s\n' "$ATTACH_OUTPUT" | awk '/\/Volumes\// {print substr($0, index($0, "/Volumes/")); exit}')"
-if [[ -z "$MOUNT_DIR" || ! -d "$MOUNT_DIR" ]]; then
+mkdir -p "$DMG_MOUNT"
+MOUNT_DIR="$DMG_MOUNT"
+ATTACH_OUTPUT="$(hdiutil attach -readwrite -noverify -noautoopen -mountpoint "$MOUNT_DIR" "$DMG_RW")"
+if [[ ! -d "$MOUNT_DIR" ]]; then
     echo "Failed to mount DMG for Finder layout" >&2
     printf '%s\n' "$ATTACH_OUTPUT" >&2
     exit 1
@@ -97,6 +93,7 @@ set backgroundAlias to POSIX file "$MOUNT_DIR/.background/background.tiff" as al
 
 tell application "Finder"
     open volumeAlias
+    delay 1
     set containerWindow to container window of volumeAlias
     set current view of containerWindow to icon view
     set toolbar visible of containerWindow to false
@@ -108,18 +105,27 @@ tell application "Finder"
     set background picture of viewOptions to backgroundAlias
     set position of item "$APP_NAME.app" of volumeAlias to {175, 108}
     set position of item "Applications" of volumeAlias to {485, 108}
-    set position of item "$INSTALL_COMMAND_NAME" of volumeAlias to {330, 258}
-    set position of item "$PRIVACY_SETTINGS_NAME" of volumeAlias to {330, 410}
-    update volumeAlias without registering applications
-    delay 3
     close containerWindow
+    delay 1
 end tell
 APPLESCRIPT
+
+for _ in {1..10}; do
+    if [[ -f "$MOUNT_DIR/.DS_Store" ]]; then
+        break
+    fi
+    sleep 1
+done
+if [[ ! -f "$MOUNT_DIR/.DS_Store" ]]; then
+    echo "Finder did not persist the DMG .DS_Store layout" >&2
+    exit 1
+fi
 
 rm -rf "$MOUNT_DIR/.fseventsd" "$MOUNT_DIR/.Trashes"
 sync
 hdiutil detach "$MOUNT_DIR" >/dev/null
 MOUNT_DIR=""
+rmdir "$DMG_MOUNT" 2>/dev/null || true
 
 hdiutil convert "$DMG_RW" -format UDZO -o "$DIST_DMG" >/dev/null
 rm -f "$DMG_RW"

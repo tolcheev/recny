@@ -102,7 +102,7 @@ func render(scale: Int) -> NSBitmapImageRep {
 
     badge("1", centerX: 46, centerY: 498)
     NSAttributedString(
-        string: "Recommended: double-click \"Install ToRec\"",
+        string: "Drag ToRec to Applications",
         attributes: [
             .font: NSFont.systemFont(ofSize: 13, weight: .bold),
             .foregroundColor: dark(0.82),
@@ -110,7 +110,7 @@ func render(scale: Int) -> NSBitmapImageRep {
         ]
     ).draw(in: CGRect(x: 70, y: 490, width: 460, height: 18))
     NSAttributedString(
-        string: "Рекомендуется: дважды кликни «Install ToRec»",
+        string: "Перетащи ToRec в Программы",
         attributes: [
             .font: NSFont.systemFont(ofSize: 11, weight: .medium),
             .foregroundColor: dark(0.55),
@@ -143,29 +143,29 @@ func render(scale: Int) -> NSBitmapImageRep {
         context.setLineDash(phase: 0, lengths: [])
     }
 
-    divider(y: 338)
+    divider(y: 300)
 
-    badge("2", centerX: 46, centerY: 320)
+    badge("2", centerX: 46, centerY: 272)
     NSAttributedString(
-        string: "Manual fallback: drag ToRec to Applications",
+        string: "First launch: Finder -> Applications -> right-click ToRec -> Open",
         attributes: [
             .font: NSFont.systemFont(ofSize: 13, weight: .bold),
             .foregroundColor: dark(0.82),
             .paragraphStyle: paragraph()
         ]
-    ).draw(in: CGRect(x: 70, y: 312, width: 540, height: 18))
+    ).draw(in: CGRect(x: 70, y: 264, width: 560, height: 18))
     NSAttributedString(
-        string: "Запасной вариант: перетащи ToRec в Программы",
+        string: "Первый запуск: Finder -> Программы -> правый клик ToRec -> Открыть",
         attributes: [
             .font: NSFont.systemFont(ofSize: 11, weight: .medium),
             .foregroundColor: dark(0.55),
             .paragraphStyle: paragraph()
         ]
-    ).draw(in: CGRect(x: 70, y: 295, width: 540, height: 16))
+    ).draw(in: CGRect(x: 70, y: 247, width: 560, height: 16))
 
-    divider(y: 250)
+    divider(y: 214)
 
-    badge("3", centerX: 46, centerY: 232)
+    badge("3", centerX: 46, centerY: 186)
     NSAttributedString(
         string: "If macOS blocks launch, click \"Done\"",
         attributes: [
@@ -173,7 +173,7 @@ func render(scale: Int) -> NSBitmapImageRep {
             .foregroundColor: dark(0.82),
             .paragraphStyle: paragraph()
         ]
-    ).draw(in: CGRect(x: 70, y: 224, width: 540, height: 18))
+    ).draw(in: CGRect(x: 70, y: 178, width: 540, height: 18))
     NSAttributedString(
         string: "Если macOS заблокирует запуск, нажми «Готово»",
         attributes: [
@@ -181,11 +181,11 @@ func render(scale: Int) -> NSBitmapImageRep {
             .foregroundColor: dark(0.55),
             .paragraphStyle: paragraph()
         ]
-    ).draw(in: CGRect(x: 70, y: 207, width: 540, height: 16))
+    ).draw(in: CGRect(x: 70, y: 161, width: 540, height: 16))
 
-    divider(y: 80)
+    divider(y: 128)
 
-    badge("4", centerX: 46, centerY: 62)
+    badge("4", centerX: 46, centerY: 100)
     let englishStep4 = NSMutableAttributedString(
         string: "Scroll to Security -> click ",
         attributes: [
@@ -202,7 +202,7 @@ func render(scale: Int) -> NSBitmapImageRep {
             .paragraphStyle: paragraph()
         ]
     ))
-    englishStep4.draw(in: CGRect(x: 70, y: 54, width: 540, height: 18))
+    englishStep4.draw(in: CGRect(x: 70, y: 92, width: 540, height: 18))
 
     let russianStep4 = NSMutableAttributedString(
         string: "Прокрути до «Безопасность» -> нажми ",
@@ -220,16 +220,16 @@ func render(scale: Int) -> NSBitmapImageRep {
             .paragraphStyle: paragraph()
         ]
     ))
-    russianStep4.draw(in: CGRect(x: 70, y: 37, width: 540, height: 16))
+    russianStep4.draw(in: CGRect(x: 70, y: 75, width: 540, height: 16))
 
     NSAttributedString(
-        string: "One-time only  ·  Только один раз",
+        string: "One-time Gatekeeper step for the free unsigned test build  ·  Только один раз",
         attributes: [
             .font: NSFont.systemFont(ofSize: 9),
             .foregroundColor: dark(0.25),
             .paragraphStyle: paragraph()
         ]
-    ).draw(in: CGRect(x: 70, y: 14, width: 300, height: 12))
+    ).draw(in: CGRect(x: 70, y: 46, width: 420, height: 12))
 
     return bitmap
 }

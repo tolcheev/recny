@@ -163,7 +163,7 @@ dist/ToRec-v0.1.4-macOS.zip
 dist/ToRec-v0.1.4-macOS.dmg
 ```
 
-The zip is app-only and contains just `ToRec.app`. The DMG contains `ToRec.app`, an `Applications` shortcut, a visual arrow from the app to Applications, `Install ToRec.command`, and an `Open Privacy Settings` shortcut so non-technical testers have the install and Gatekeeper recovery steps in one place.
+The zip is app-only and contains just `ToRec.app`. The DMG contains only `ToRec.app`, an `Applications` shortcut, a visual arrow from the app to Applications, and visible Gatekeeper recovery steps. It intentionally does not include an installer shell script because macOS Gatekeeper can block downloaded `.command` files before they run.
 
 The current package is an internal ad-hoc signed build. It is suitable for controlled testing on trusted Macs, but it is not a public notarized macOS release yet. For a frictionless external install, add Developer ID signing and Apple notarization.
 
@@ -171,27 +171,20 @@ The current package is an internal ad-hoc signed build. It is suitable for contr
 
 macOS can block the first launch with a message that Apple cannot verify `ToRec`. This cannot be silently bypassed for testers while the app is ad-hoc signed and not notarized. The proper product fix is Apple Developer ID signing plus notarization.
 
-The best free testing path is the DMG installer helper. It is not notarization and it does not disable Gatekeeper globally. It copies the app into `/Applications`, clears the downloaded-app quarantine attribute from that local copy, opens the installed app, and leaves a visible Privacy & Security fallback in the same DMG.
+The best free testing path is the standard unsigned-app flow: drag the app into `/Applications`, open it through Finder with right-click -> Open, and use Privacy & Security -> Open Anyway only if macOS still blocks it. This is not as smooth as Developer ID notarization, but it avoids giving testers a downloaded shell script that Gatekeeper can block independently.
 
 For trusted internal testing:
 
 1. Open `ToRec-v0.1.4-macOS.dmg`.
-2. Double-click `Install ToRec.command`.
-3. If macOS asks whether Terminal may run it, allow it.
-4. If macOS still blocks `ToRec`, click `Done`.
-5. Double-click `Open Privacy Settings` in the DMG or open System Settings -> Privacy & Security -> Security manually.
+2. Drag `ToRec.app` into `Applications`.
+3. Open Finder -> Applications.
+4. Right-click `ToRec` -> Open.
+5. If macOS still blocks `ToRec`, click `Done`, then open System Settings -> Privacy & Security -> Security.
 6. Click `Open Anyway` / `Все равно открыть`.
-
-Manual fallback:
-
-1. Drag `ToRec.app` into `Applications`.
-2. Open Finder -> Applications.
-3. Right-click `ToRec` -> Open.
-4. If macOS still blocks it, use `Open Privacy Settings` from the DMG and click `Open Anyway` / `Все равно открыть`.
 
 ![macOS Gatekeeper Open Anyway](docs/assets/gatekeeper-open-anyway.png)
 
-Do not ask testers to disable Gatekeeper globally. The terminal workaround `xattr -dr com.apple.quarantine /Applications/ToRec.app` exists, but the recommended student install path is the DMG helper.
+Do not ask testers to disable Gatekeeper globally. The terminal workaround `xattr -dr com.apple.quarantine /Applications/ToRec.app` exists, but it is not the recommended student install path.
 
 ## Install
 
