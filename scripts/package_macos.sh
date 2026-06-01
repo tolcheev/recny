@@ -18,12 +18,15 @@ DMG_BACKGROUND="$DIST_DIR/dmg-background.tiff"
 DMG_BACKGROUND_PREFIX="$DIST_DIR/dmg-background"
 DMG_BACKGROUND_GENERATOR="$DIST_DIR/dmg-background-generator"
 DMG_RW="$DIST_DIR/$APP_NAME-$PACKAGE_VERSION-macOS-rw.dmg"
-DMG_MOUNT="$DIST_DIR/dmg-mount"
+DMG_MOUNT=""
 MOUNT_DIR=""
 
 cleanup_mount() {
     if [[ -n "$MOUNT_DIR" && -d "$MOUNT_DIR" ]]; then
         hdiutil detach "$MOUNT_DIR" >/dev/null 2>&1 || true
+    fi
+    if [[ -n "$DMG_MOUNT" && -d "$DMG_MOUNT" ]]; then
+        rmdir "$DMG_MOUNT" >/dev/null 2>&1 || true
     fi
 }
 
@@ -46,7 +49,6 @@ rm -rf \
     "$DIST_DIR/$APP_NAME-macOS-MVP.zip" \
     "$DIST_DIR/$LEGACY_APP_NAME.app" \
     "$DMG_ROOT" \
-    "$DMG_MOUNT" \
     "$DMG_BACKGROUND" \
     "$DMG_BACKGROUND_PREFIX"_1x.png \
     "$DMG_BACKGROUND_PREFIX"_2x.png \
@@ -76,7 +78,11 @@ hdiutil create \
     -format UDRW \
     "$DMG_RW" >/dev/null
 
-mkdir -p "$DMG_MOUNT"
+if [[ -d "/Volumes/$DMG_VOLUME_NAME" ]]; then
+    hdiutil detach "/Volumes/$DMG_VOLUME_NAME" >/dev/null 2>&1 || true
+fi
+
+DMG_MOUNT="$(mktemp -d /tmp/torec-dmg-mount.XXXXXX)"
 MOUNT_DIR="$DMG_MOUNT"
 ATTACH_OUTPUT="$(hdiutil attach -readwrite -noverify -noautoopen -mountpoint "$MOUNT_DIR" "$DMG_RW")"
 if [[ ! -d "$MOUNT_DIR" ]]; then
@@ -105,10 +111,18 @@ tell application "Finder"
     set background picture of viewOptions to backgroundAlias
     set position of item "$APP_NAME.app" of volumeAlias to {175, 108}
     set position of item "Applications" of volumeAlias to {485, 108}
+    try
+        set position of item ".background" of volumeAlias to {900, 900}
+    end try
     close containerWindow
     delay 1
 end tell
 APPLESCRIPT
+
+chflags hidden "$MOUNT_DIR/.background" "$MOUNT_DIR/.background/background.tiff" 2>/dev/null || true
+if [[ -x /usr/bin/SetFile ]]; then
+    /usr/bin/SetFile -a V "$MOUNT_DIR/.background" "$MOUNT_DIR/.background/background.tiff" 2>/dev/null || true
+fi
 
 for _ in {1..10}; do
     if [[ -f "$MOUNT_DIR/.DS_Store" ]]; then
@@ -126,6 +140,7 @@ sync
 hdiutil detach "$MOUNT_DIR" >/dev/null
 MOUNT_DIR=""
 rmdir "$DMG_MOUNT" 2>/dev/null || true
+DMG_MOUNT=""
 
 hdiutil convert "$DMG_RW" -format UDZO -o "$DIST_DMG" >/dev/null
 rm -f "$DMG_RW"

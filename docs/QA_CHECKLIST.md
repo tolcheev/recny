@@ -50,6 +50,7 @@ TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
 hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.4-macOS.dmg
 test -d "$TMP_MOUNT/ToRec.app"
 test -L "$TMP_MOUNT/Applications"
+ls -ldO "$TMP_MOUNT/.background" | grep hidden
 test ! -e "$TMP_MOUNT/Install ToRec.command"
 test ! -e "$TMP_MOUNT/Open Privacy Settings"
 hdiutil detach "$TMP_MOUNT"
