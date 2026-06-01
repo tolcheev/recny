@@ -34,13 +34,24 @@ test -f dist/ToRec-v0.1.4-macOS.dmg
 zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -Fx ToRec.app/
 ! zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
 hdiutil attach -readonly dist/ToRec-v0.1.4-macOS.dmg
-# DMG should show ToRec.app, Applications, Open Privacy Settings, and install/Gatekeeper instructions.
+# DMG should show ToRec.app, Applications, Install ToRec.command,
+# Open Privacy Settings, and install/Gatekeeper instructions.
 ```
 
 - [ ] Install passes:
 
 ```sh
 ./scripts/install_macos.sh
+```
+
+- [ ] DMG install helper is present and executable:
+
+```sh
+TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
+hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.4-macOS.dmg
+test -x "$TMP_MOUNT/Install ToRec.command"
+hdiutil detach "$TMP_MOUNT"
+rmdir "$TMP_MOUNT"
 ```
 
 - [ ] App opens from `/Applications`:

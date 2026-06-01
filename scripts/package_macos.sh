@@ -18,6 +18,8 @@ DMG_BACKGROUND="$DIST_DIR/dmg-background.tiff"
 DMG_BACKGROUND_PREFIX="$DIST_DIR/dmg-background"
 DMG_BACKGROUND_GENERATOR="$DIST_DIR/dmg-background-generator"
 DMG_RW="$DIST_DIR/$APP_NAME-$PACKAGE_VERSION-macOS-rw.dmg"
+INSTALL_COMMAND_NAME="Install ToRec.command"
+INSTALL_COMMAND_SOURCE="$ROOT_DIR/scripts/install_from_dmg.command"
 PRIVACY_SETTINGS_NAME="Open Privacy Settings"
 PRIVACY_SETTINGS_TARGET="/System/Library/PreferencePanes/Security.prefPane"
 MOUNT_DIR=""
@@ -61,6 +63,8 @@ cp -R "$BUILD_APP" "$DIST_APP"
 
 mkdir -p "$DMG_ROOT"
 cp -R "$DIST_APP" "$DMG_ROOT/$APP_NAME.app"
+cp "$INSTALL_COMMAND_SOURCE" "$DMG_ROOT/$INSTALL_COMMAND_NAME"
+chmod +x "$DMG_ROOT/$INSTALL_COMMAND_NAME"
 ln -s /Applications "$DMG_ROOT/Applications"
 ln -s "$PRIVACY_SETTINGS_TARGET" "$DMG_ROOT/$PRIVACY_SETTINGS_NAME"
 swiftc "$ROOT_DIR/scripts/dmg_background.swift" -o "$DMG_BACKGROUND_GENERATOR"
@@ -104,7 +108,8 @@ tell application "Finder"
     set background picture of viewOptions to backgroundAlias
     set position of item "$APP_NAME.app" of volumeAlias to {175, 108}
     set position of item "Applications" of volumeAlias to {485, 108}
-    set position of item "$PRIVACY_SETTINGS_NAME" of volumeAlias to {330, 368}
+    set position of item "$INSTALL_COMMAND_NAME" of volumeAlias to {330, 258}
+    set position of item "$PRIVACY_SETTINGS_NAME" of volumeAlias to {330, 410}
     update volumeAlias without registering applications
     delay 3
     close containerWindow

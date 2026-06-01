@@ -291,7 +291,7 @@ plutil -p metadata.json
 - [ ] Final DMG artifact path is `dist/ToRec-v0.1.4-macOS.dmg`.
 - [ ] Zip contains `ToRec.app`.
 - [ ] Zip does not contain `INSTALL.md` or `RELEASE_NOTES.md`.
-- [ ] DMG contains `ToRec.app`, an `Applications` shortcut, an `Open Privacy Settings` shortcut, and visible install/Gatekeeper instructions.
+- [ ] DMG contains `ToRec.app`, an `Applications` shortcut, `Install ToRec.command`, an `Open Privacy Settings` shortcut, and visible install/Gatekeeper instructions.
 - [ ] `ToRec.app` has the play-triangle app icon.
 - [ ] Zip opens on a clean local unpack.
 - [ ] App launches from unpacked artifact or `/Applications`.
@@ -303,6 +303,14 @@ Artifact check:
 ls -lh dist/ToRec-v0.1.4-macOS.zip dist/ToRec-v0.1.4-macOS.dmg
 zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | head
 ! zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
+hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.4-macOS.dmg
+test -d "$TMP_MOUNT/ToRec.app"
+test -L "$TMP_MOUNT/Applications"
+test -x "$TMP_MOUNT/Install ToRec.command"
+test -L "$TMP_MOUNT/Open Privacy Settings"
+hdiutil detach "$TMP_MOUNT"
+rmdir "$TMP_MOUNT"
 ```
 
 ## 10. GitHub

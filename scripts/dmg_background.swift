@@ -102,7 +102,7 @@ func render(scale: Int) -> NSBitmapImageRep {
 
     badge("1", centerX: 46, centerY: 498)
     NSAttributedString(
-        string: "Drag ToRec to Applications",
+        string: "Recommended: double-click \"Install ToRec\"",
         attributes: [
             .font: NSFont.systemFont(ofSize: 13, weight: .bold),
             .foregroundColor: dark(0.82),
@@ -110,7 +110,7 @@ func render(scale: Int) -> NSBitmapImageRep {
         ]
     ).draw(in: CGRect(x: 70, y: 490, width: 460, height: 18))
     NSAttributedString(
-        string: "Перетащи ToRec в Программы",
+        string: "Рекомендуется: дважды кликни «Install ToRec»",
         attributes: [
             .font: NSFont.systemFont(ofSize: 11, weight: .medium),
             .foregroundColor: dark(0.55),
@@ -147,7 +147,7 @@ func render(scale: Int) -> NSBitmapImageRep {
 
     badge("2", centerX: 46, centerY: 320)
     NSAttributedString(
-        string: "Open ToRec — if blocked, click \"Done\"",
+        string: "Manual fallback: drag ToRec to Applications",
         attributes: [
             .font: NSFont.systemFont(ofSize: 13, weight: .bold),
             .foregroundColor: dark(0.82),
@@ -155,7 +155,7 @@ func render(scale: Int) -> NSBitmapImageRep {
         ]
     ).draw(in: CGRect(x: 70, y: 312, width: 540, height: 18))
     NSAttributedString(
-        string: "Открой ToRec — если заблокировано, нажми «Готово»",
+        string: "Запасной вариант: перетащи ToRec в Программы",
         attributes: [
             .font: NSFont.systemFont(ofSize: 11, weight: .medium),
             .foregroundColor: dark(0.55),
@@ -167,7 +167,7 @@ func render(scale: Int) -> NSBitmapImageRep {
 
     badge("3", centerX: 46, centerY: 232)
     NSAttributedString(
-        string: "Double-click \"Open Privacy Settings\"",
+        string: "If macOS blocks launch, click \"Done\"",
         attributes: [
             .font: NSFont.systemFont(ofSize: 13, weight: .bold),
             .foregroundColor: dark(0.82),
@@ -175,7 +175,7 @@ func render(scale: Int) -> NSBitmapImageRep {
         ]
     ).draw(in: CGRect(x: 70, y: 224, width: 540, height: 18))
     NSAttributedString(
-        string: "Дважды кликни «Open Privacy Settings»",
+        string: "Если macOS заблокирует запуск, нажми «Готово»",
         attributes: [
             .font: NSFont.systemFont(ofSize: 11, weight: .medium),
             .foregroundColor: dark(0.55),
