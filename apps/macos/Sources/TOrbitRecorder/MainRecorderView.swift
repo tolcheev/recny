@@ -7,6 +7,11 @@ struct MainRecorderView: View {
     @State private var isCapturingScreenshot = false
     @State private var screenshotMessage: String?
     @State private var screenshotError: String?
+    @State private var updateReminderState = AppUpdateReminderStore.load()
+    @State private var availableUpdateRelease: AppUpdateRelease?
+    @State private var updateMessage: String?
+    @State private var updateError: String?
+    @State private var isCheckingForUpdates = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -17,6 +22,7 @@ struct MainRecorderView: View {
             RecordingStatusCard(appState: appState)
             screenshotFeedback
             footerActions
+            updateFooter
         }
         .padding(18)
         .frame(
@@ -29,6 +35,7 @@ struct MainRecorderView: View {
         .onAppear {
             appState.refreshMicrophoneDevices()
             appState.refreshPermissionSnapshot()
+            runAutomaticUpdateCheckIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             appState.refreshPermissionSnapshot()
@@ -127,6 +134,117 @@ struct MainRecorderView: View {
         .padding(.top, 2)
     }
 
+    private var updateFooter: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            if let availableUpdateRelease,
+               appState.status != .recording {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        updateAvailableLabel(availableUpdateRelease)
+                        Spacer(minLength: 8)
+                        updateActionButtons(availableUpdateRelease)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        updateAvailableLabel(availableUpdateRelease)
+                        updateActionButtons(availableUpdateRelease)
+                    }
+                }
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        Text("ToRec \(BuildInfo.appVersion)")
+                            .foregroundStyle(.secondary)
+                        if let updateMessage {
+                            Text("· \(updateMessage)")
+                                .foregroundStyle(.secondary)
+                        }
+                        if let updateError {
+                            Text("· \(updateError)")
+                                .foregroundStyle(.red)
+                        }
+                        Spacer(minLength: 8)
+                        bugReportButton
+                        checkUpdatesButton
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Text("ToRec \(BuildInfo.appVersion)")
+                                .foregroundStyle(.secondary)
+                            if let updateMessage {
+                                Text("· \(updateMessage)")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        if let updateError {
+                            Text(updateError)
+                                .foregroundStyle(.red)
+                        }
+                        HStack(spacing: 8) {
+                            bugReportButton
+                            checkUpdatesButton
+                        }
+                    }
+                }
+                .font(.caption)
+            }
+        }
+    }
+
+    private func updateAvailableLabel(_ release: AppUpdateRelease) -> some View {
+        Label("Update available: \(release.displayVersion)", systemImage: "arrow.down.circle.fill")
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.blue)
+            .textSelection(.enabled)
+    }
+
+    private func updateActionButtons(_ release: AppUpdateRelease) -> some View {
+        HStack(spacing: 8) {
+            Button("Download") {
+                NSWorkspace.shared.open(release.downloadURL)
+            }
+
+            Button("Later") {
+                AppUpdateReminderPolicy.remindLater(
+                    state: &updateReminderState,
+                    release: release,
+                    now: Date()
+                )
+                AppUpdateReminderStore.save(updateReminderState)
+                availableUpdateRelease = nil
+                updateMessage = "Will remind later."
+                updateError = nil
+            }
+
+            Button("Skip") {
+                AppUpdateReminderPolicy.skip(state: &updateReminderState, release: release)
+                AppUpdateReminderStore.save(updateReminderState)
+                availableUpdateRelease = nil
+                updateMessage = "Skipped \(release.displayVersion)."
+                updateError = nil
+            }
+        }
+        .font(.caption)
+    }
+
+    private var checkUpdatesButton: some View {
+        Button(isCheckingForUpdates ? "Checking..." : "Check for Updates") {
+            runManualUpdateCheck()
+        }
+        .buttonStyle(.link)
+        .disabled(isCheckingForUpdates || appState.status == .recording)
+    }
+
+    private var bugReportButton: some View {
+        Button("Report Bug") {
+            openBugReport()
+        }
+        .buttonStyle(.link)
+    }
+
     @ViewBuilder
     private var screenshotFeedback: some View {
         if let screenshotError {
@@ -220,5 +338,86 @@ struct MainRecorderView: View {
                 }
             }
         }
+    }
+
+    private func runAutomaticUpdateCheckIfNeeded() {
+        let now = Date()
+        guard AppUpdateReminderPolicy.shouldRunAutomaticCheck(
+            now: now,
+            state: updateReminderState,
+            isRecording: appState.status == .recording
+        ) else {
+            return
+        }
+
+        AppUpdateReminderPolicy.markAutomaticCheck(state: &updateReminderState, now: now)
+        AppUpdateReminderStore.save(updateReminderState)
+        runUpdateCheck(isAutomatic: true)
+    }
+
+    private func runManualUpdateCheck() {
+        runUpdateCheck(isAutomatic: false)
+    }
+
+    private func runUpdateCheck(isAutomatic: Bool) {
+        guard !isCheckingForUpdates,
+              appState.status != .recording
+        else {
+            return
+        }
+
+        isCheckingForUpdates = true
+        if !isAutomatic {
+            updateMessage = "Checking latest release..."
+            updateError = nil
+        }
+
+        Task {
+            do {
+                let result = try await AppUpdateChecker().check(
+                    platform: .macOS,
+                    currentVersion: BuildInfo.appVersion
+                )
+                let shouldSurface = AppUpdateReminderPolicy.shouldSurfaceUpdate(
+                    result: result,
+                    state: updateReminderState,
+                    now: Date(),
+                    isRecording: appState.status == .recording
+                )
+
+                await MainActor.run {
+                    isCheckingForUpdates = false
+                    updateError = nil
+                    if shouldSurface {
+                        availableUpdateRelease = result.latestRelease
+                        updateMessage = nil
+                    } else if !isAutomatic {
+                        availableUpdateRelease = nil
+                        updateMessage = result.displayText
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isCheckingForUpdates = false
+                    if !isAutomatic {
+                        availableUpdateRelease = nil
+                        updateMessage = nil
+                        updateError = "Could not check updates: \(String(describing: error))"
+                    }
+                    AppLogger.file(.error, category: "app", "main update check failed automatic=\(isAutomatic) error=\(String(describing: error))")
+                }
+            }
+        }
+    }
+
+    private func openBugReport() {
+        guard let url = AppSupportLinks.bugReportURL(
+            version: BuildInfo.appVersion,
+            platform: .macOS
+        ) else {
+            return
+        }
+
+        NSWorkspace.shared.open(url)
     }
 }

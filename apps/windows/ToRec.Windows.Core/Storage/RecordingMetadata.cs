@@ -14,7 +14,7 @@ public sealed class RecordingMetadata
     public string Platform { get; set; } = "windows";
 
     [JsonPropertyName("version")]
-    public string Version { get; set; } = "0.2.3-beta";
+    public string Version { get; set; } = "0.2.4-beta";
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = "completed";

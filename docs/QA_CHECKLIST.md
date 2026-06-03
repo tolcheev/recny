@@ -29,12 +29,12 @@ Use this checklist for manual macOS MVP validation. Prefer testing the installed
 
 ```sh
 test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.5-macOS.zip
-test -f dist/ToRec-v0.1.5-macOS.dmg
+test -f dist/ToRec-v0.1.6-macOS.zip
+test -f dist/ToRec-v0.1.6-macOS.dmg
 test -f dist/latest.json
-zipinfo -1 dist/ToRec-v0.1.5-macOS.zip | grep -Fx ToRec.app/
-! zipinfo -1 dist/ToRec-v0.1.5-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
-hdiutil attach -readonly dist/ToRec-v0.1.5-macOS.dmg
+zipinfo -1 dist/ToRec-v0.1.6-macOS.zip | grep -Fx ToRec.app/
+! zipinfo -1 dist/ToRec-v0.1.6-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+hdiutil attach -readonly dist/ToRec-v0.1.6-macOS.dmg
 # DMG should show ToRec.app, Applications, and install/Gatekeeper instructions.
 ```
 
@@ -48,7 +48,7 @@ hdiutil attach -readonly dist/ToRec-v0.1.5-macOS.dmg
 
 ```sh
 TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
-hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.5-macOS.dmg
+hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.6-macOS.dmg
 test -d "$TMP_MOUNT/ToRec.app"
 test -L "$TMP_MOUNT/Applications"
 ls -ldO "$TMP_MOUNT/.background" | grep hidden
@@ -205,6 +205,12 @@ plutil -p metadata.json
 - [ ] Settings -> About shows version, build date, commit hash, and local storage path.
 - [ ] Settings -> About -> Check for Updates reports either the latest version or a newer version from the public release manifest.
 - [ ] Settings -> About -> Download Update opens the public GitHub download URL when a newer version is available.
+- [ ] Main window footer shows `ToRec v...`, `Check for Updates`, and `Report Bug`.
+- [ ] If a newer version exists, the footer shows `Download`, `Later`, and `Skip`.
+- [ ] `Later` hides the current update reminder for about 24 hours.
+- [ ] `Skip` hides the current update version until a newer version appears.
+- [ ] Automatic update checks do not run or surface reminders while recording is active.
+- [ ] `Report Bug` opens the public GitHub issue form with version and platform prefilled.
 - [ ] Diagnostics opens.
 - [ ] Diagnostics shows permissions, selected input, recommended input, last error, logs, and recoverables.
 - [ ] Diagnostics shows the last 100 local `app.log` lines.

@@ -512,9 +512,15 @@ struct SettingsView: View {
                     Label("Release Page", systemImage: "safari")
                 }
                 .disabled(latestUpdateRelease == nil)
+
+                Button {
+                    openBugReport()
+                } label: {
+                    Label("Report Bug", systemImage: "ladybug")
+                }
             }
 
-            Text("Updates are downloaded from the public GitHub release page. ToRec does not overwrite itself automatically.")
+            Text("Updates are downloaded from the public GitHub release page. ToRec does not overwrite itself automatically. Report Bug opens the public structured bug form.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -719,6 +725,17 @@ struct SettingsView: View {
         }
 
         NSWorkspace.shared.open(latestUpdateRelease.releaseURL)
+    }
+
+    private func openBugReport() {
+        guard let url = AppSupportLinks.bugReportURL(
+            version: BuildInfo.appVersion,
+            platform: .macOS
+        ) else {
+            return
+        }
+
+        NSWorkspace.shared.open(url)
     }
 
     private func joined(_ values: [String]) -> String {

@@ -100,7 +100,7 @@ public readonly record struct AppVersion(int Major, int Minor, int Patch, string
 public sealed class AppUpdateChecker
 {
     public const string DefaultManifestUrl = "https://raw.githubusercontent.com/tolcheev/torec-releases/main/latest.json";
-    public const string CurrentWindowsVersion = "0.2.3-beta";
+    public const string CurrentWindowsVersion = "0.2.4-beta";
 
     private readonly HttpClient _httpClient;
     private readonly string _manifestUrl;
@@ -150,5 +150,129 @@ public sealed class AppUpdateChecker
         }
 
         return assembly?.GetName().Version?.ToString() ?? CurrentWindowsVersion;
+    }
+}
+
+public sealed class AppUpdateReminderState
+{
+    public DateTimeOffset? LastAutomaticCheckAt { get; set; }
+    public DateTimeOffset? RemindLaterUntil { get; set; }
+    public string? SkippedVersion { get; set; }
+}
+
+public static class AppUpdateReminderPolicy
+{
+    public static readonly TimeSpan AutomaticCheckInterval = TimeSpan.FromHours(24);
+    public static readonly TimeSpan RemindLaterInterval = TimeSpan.FromHours(24);
+
+    public static bool ShouldRunAutomaticCheck(DateTimeOffset now, AppUpdateReminderState state, bool isRecording)
+    {
+        if (isRecording)
+        {
+            return false;
+        }
+
+        return state.LastAutomaticCheckAt is null
+            || now - state.LastAutomaticCheckAt.Value >= AutomaticCheckInterval;
+    }
+
+    public static bool ShouldSurfaceUpdate(
+        AppUpdateCheckResult result,
+        AppUpdateReminderState state,
+        DateTimeOffset now,
+        bool isRecording)
+    {
+        if (!result.IsUpdateAvailable || isRecording)
+        {
+            return false;
+        }
+
+        if (state.SkippedVersion == result.LatestRelease.Version)
+        {
+            return false;
+        }
+
+        if (state.RemindLaterUntil is not null && now < state.RemindLaterUntil.Value)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public static void MarkAutomaticCheck(AppUpdateReminderState state, DateTimeOffset now)
+    {
+        state.LastAutomaticCheckAt = now;
+    }
+
+    public static void RemindLater(AppUpdateReminderState state, AppUpdateRelease release, DateTimeOffset now)
+    {
+        state.RemindLaterUntil = now.Add(RemindLaterInterval);
+        if (state.SkippedVersion == release.Version)
+        {
+            state.SkippedVersion = null;
+        }
+    }
+
+    public static void Skip(AppUpdateReminderState state, AppUpdateRelease release)
+    {
+        state.SkippedVersion = release.Version;
+        state.RemindLaterUntil = null;
+    }
+}
+
+public static class AppUpdateReminderStore
+{
+    public static AppUpdateReminderState Load(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return new AppUpdateReminderState();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<AppUpdateReminderState>(
+                File.ReadAllText(path),
+                new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new AppUpdateReminderState();
+        }
+        catch
+        {
+            return new AppUpdateReminderState();
+        }
+    }
+
+    public static void Save(string path, AppUpdateReminderState state)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(
+            path,
+            JsonSerializer.Serialize(state, new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            {
+                WriteIndented = true
+            }));
+    }
+}
+
+public static class AppSupportLinks
+{
+    public const string BugReportBaseUrl = "https://github.com/tolcheev/torec-releases/issues/new";
+
+    public static string BugReportUrl(string version, string platform)
+    {
+        var body = $"""
+        version: {version}
+        platform: {platform}
+
+        What happened:
+
+        Expected:
+
+        Call app:
+
+        OS version:
+        """;
+
+        return $"{BugReportBaseUrl}?template=bug_report.yml&labels=bug&title={Uri.EscapeDataString("[Bug] ")}&body={Uri.EscapeDataString(body)}";
     }
 }

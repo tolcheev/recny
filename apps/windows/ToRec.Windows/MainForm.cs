@@ -14,12 +14,22 @@ public sealed class MainForm : Form
     private readonly Label _elapsedLabel;
     private readonly Button _startButton;
     private readonly Button _stopButton;
+    private readonly Button _updatesButton;
+    private readonly Button _reportBugButton;
+    private readonly string _updateStatePath;
+    private AppUpdateReminderState _updateReminderState;
+    private AppUpdateRelease? _pendingUpdateRelease;
     private bool _allowClose;
 
     public MainForm(RecordingController controller, string storageRoot)
     {
         _controller = controller;
         _storageRoot = storageRoot;
+        _updateStatePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "ToRec",
+            "update-state.json");
+        _updateReminderState = AppUpdateReminderStore.Load(_updateStatePath);
         Text = "ToRec Windows";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(520, 320);
@@ -81,13 +91,23 @@ public sealed class MainForm : Form
         };
         diagnosticsButton.Click += (_, _) => new DiagnosticsForm(_storageRoot, _controller.LastError).Show();
 
-        var updatesButton = new Button
+        _updatesButton = new Button
         {
             Text = "Updates",
-            Width = 120,
+            Width = 110,
             Height = 34
         };
-        updatesButton.Click += async (_, _) => await CheckForUpdatesAsync();
+        _updatesButton.Click += async (_, _) => await CheckForUpdatesAsync();
+
+        _reportBugButton = new Button
+        {
+            Text = "Report Bug",
+            Width = 110,
+            Height = 34
+        };
+        _reportBugButton.Click += (_, _) => OpenUrl(AppSupportLinks.BugReportUrl(
+            AppUpdateChecker.EntryAssemblyDisplayVersion(),
+            "windows"));
 
         var folderButton = new Button
         {
@@ -111,15 +131,16 @@ public sealed class MainForm : Form
         var secondaryButtons = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 54,
+            Height = 86,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
             Padding = new Padding(0, 8, 0, 0)
         };
         secondaryButtons.Controls.Add(recordsButton);
         secondaryButtons.Controls.Add(folderButton);
         secondaryButtons.Controls.Add(diagnosticsButton);
-        secondaryButtons.Controls.Add(updatesButton);
+        secondaryButtons.Controls.Add(_updatesButton);
+        secondaryButtons.Controls.Add(_reportBugButton);
 
         var content = new Panel
         {
@@ -141,6 +162,7 @@ public sealed class MainForm : Form
         _timer.Tick += (_, _) => RefreshState();
         _timer.Start();
         _controller.StateChanged += (_, _) => BeginInvoke((MethodInvoker)RefreshState);
+        Shown += async (_, _) => await RunAutomaticUpdateCheckAsync();
 
         RefreshState();
     }
@@ -201,10 +223,51 @@ public sealed class MainForm : Form
         });
     }
 
-    private static async Task CheckForUpdatesAsync()
+    private async Task RunAutomaticUpdateCheckAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (!AppUpdateReminderPolicy.ShouldRunAutomaticCheck(
+                now,
+                _updateReminderState,
+                isRecording: _controller.State == RecordingState.Recording))
+        {
+            return;
+        }
+
+        AppUpdateReminderPolicy.MarkAutomaticCheck(_updateReminderState, now);
+        AppUpdateReminderStore.Save(_updateStatePath, _updateReminderState);
+
+        try
+        {
+            var result = await new AppUpdateChecker().CheckWindowsAsync();
+            if (AppUpdateReminderPolicy.ShouldSurfaceUpdate(
+                    result,
+                    _updateReminderState,
+                    DateTimeOffset.UtcNow,
+                    isRecording: _controller.State == RecordingState.Recording))
+            {
+                _pendingUpdateRelease = result.LatestRelease;
+                _updatesButton.Text = $"Update {result.LatestRelease.DisplayVersion}";
+            }
+        }
+        catch
+        {
+            // Automatic checks stay quiet; manual checks show errors.
+        }
+    }
+
+    private async Task CheckForUpdatesAsync()
     {
         try
         {
+            if (_pendingUpdateRelease is not null)
+            {
+                ShowUpdateDialog(new AppUpdateCheckResult(
+                    AppUpdateChecker.EntryAssemblyDisplayVersion(),
+                    _pendingUpdateRelease));
+                return;
+            }
+
             var result = await new AppUpdateChecker().CheckWindowsAsync();
             if (!result.IsUpdateAvailable)
             {
@@ -212,19 +275,38 @@ public sealed class MainForm : Form
                 return;
             }
 
-            var answer = MessageBox.Show(
-                $"{result.DisplayText}\n\nOpen the download page now?",
-                "ToRec Updates",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Information);
-            if (answer == DialogResult.Yes)
-            {
-                OpenUrl(result.LatestRelease.DownloadUrl);
-            }
+            ShowUpdateDialog(result);
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Could not check updates: {ex.Message}", "ToRec Updates", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ShowUpdateDialog(AppUpdateCheckResult result)
+    {
+        var answer = MessageBox.Show(
+            $"{result.DisplayText}\n\nYes = download now.\nNo = remind later.\nCancel = skip this version.",
+            "ToRec Updates",
+            MessageBoxButtons.YesNoCancel,
+            MessageBoxIcon.Information);
+        if (answer == DialogResult.Yes)
+        {
+            OpenUrl(result.LatestRelease.DownloadUrl);
+        }
+        else if (answer == DialogResult.No)
+        {
+            AppUpdateReminderPolicy.RemindLater(_updateReminderState, result.LatestRelease, DateTimeOffset.UtcNow);
+            AppUpdateReminderStore.Save(_updateStatePath, _updateReminderState);
+            _pendingUpdateRelease = null;
+            _updatesButton.Text = "Updates";
+        }
+        else if (answer == DialogResult.Cancel)
+        {
+            AppUpdateReminderPolicy.Skip(_updateReminderState, result.LatestRelease);
+            AppUpdateReminderStore.Save(_updateStatePath, _updateReminderState);
+            _pendingUpdateRelease = null;
+            _updatesButton.Text = "Updates";
         }
     }
 

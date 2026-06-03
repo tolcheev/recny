@@ -181,6 +181,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         diagnosticsItem.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(diagnosticsItem)
 
+        let bugReportItem = NSMenuItem(
+            title: "Report Bug",
+            action: #selector(openBugReport),
+            keyEquivalent: ""
+        )
+        bugReportItem.target = self
+        menu.addItem(bugReportItem)
+
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
@@ -560,6 +568,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showDiagnostics() {
         AppWindows.openDiagnostics(appState: appState)
+    }
+
+    @objc private func openBugReport() {
+        guard let url = AppSupportLinks.bugReportURL(
+            version: BuildInfo.appVersion,
+            platform: .macOS
+        ) else {
+            return
+        }
+
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func captureScreenshotFromMenu() {

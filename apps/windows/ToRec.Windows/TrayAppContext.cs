@@ -37,6 +37,9 @@ public sealed class TrayAppContext : ApplicationContext
         menu.Items.Add("Open Records Folder", null, (_, _) => OpenPath(_storageRoot));
         menu.Items.Add("Diagnostics", null, (_, _) => new DiagnosticsForm(_storageRoot, _controller.LastError).Show());
         menu.Items.Add("Check for Updates", null, async (_, _) => await CheckForUpdatesAsync());
+        menu.Items.Add("Report Bug", null, (_, _) => OpenUrl(AppSupportLinks.BugReportUrl(
+            AppUpdateChecker.EntryAssemblyDisplayVersion(),
+            "windows")));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, async (_, _) => await ExitAsync());
 

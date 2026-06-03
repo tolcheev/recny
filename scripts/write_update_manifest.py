@@ -9,15 +9,15 @@ def env(name: str, default: str) -> str:
     return os.environ.get(name, default)
 
 
-release_tag = env("TOREC_RELEASE_TAG", "torec-test-builds-2026-06-03-v5")
+release_tag = env("TOREC_RELEASE_TAG", "torec-test-builds-2026-06-03-v6")
 release_base = f"https://github.com/tolcheev/torec-releases/releases/download/{release_tag}"
 release_page = f"https://github.com/tolcheev/torec-releases/releases/tag/{release_tag}"
-mac_version = env("TOREC_MACOS_VERSION", "0.1.5")
+mac_version = env("TOREC_MACOS_VERSION", "0.1.6")
 mac_display_version = env("TOREC_MACOS_DISPLAY_VERSION", f"v{mac_version}")
-mac_build = env("TOREC_MACOS_BUILD", "6")
-windows_version = env("TOREC_WINDOWS_VERSION", "0.2.3-beta")
+mac_build = env("TOREC_MACOS_BUILD", "7")
+windows_version = env("TOREC_WINDOWS_VERSION", "0.2.4-beta")
 windows_display_version = env("TOREC_WINDOWS_DISPLAY_VERSION", f"v{windows_version}")
-windows_build = env("TOREC_WINDOWS_BUILD", "3")
+windows_build = env("TOREC_WINDOWS_BUILD", "4")
 output_path = Path(env("TOREC_UPDATE_MANIFEST_PATH", "dist/latest.json"))
 
 manifest = {
@@ -30,7 +30,7 @@ manifest = {
         "release_url": release_page,
         "download_url": f"{release_base}/ToRec-v{mac_version}-macOS.dmg",
         "sha256_url": f"{release_base}/ToRec-v{mac_version}-macOS.dmg.sha256",
-        "notes": "Fixes repeated macOS permission prompts and adds update checks."
+        "notes": "Adds a Handy-style update reminder footer and a structured bug-report form link."
     },
     "windows": {
         "version": windows_version,
@@ -39,7 +39,7 @@ manifest = {
         "release_url": release_page,
         "download_url": f"{release_base}/ToRec-Windows-v{windows_version}.zip",
         "sha256_url": f"{release_base}/ToRec-Windows-v{windows_version}.zip.sha256",
-        "notes": "Adds update checks and keeps Windows auto-recording beta behavior."
+        "notes": "Adds update reminder state and a structured bug-report form link."
     }
 }
 

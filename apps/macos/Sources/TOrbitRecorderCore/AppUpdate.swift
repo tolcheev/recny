@@ -142,6 +142,139 @@ public struct AppUpdateCheckResult: Equatable, Sendable {
     }
 }
 
+public struct AppUpdateReminderState: Codable, Equatable, Sendable {
+    public var lastAutomaticCheckAt: Date?
+    public var remindLaterUntil: Date?
+    public var skippedVersion: String?
+
+    public init(
+        lastAutomaticCheckAt: Date? = nil,
+        remindLaterUntil: Date? = nil,
+        skippedVersion: String? = nil
+    ) {
+        self.lastAutomaticCheckAt = lastAutomaticCheckAt
+        self.remindLaterUntil = remindLaterUntil
+        self.skippedVersion = skippedVersion
+    }
+}
+
+public enum AppUpdateReminderPolicy {
+    public static let automaticCheckInterval: TimeInterval = 24 * 60 * 60
+    public static let remindLaterInterval: TimeInterval = 24 * 60 * 60
+
+    public static func shouldRunAutomaticCheck(
+        now: Date,
+        state: AppUpdateReminderState,
+        isRecording: Bool
+    ) -> Bool {
+        guard !isRecording else {
+            return false
+        }
+
+        guard let lastAutomaticCheckAt = state.lastAutomaticCheckAt else {
+            return true
+        }
+
+        return now.timeIntervalSince(lastAutomaticCheckAt) >= automaticCheckInterval
+    }
+
+    public static func shouldSurfaceUpdate(
+        result: AppUpdateCheckResult,
+        state: AppUpdateReminderState,
+        now: Date,
+        isRecording: Bool
+    ) -> Bool {
+        guard result.isUpdateAvailable, !isRecording else {
+            return false
+        }
+
+        if state.skippedVersion == result.latestRelease.version {
+            return false
+        }
+
+        if let remindLaterUntil = state.remindLaterUntil,
+           now < remindLaterUntil {
+            return false
+        }
+
+        return true
+    }
+
+    public static func markAutomaticCheck(state: inout AppUpdateReminderState, now: Date) {
+        state.lastAutomaticCheckAt = now
+    }
+
+    public static func remindLater(
+        state: inout AppUpdateReminderState,
+        release: AppUpdateRelease,
+        now: Date,
+        interval: TimeInterval = remindLaterInterval
+    ) {
+        state.remindLaterUntil = now.addingTimeInterval(interval)
+        if state.skippedVersion == release.version {
+            state.skippedVersion = nil
+        }
+    }
+
+    public static func skip(state: inout AppUpdateReminderState, release: AppUpdateRelease) {
+        state.skippedVersion = release.version
+        state.remindLaterUntil = nil
+    }
+}
+
+public enum AppUpdateReminderStore {
+    private static let key = "com.torbit.recorder.app.updateReminder.v1"
+
+    public static func load(defaults: UserDefaults = .standard) -> AppUpdateReminderState {
+        guard let data = defaults.data(forKey: key),
+              let state = try? JSONDecoder().decode(AppUpdateReminderState.self, from: data)
+        else {
+            return AppUpdateReminderState()
+        }
+
+        return state
+    }
+
+    public static func save(_ state: AppUpdateReminderState, defaults: UserDefaults = .standard) {
+        guard let data = try? JSONEncoder().encode(state) else {
+            return
+        }
+
+        defaults.set(data, forKey: key)
+    }
+}
+
+public enum AppSupportLinks {
+    public static let bugReportBaseURL = URL(
+        string: "https://github.com/tolcheev/torec-releases/issues/new"
+    )!
+
+    public static func bugReportURL(version: String, platform: AppUpdatePlatform) -> URL? {
+        var components = URLComponents(url: bugReportBaseURL, resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "template", value: "bug_report.yml"),
+            URLQueryItem(name: "labels", value: "bug"),
+            URLQueryItem(name: "title", value: "[Bug] "),
+            URLQueryItem(
+                name: "body",
+                value: """
+                version: \(version)
+                platform: \(platform.rawValue)
+
+                What happened:
+
+                Expected:
+
+                Call app:
+
+                OS version:
+                """
+            )
+        ]
+        return components?.url
+    }
+}
+
 public final class AppUpdateChecker: @unchecked Sendable {
     public static let defaultManifestURL = URL(
         string: "https://raw.githubusercontent.com/tolcheev/torec-releases/main/latest.json"

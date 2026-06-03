@@ -2,7 +2,7 @@
 
 ## Status
 
-Active v0.2.3 beta scope.
+Active v0.2.4 beta scope.
 
 Windows is still outside the shipped macOS v0.1.2 MVP, but the repository now contains a separate experimental Windows client under `apps/windows`. Keep it isolated from the macOS Swift app.
 
@@ -31,6 +31,7 @@ Provide a lightweight student-side recorder for Windows:
 - Shows simple recording status.
 - Provides Diagnostics for support.
 - Checks the public release manifest for newer builds and opens the GitHub download page.
+- Provides a `Report Bug` link to the public structured feedback form.
 
 Deferred:
 
