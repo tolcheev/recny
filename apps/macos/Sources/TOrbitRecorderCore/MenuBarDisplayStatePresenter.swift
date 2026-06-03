@@ -10,6 +10,7 @@ public enum MenuBarTint: Equatable, Sendable {
     case none
     case recording
     case error
+    case update
 }
 
 public struct MenuBarDisplayState: Equatable, Sendable {
@@ -48,6 +49,7 @@ public enum MenuBarDisplayStatePresenter {
         recordingStatus: RecordingStatus,
         hasPlayableLastRecording: Bool,
         hasLastRecording: Bool,
+        hasUpdateAvailable: Bool = false,
         showRecordingIndicator: Bool,
         needsRecordingPermissions: Bool
     ) -> MenuBarDisplayState {
@@ -86,6 +88,19 @@ public enum MenuBarDisplayStatePresenter {
                 return recordingPermissionsNeededState(
                     hasPlayableLastRecording: hasPlayableLastRecording,
                     hasLastRecording: hasLastRecording
+                )
+            }
+
+            if hasUpdateAvailable {
+                return MenuBarDisplayState(
+                    recordingToggleTitle: "Start Recording",
+                    recordingToggleAction: .start,
+                    canPlayLastRecording: hasPlayableLastRecording,
+                    canOpenLastRecordingFolder: hasLastRecording,
+                    symbolName: "play.update",
+                    statusItemTitle: "",
+                    tint: .update,
+                    accessibilityDescription: "ToRec update available"
                 )
             }
 

@@ -37,6 +37,26 @@ struct MainRecorderView: View {
             appState.refreshPermissionSnapshot()
             runAutomaticUpdateCheckIfNeeded()
         }
+        .onReceive(NotificationCenter.default.publisher(for: AppUpdateEvents.updateAvailable)) { notification in
+            guard let release = AppUpdateEvents.release(from: notification),
+                  appState.status != .recording
+            else {
+                return
+            }
+
+            availableUpdateRelease = release
+            updateMessage = nil
+            updateError = nil
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AppUpdateEvents.updateDismissed)) { notification in
+            guard let version = AppUpdateEvents.dismissedVersion(from: notification),
+                  availableUpdateRelease?.version == version
+            else {
+                return
+            }
+
+            availableUpdateRelease = nil
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             appState.refreshPermissionSnapshot()
         }
@@ -214,6 +234,7 @@ struct MainRecorderView: View {
                     now: Date()
                 )
                 AppUpdateReminderStore.save(updateReminderState)
+                AppUpdateEvents.postDismissed(version: release.version)
                 availableUpdateRelease = nil
                 updateMessage = "Will remind later."
                 updateError = nil
@@ -222,6 +243,7 @@ struct MainRecorderView: View {
             Button("Skip") {
                 AppUpdateReminderPolicy.skip(state: &updateReminderState, release: release)
                 AppUpdateReminderStore.save(updateReminderState)
+                AppUpdateEvents.postDismissed(version: release.version)
                 availableUpdateRelease = nil
                 updateMessage = "Skipped \(release.displayVersion)."
                 updateError = nil
@@ -390,6 +412,7 @@ struct MainRecorderView: View {
                     updateError = nil
                     if shouldSurface {
                         availableUpdateRelease = result.latestRelease
+                        AppUpdateEvents.postAvailable(result.latestRelease)
                         updateMessage = nil
                     } else if !isAutomatic {
                         availableUpdateRelease = nil

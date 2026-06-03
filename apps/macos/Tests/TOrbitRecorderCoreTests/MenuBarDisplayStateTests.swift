@@ -8,6 +8,7 @@ struct MenuBarDisplayStateTests {
             recordingStatus: .idle,
             hasPlayableLastRecording: false,
             hasLastRecording: false,
+            hasUpdateAvailable: false,
             showRecordingIndicator: true,
             needsRecordingPermissions: false
         )
@@ -28,6 +29,7 @@ struct MenuBarDisplayStateTests {
             recordingStatus: .recording,
             hasPlayableLastRecording: true,
             hasLastRecording: true,
+            hasUpdateAvailable: false,
             showRecordingIndicator: true,
             needsRecordingPermissions: false
         )
@@ -48,6 +50,7 @@ struct MenuBarDisplayStateTests {
             recordingStatus: .recording,
             hasPlayableLastRecording: false,
             hasLastRecording: false,
+            hasUpdateAvailable: false,
             showRecordingIndicator: false,
             needsRecordingPermissions: false
         )
@@ -64,6 +67,7 @@ struct MenuBarDisplayStateTests {
             recordingStatus: .error,
             hasPlayableLastRecording: true,
             hasLastRecording: true,
+            hasUpdateAvailable: false,
             showRecordingIndicator: true,
             needsRecordingPermissions: false
         )
@@ -84,6 +88,7 @@ struct MenuBarDisplayStateTests {
             recordingStatus: .idle,
             hasPlayableLastRecording: false,
             hasLastRecording: false,
+            hasUpdateAvailable: false,
             showRecordingIndicator: true,
             needsRecordingPermissions: true
         )
@@ -102,6 +107,7 @@ struct MenuBarDisplayStateTests {
             recordingStatus: .error,
             hasPlayableLastRecording: false,
             hasLastRecording: false,
+            hasUpdateAvailable: false,
             showRecordingIndicator: true,
             needsRecordingPermissions: true
         )
@@ -120,6 +126,7 @@ struct MenuBarDisplayStateTests {
             recordingStatus: .recording,
             hasPlayableLastRecording: false,
             hasLastRecording: false,
+            hasUpdateAvailable: true,
             showRecordingIndicator: true,
             needsRecordingPermissions: true
         )
@@ -130,5 +137,41 @@ struct MenuBarDisplayStateTests {
         #expect(state.statusItemTitle.isEmpty)
         #expect(state.tint == .none)
         #expect(state.accessibilityDescription == "ToRec is recording")
+    }
+
+    @Test
+    func idleUpdateAvailableShowsSubtleUpdateBadge() {
+        let state = MenuBarDisplayStatePresenter.state(
+            recordingStatus: .idle,
+            hasPlayableLastRecording: false,
+            hasLastRecording: false,
+            hasUpdateAvailable: true,
+            showRecordingIndicator: true,
+            needsRecordingPermissions: false
+        )
+
+        #expect(state.recordingToggleTitle == "Start Recording")
+        #expect(state.recordingToggleAction == .start)
+        #expect(state.symbolName == "play.update")
+        #expect(state.statusItemTitle.isEmpty)
+        #expect(state.tint == .update)
+        #expect(state.accessibilityDescription == "ToRec update available")
+    }
+
+    @Test
+    func permissionProblemTakesPriorityOverUpdateBadge() {
+        let state = MenuBarDisplayStatePresenter.state(
+            recordingStatus: .idle,
+            hasPlayableLastRecording: false,
+            hasLastRecording: false,
+            hasUpdateAvailable: true,
+            showRecordingIndicator: true,
+            needsRecordingPermissions: true
+        )
+
+        #expect(state.recordingToggleTitle == "Fix Recording Permissions")
+        #expect(state.symbolName == "permission.question")
+        #expect(state.tint == .error)
+        #expect(state.accessibilityDescription == "ToRec recording unavailable: permissions needed")
     }
 }

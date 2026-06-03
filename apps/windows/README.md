@@ -4,7 +4,7 @@ This is the experimental Windows client for ToRec.
 
 ## Current Scope
 
-Version: `0.2.4-beta`
+Version: `0.2.5-beta`
 
 Implemented:
 
@@ -20,7 +20,8 @@ Implemented:
 - Records window with Play and Open Folder.
 - Diagnostics window and local file log.
 - Manual `Check for Updates` action from the main window and tray menu.
-- Quiet daily update reminder state with remind-later and skip-this-version behavior.
+- Quiet daily background update check from the tray app.
+- Tray update badge plus `Update available` menu item with remind-later and skip-this-version behavior.
 - `Report Bug` link from the main window and tray menu.
 
 Not implemented in this beta:

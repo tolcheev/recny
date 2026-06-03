@@ -4,7 +4,7 @@ namespace ToRec.Windows;
 
 internal static class TrayIconFactory
 {
-    public static Icon Create(bool recording)
+    public static Icon Create(bool recording, bool updateAvailable = false)
     {
         var bitmap = new Bitmap(32, 32);
         using var graphics = Graphics.FromImage(bitmap);
@@ -31,6 +31,12 @@ internal static class TrayIconFactory
                 new Point(11, 24)
             };
             graphics.DrawLines(pen, points);
+
+            if (updateAvailable)
+            {
+                using var brush = new SolidBrush(Color.FromArgb(0, 122, 255));
+                graphics.FillEllipse(brush, 22, 5, 7, 7);
+            }
         }
 
         var handle = bitmap.GetHicon();

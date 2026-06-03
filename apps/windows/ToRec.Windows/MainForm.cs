@@ -162,7 +162,6 @@ public sealed class MainForm : Form
         _timer.Tick += (_, _) => RefreshState();
         _timer.Start();
         _controller.StateChanged += (_, _) => BeginInvoke((MethodInvoker)RefreshState);
-        Shown += async (_, _) => await RunAutomaticUpdateCheckAsync();
 
         RefreshState();
     }

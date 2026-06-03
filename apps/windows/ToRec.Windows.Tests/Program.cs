@@ -23,6 +23,7 @@ internal static class Program
             ("version comparison handles beta and stable releases", VersionComparisonHandlesBetaAndStableReleases),
             ("update reminder runs daily and respects recording", UpdateReminderRunsDailyAndRespectsRecording),
             ("update reminder respects later and skipped versions", UpdateReminderRespectsLaterAndSkippedVersions),
+            ("update notification presenter keeps recording state primary", UpdateNotificationPresenterKeepsRecordingStatePrimary),
             ("bug report url includes version and platform", BugReportUrlIncludesVersionAndPlatform)
         };
 
@@ -207,21 +208,21 @@ internal static class Program
           "schema_version": 1,
           "generated_at": "2026-06-03T08:00:00Z",
           "macos": {
-            "version": "0.1.6",
-            "display_version": "v0.1.6",
-            "build": "7",
-            "release_url": "https://github.com/tolcheev/torec-releases/releases/tag/torec-test-builds-2026-06-03-v6",
-            "download_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v6/ToRec-v0.1.6-macOS.dmg",
-            "sha256_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v6/ToRec-v0.1.6-macOS.dmg.sha256",
+            "version": "0.1.7",
+            "display_version": "v0.1.7",
+            "build": "8",
+            "release_url": "https://github.com/tolcheev/torec-releases/releases/tag/torec-test-builds-2026-06-03-v7",
+            "download_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v7/ToRec-v0.1.7-macOS.dmg",
+            "sha256_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v7/ToRec-v0.1.7-macOS.dmg.sha256",
             "notes": "Permission and update fixes."
           },
           "windows": {
-            "version": "0.2.4-beta",
-            "display_version": "v0.2.4-beta",
-            "build": "4",
-            "release_url": "https://github.com/tolcheev/torec-releases/releases/tag/torec-test-builds-2026-06-03-v6",
-            "download_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v6/ToRec-Windows-v0.2.4-beta.zip",
-            "sha256_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v6/ToRec-Windows-v0.2.4-beta.zip.sha256",
+            "version": "0.2.5-beta",
+            "display_version": "v0.2.5-beta",
+            "build": "5",
+            "release_url": "https://github.com/tolcheev/torec-releases/releases/tag/torec-test-builds-2026-06-03-v7",
+            "download_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v7/ToRec-Windows-v0.2.5-beta.zip",
+            "sha256_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v7/ToRec-Windows-v0.2.5-beta.zip.sha256",
             "notes": "Windows update checks."
           }
         }
@@ -229,8 +230,8 @@ internal static class Program
 
         var manifest = AppUpdateChecker.DecodeManifest(json);
 
-        Assert(manifest.Windows.Version == "0.2.4-beta");
-        Assert(manifest.Windows.DownloadUrl.EndsWith("ToRec-Windows-v0.2.4-beta.zip"));
+        Assert(manifest.Windows.Version == "0.2.5-beta");
+        Assert(manifest.Windows.DownloadUrl.EndsWith("ToRec-Windows-v0.2.5-beta.zip"));
     }
 
     private static void VersionComparisonHandlesBetaAndStableReleases()
@@ -259,9 +260,9 @@ internal static class Program
     {
         var now = new DateTimeOffset(2026, 6, 3, 12, 0, 0, TimeSpan.Zero);
         var release = new AppUpdateRelease(
-            "0.2.4-beta",
-            "v0.2.4-beta",
-            "4",
+            "0.2.5-beta",
+            "v0.2.5-beta",
+            "5",
             "https://example.com/release",
             "https://example.com/ToRec.zip",
             null,
@@ -280,12 +281,45 @@ internal static class Program
         Assert(!AppUpdateReminderPolicy.ShouldSurfaceUpdate(result, state, now.AddHours(25), isRecording: false));
     }
 
+    private static void UpdateNotificationPresenterKeepsRecordingStatePrimary()
+    {
+        var idleWithUpdate = AppUpdateNotificationPresenter.Present(
+            isRecording: false,
+            update: new AppUpdateRelease(
+                "0.2.5-beta",
+                "v0.2.5-beta",
+                "5",
+                "https://example.com/release",
+                "https://example.com/ToRec.zip",
+                null,
+                null));
+
+        Assert(idleWithUpdate.HasUpdate);
+        Assert(idleWithUpdate.TrayText == "ToRec update available: v0.2.5-beta");
+        Assert(idleWithUpdate.UpdateMenuTitle == "Update available: v0.2.5-beta");
+
+        var recordingWithUpdate = AppUpdateNotificationPresenter.Present(
+            isRecording: true,
+            update: new AppUpdateRelease(
+                "0.2.5-beta",
+                "v0.2.5-beta",
+                "5",
+                "https://example.com/release",
+                "https://example.com/ToRec.zip",
+                null,
+                null));
+
+        Assert(recordingWithUpdate.HasUpdate);
+        Assert(recordingWithUpdate.TrayText == "ToRec is recording");
+        Assert(recordingWithUpdate.UpdateMenuTitle == "Update available: v0.2.5-beta");
+    }
+
     private static void BugReportUrlIncludesVersionAndPlatform()
     {
-        var url = AppSupportLinks.BugReportUrl("0.2.4-beta", "windows");
+        var url = AppSupportLinks.BugReportUrl("0.2.5-beta", "windows");
 
         Assert(url.Contains("torec-releases/issues/new"));
-        Assert(url.Contains("version%3A%200.2.4-beta"));
+        Assert(url.Contains("version%3A%200.2.5-beta"));
         Assert(url.Contains("platform%3A%20windows"));
     }
 

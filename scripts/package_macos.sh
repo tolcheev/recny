@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="ToRec"
 LEGACY_APP_NAME="TOrbitRecorder"
-PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.6}"
+PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.7}"
 DMG_VOLUME_NAME="${DMG_VOLUME_NAME:-$APP_NAME $PACKAGE_VERSION}"
 BUILD_APP="$ROOT_DIR/apps/macos/.build/app/$APP_NAME.app"
 DIST_DIR="$ROOT_DIR/dist"
@@ -154,7 +154,7 @@ rm -f "$DMG_RW"
 TOREC_UPDATE_MANIFEST_PATH="$DIST_DIR/latest.json" \
     TOREC_MACOS_VERSION="${PACKAGE_VERSION#v}" \
     TOREC_MACOS_DISPLAY_VERSION="$PACKAGE_VERSION" \
-    TOREC_MACOS_BUILD="${BUILD_NUMBER:-7}" \
+    TOREC_MACOS_BUILD="${BUILD_NUMBER:-8}" \
     "$ROOT_DIR/scripts/write_update_manifest.py" >/dev/null
 
 echo "Version: $PACKAGE_VERSION"

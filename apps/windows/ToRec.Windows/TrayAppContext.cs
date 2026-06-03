@@ -13,6 +13,11 @@ public sealed class TrayAppContext : ApplicationContext
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _startItem;
     private readonly ToolStripMenuItem _stopItem;
+    private readonly ToolStripMenuItem _updateAvailableItem;
+    private readonly System.Windows.Forms.Timer _startupUpdateTimer;
+    private readonly string _updateStatePath;
+    private AppUpdateReminderState _updateReminderState;
+    private AppUpdateRelease? _pendingUpdateRelease;
     private MainForm? _mainForm;
 
     public TrayAppContext(RecordingController controller, string storageRoot, FileLogger logger)
@@ -22,12 +27,31 @@ public sealed class TrayAppContext : ApplicationContext
         _logger = logger;
         _controller.StateChanged += OnStateChanged;
         _autoStartMonitor = new AutoStartMonitor(_controller, _logger);
+        _updateStatePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "ToRec",
+            "update-state.json");
+        _updateReminderState = AppUpdateReminderStore.Load(_updateStatePath);
 
         _startItem = new ToolStripMenuItem("Start Recording", null, async (_, _) => await StartRecordingAsync());
         _stopItem = new ToolStripMenuItem("Stop Recording", null, async (_, _) => await StopRecordingAsync());
+        _updateAvailableItem = new ToolStripMenuItem("Update available", null, async (_, _) => await CheckForUpdatesAsync())
+        {
+            Visible = false
+        };
+        _startupUpdateTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 1_000
+        };
+        _startupUpdateTimer.Tick += async (_, _) =>
+        {
+            _startupUpdateTimer.Stop();
+            await RunAutomaticUpdateCheckAsync();
+        };
 
         var menu = new ContextMenuStrip();
         menu.Items.Add("Show", null, (_, _) => ShowMainWindow());
+        menu.Items.Add(_updateAvailableItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Auto-start: On", null, (_, _) => ShowMainWindow()).Enabled = false;
         menu.Items.Add(_startItem);
@@ -54,6 +78,7 @@ public sealed class TrayAppContext : ApplicationContext
 
         UpdateMenu();
         ShowMainWindow();
+        _startupUpdateTimer.Start();
     }
 
     private async Task StartRecordingAsync()
@@ -110,11 +135,16 @@ public sealed class TrayAppContext : ApplicationContext
     private void UpdateMenu()
     {
         var isRecording = _controller.State == RecordingState.Recording;
+        var notification = AppUpdateNotificationPresenter.Present(isRecording, _pendingUpdateRelease);
         _startItem.Enabled = _controller.State == RecordingState.Idle;
         _stopItem.Enabled = isRecording;
-        _notifyIcon.Text = isRecording ? "ToRec is recording" : "ToRec";
+        _updateAvailableItem.Text = notification.UpdateMenuTitle;
+        _updateAvailableItem.Visible = notification.HasUpdate && !isRecording;
+        _notifyIcon.Text = notification.TrayText.Length > 63
+            ? notification.TrayText[..63]
+            : notification.TrayText;
         var oldIcon = _notifyIcon.Icon;
-        _notifyIcon.Icon = TrayIconFactory.Create(isRecording);
+        _notifyIcon.Icon = TrayIconFactory.Create(isRecording, notification.HasUpdate);
         oldIcon?.Dispose();
     }
 
@@ -127,10 +157,51 @@ public sealed class TrayAppContext : ApplicationContext
         });
     }
 
-    private static async Task CheckForUpdatesAsync()
+    private async Task RunAutomaticUpdateCheckAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (!AppUpdateReminderPolicy.ShouldRunAutomaticCheck(
+                now,
+                _updateReminderState,
+                isRecording: _controller.State == RecordingState.Recording))
+        {
+            return;
+        }
+
+        AppUpdateReminderPolicy.MarkAutomaticCheck(_updateReminderState, now);
+        AppUpdateReminderStore.Save(_updateStatePath, _updateReminderState);
+
+        try
+        {
+            var result = await new AppUpdateChecker().CheckWindowsAsync();
+            if (AppUpdateReminderPolicy.ShouldSurfaceUpdate(
+                    result,
+                    _updateReminderState,
+                    DateTimeOffset.UtcNow,
+                    isRecording: _controller.State == RecordingState.Recording))
+            {
+                _pendingUpdateRelease = result.LatestRelease;
+                UpdateMenu();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Write($"automatic update check failed error={ex.Message}");
+        }
+    }
+
+    private async Task CheckForUpdatesAsync()
     {
         try
         {
+            if (_pendingUpdateRelease is not null)
+            {
+                ShowUpdateDialog(new AppUpdateCheckResult(
+                    AppUpdateChecker.EntryAssemblyDisplayVersion(),
+                    _pendingUpdateRelease));
+                return;
+            }
+
             var result = await new AppUpdateChecker().CheckWindowsAsync();
             if (!result.IsUpdateAvailable)
             {
@@ -138,19 +209,38 @@ public sealed class TrayAppContext : ApplicationContext
                 return;
             }
 
-            var answer = MessageBox.Show(
-                $"{result.DisplayText}\n\nOpen the download page now?",
-                "ToRec Updates",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Information);
-            if (answer == DialogResult.Yes)
-            {
-                OpenUrl(result.LatestRelease.DownloadUrl);
-            }
+            ShowUpdateDialog(result);
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Could not check updates: {ex.Message}", "ToRec Updates", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ShowUpdateDialog(AppUpdateCheckResult result)
+    {
+        var answer = MessageBox.Show(
+            $"{result.DisplayText}\n\nYes = download now.\nNo = remind later.\nCancel = skip this version.",
+            "ToRec Updates",
+            MessageBoxButtons.YesNoCancel,
+            MessageBoxIcon.Information);
+        if (answer == DialogResult.Yes)
+        {
+            OpenUrl(result.LatestRelease.DownloadUrl);
+        }
+        else if (answer == DialogResult.No)
+        {
+            AppUpdateReminderPolicy.RemindLater(_updateReminderState, result.LatestRelease, DateTimeOffset.UtcNow);
+            AppUpdateReminderStore.Save(_updateStatePath, _updateReminderState);
+            _pendingUpdateRelease = null;
+            UpdateMenu();
+        }
+        else if (answer == DialogResult.Cancel)
+        {
+            AppUpdateReminderPolicy.Skip(_updateReminderState, result.LatestRelease);
+            AppUpdateReminderStore.Save(_updateStatePath, _updateReminderState);
+            _pendingUpdateRelease = null;
+            UpdateMenu();
         }
     }
 
@@ -181,6 +271,7 @@ public sealed class TrayAppContext : ApplicationContext
 
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
+        _startupUpdateTimer.Dispose();
         _autoStartMonitor.Dispose();
         _mainForm?.AllowClose();
         Application.Exit();

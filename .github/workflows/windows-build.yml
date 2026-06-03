@@ -11,7 +11,7 @@ on:
       - "apps/windows/**"
       - ".github/workflows/windows-build.yml"
       - "docs/WINDOWS_CLIENT.md"
-      - "docs/RELEASE_NOTES_WINDOWS_V0_2_4.md"
+      - "docs/RELEASE_NOTES_WINDOWS_V0_2_5.md"
   workflow_dispatch:
 
 jobs:
@@ -45,18 +45,18 @@ jobs:
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
-          -o dist/windows/ToRec-Windows-v0.2.4-beta
+          -o dist/windows/ToRec-Windows-v0.2.5-beta
 
       - name: Add release notes
         shell: pwsh
-        run: Copy-Item docs/RELEASE_NOTES_WINDOWS_V0_2_4.md dist/windows/ToRec-Windows-v0.2.4-beta/README.md
+        run: Copy-Item docs/RELEASE_NOTES_WINDOWS_V0_2_5.md dist/windows/ToRec-Windows-v0.2.5-beta/README.md
 
       - name: Zip
         shell: pwsh
-        run: Compress-Archive -Path dist/windows/ToRec-Windows-v0.2.4-beta/* -DestinationPath dist/windows/ToRec-Windows-v0.2.4-beta.zip -Force
+        run: Compress-Archive -Path dist/windows/ToRec-Windows-v0.2.5-beta/* -DestinationPath dist/windows/ToRec-Windows-v0.2.5-beta.zip -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ToRec-Windows-v0.2.4-beta
-          path: dist/windows/ToRec-Windows-v0.2.4-beta.zip
+          name: ToRec-Windows-v0.2.5-beta
+          path: dist/windows/ToRec-Windows-v0.2.5-beta.zip

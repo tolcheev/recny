@@ -28,6 +28,30 @@ public sealed record AppUpdateCheckResult(string CurrentVersion, AppUpdateReleas
         : $"You are on the latest version: {LatestRelease.DisplayVersion}";
 }
 
+public sealed record AppUpdateNotificationState(
+    bool HasUpdate,
+    string TrayText,
+    string UpdateMenuTitle);
+
+public static class AppUpdateNotificationPresenter
+{
+    public static AppUpdateNotificationState Present(bool isRecording, AppUpdateRelease? update)
+    {
+        if (update is null)
+        {
+            return new AppUpdateNotificationState(
+                false,
+                isRecording ? "ToRec is recording" : "ToRec",
+                "Check for Updates");
+        }
+
+        return new AppUpdateNotificationState(
+            true,
+            isRecording ? "ToRec is recording" : $"ToRec update available: {update.DisplayVersion}",
+            $"Update available: {update.DisplayVersion}");
+    }
+}
+
 public readonly record struct AppVersion(int Major, int Minor, int Patch, string? Prerelease)
     : IComparable<AppVersion>
 {
@@ -100,7 +124,7 @@ public readonly record struct AppVersion(int Major, int Minor, int Patch, string
 public sealed class AppUpdateChecker
 {
     public const string DefaultManifestUrl = "https://raw.githubusercontent.com/tolcheev/torec-releases/main/latest.json";
-    public const string CurrentWindowsVersion = "0.2.4-beta";
+    public const string CurrentWindowsVersion = "0.2.5-beta";
 
     private readonly HttpClient _httpClient;
     private readonly string _manifestUrl;

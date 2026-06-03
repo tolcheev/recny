@@ -30,7 +30,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 
 ## Windows Beta
 
-Windows support is an experimental v0.2.4 beta, not feature-parity with macOS yet.
+Windows support is an experimental v0.2.5 beta, not feature-parity with macOS yet.
 
 Implemented:
 
@@ -42,7 +42,7 @@ Implemented:
 - system-audio recording through WASAPI loopback;
 - local records list;
 - local diagnostics and logs.
-- manual update check from the main window and tray menu.
+- manual and quiet background update checks from the main window/menu bar/tray.
 
 Not implemented yet:
 
@@ -144,7 +144,7 @@ The current shell is a SwiftPM-based macOS app target. The build script compiles
 
 The build script injects app metadata into the bundle:
 
-- app version: `v0.1.6`
+- app version: `v0.1.7`
 - build date
 - git commit hash
 
@@ -160,8 +160,8 @@ This creates:
 
 ```text
 dist/ToRec.app
-dist/ToRec-v0.1.6-macOS.zip
-dist/ToRec-v0.1.6-macOS.dmg
+dist/ToRec-v0.1.7-macOS.zip
+dist/ToRec-v0.1.7-macOS.dmg
 dist/latest.json
 ```
 
@@ -177,7 +177,7 @@ The best free testing path is the standard unsigned-app flow: drag the app into 
 
 For trusted internal testing:
 
-1. Open `ToRec-v0.1.6-macOS.dmg`.
+1. Open `ToRec-v0.1.7-macOS.dmg`.
 2. Drag `ToRec.app` into `Applications`.
 3. Open Finder -> Applications.
 4. Right-click `ToRec` -> Open.
@@ -237,7 +237,7 @@ Settings currently cover preferred microphone selection, required MVP output ind
 
 Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, required system audio and mixed export enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. ToRec is menu-bar-first by default; use the menu bar icon or global `Ctrl+Option+R` to show the app window when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
-Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path. Settings/About also provides a manual `Check for Updates` action and a `Report Bug` link. Update checks read the public GitHub manifest at `https://raw.githubusercontent.com/tolcheev/torec-releases/main/latest.json`; ToRec never silently replaces itself. The main recorder window also has a compact footer that checks quietly at most once per 24 hours and shows `Download`, `Later`, and `Skip` only when a newer version exists.
+Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path. Settings/About also provides a manual `Check for Updates` action and a `Report Bug` link. Update checks read the public GitHub manifest at `https://raw.githubusercontent.com/tolcheev/torec-releases/main/latest.json`; ToRec never silently replaces itself. The main recorder window has a compact footer that checks quietly at most once per 24 hours and shows `Download`, `Later`, and `Skip` only when a newer version exists. The menu bar app also checks in the background, shows a subtle update badge and adds `Update available`, `Remind Later`, and `Skip This Version` menu items. Recording and permission-blocked states take visual priority over update badges.
 
 ## Launch At Login
 
@@ -356,7 +356,7 @@ open /Applications/ToRec.app
 
 The install script refuses to replace `/Applications/ToRec.app` while the running app has an active recording recovery file. Stop recording and wait for finalization before reinstalling. `ALLOW_INSTALL_WHILE_RECORDING=1` exists only for emergency debugging where losing the active recording is acceptable.
 
-The menu bar app provides Show Window, Start Recording or Stop Recording, Play Last Recording, Capture Full Screenshot, Open Library, Open Records, Settings, Diagnostics, Report Bug, and Quit.
+The menu bar app provides Show Window, update notification actions when available, Start Recording or Stop Recording, Play Last Recording, Capture Full Screenshot, Open Library, Open Records, Settings, Diagnostics, Report Bug, and Quit.
 
 The app does not request macOS Notifications permission. Auto-start, screenshot, and recorder lifecycle events are kept in the app UI and local logs instead of system notification banners.
 

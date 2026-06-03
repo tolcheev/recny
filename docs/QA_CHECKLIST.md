@@ -29,12 +29,12 @@ Use this checklist for manual macOS MVP validation. Prefer testing the installed
 
 ```sh
 test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.6-macOS.zip
-test -f dist/ToRec-v0.1.6-macOS.dmg
+test -f dist/ToRec-v0.1.7-macOS.zip
+test -f dist/ToRec-v0.1.7-macOS.dmg
 test -f dist/latest.json
-zipinfo -1 dist/ToRec-v0.1.6-macOS.zip | grep -Fx ToRec.app/
-! zipinfo -1 dist/ToRec-v0.1.6-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
-hdiutil attach -readonly dist/ToRec-v0.1.6-macOS.dmg
+zipinfo -1 dist/ToRec-v0.1.7-macOS.zip | grep -Fx ToRec.app/
+! zipinfo -1 dist/ToRec-v0.1.7-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+hdiutil attach -readonly dist/ToRec-v0.1.7-macOS.dmg
 # DMG should show ToRec.app, Applications, and install/Gatekeeper instructions.
 ```
 
@@ -48,7 +48,7 @@ hdiutil attach -readonly dist/ToRec-v0.1.6-macOS.dmg
 
 ```sh
 TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
-hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.6-macOS.dmg
+hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.7-macOS.dmg
 test -d "$TMP_MOUNT/ToRec.app"
 test -L "$TMP_MOUNT/Applications"
 ls -ldO "$TMP_MOUNT/.background" | grep hidden
@@ -207,6 +207,9 @@ plutil -p metadata.json
 - [ ] Settings -> About -> Download Update opens the public GitHub download URL when a newer version is available.
 - [ ] Main window footer shows `ToRec v...`, `Check for Updates`, and `Report Bug`.
 - [ ] If a newer version exists, the footer shows `Download`, `Later`, and `Skip`.
+- [ ] If a newer version exists while idle, the macOS menu bar icon shows a subtle update badge and the menu shows `Update available`, `Remind Later`, and `Skip This Version`.
+- [ ] During recording, the recording icon/state remains primary and update notification actions do not visually replace it.
+- [ ] If recording permissions are missing, the red permission question remains primary and update badge/menu items stay hidden.
 - [ ] `Later` hides the current update reminder for about 24 hours.
 - [ ] `Skip` hides the current update version until a newer version appears.
 - [ ] Automatic update checks do not run or surface reminders while recording is active.

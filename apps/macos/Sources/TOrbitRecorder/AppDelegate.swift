@@ -12,6 +12,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var recordingToggleItem: NSMenuItem?
     private var permissionAttentionItem: NSMenuItem?
     private var permissionAttentionSeparatorItem: NSMenuItem?
+    private var updateAvailableItem: NSMenuItem?
+    private var updateLaterItem: NSMenuItem?
+    private var updateSkipItem: NSMenuItem?
+    private var updateSeparatorItem: NSMenuItem?
     private var playLastItem: NSMenuItem?
     private var openLastFolderItem: NSMenuItem?
     private var captureScreenshotItem: NSMenuItem?
@@ -20,6 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var globalHotKeyController: GlobalHotKeyController?
     private var screenshotHotKeyController: ScreenshotHotKeyController?
     private var didSurfacePermissionAttentionThisLaunch = false
+    private var updateReminderState = AppUpdateReminderStore.load()
+    private var availableUpdateRelease: AppUpdateRelease?
+    private var isCheckingForUpdates = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard enforceSingleRunningInstance() else {
@@ -37,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppLogger.app.info("ToRec launched")
         AppLogger.file(.info, category: "app", "app start version=\(BuildInfo.appVersion) commit=\(BuildInfo.gitCommit)")
         surfaceRecordingPermissionProblemIfNeeded(reason: "launch")
+        runAutomaticUpdateCheckIfNeeded(reason: "launch")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -111,6 +119,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         permissionAttentionSeparatorItem.isHidden = true
         menu.addItem(permissionAttentionSeparatorItem)
         self.permissionAttentionSeparatorItem = permissionAttentionSeparatorItem
+
+        let updateAvailableItem = NSMenuItem(
+            title: "Update Available",
+            action: #selector(openAvailableUpdate),
+            keyEquivalent: ""
+        )
+        updateAvailableItem.target = self
+        updateAvailableItem.isHidden = true
+        menu.addItem(updateAvailableItem)
+        self.updateAvailableItem = updateAvailableItem
+
+        let updateLaterItem = NSMenuItem(
+            title: "Remind Later",
+            action: #selector(remindLaterForAvailableUpdate),
+            keyEquivalent: ""
+        )
+        updateLaterItem.target = self
+        updateLaterItem.isHidden = true
+        menu.addItem(updateLaterItem)
+        self.updateLaterItem = updateLaterItem
+
+        let updateSkipItem = NSMenuItem(
+            title: "Skip This Version",
+            action: #selector(skipAvailableUpdate),
+            keyEquivalent: ""
+        )
+        updateSkipItem.target = self
+        updateSkipItem.isHidden = true
+        menu.addItem(updateSkipItem)
+        self.updateSkipItem = updateSkipItem
+
+        let updateSeparatorItem = NSMenuItem.separator()
+        updateSeparatorItem.isHidden = true
+        menu.addItem(updateSeparatorItem)
+        self.updateSeparatorItem = updateSeparatorItem
 
         menu.addItem(.separator())
 
@@ -209,6 +252,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] _ in
                 Task { @MainActor in
                     self?.refreshMenuState()
+                    self?.runAutomaticUpdateCheckIfNeeded(reason: "status_change")
                 }
             }
             .store(in: &cancellables)
@@ -286,6 +330,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: AppUpdateEvents.updateDismissed)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] notification in
+                Task { @MainActor in
+                    guard let version = AppUpdateEvents.dismissedVersion(from: notification),
+                          self?.availableUpdateRelease?.version == version
+                    else {
+                        return
+                    }
+
+                    self?.availableUpdateRelease = nil
+                    self?.refreshMenuState()
+                }
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: AppUpdateEvents.updateAvailable)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] notification in
+                Task { @MainActor in
+                    guard let release = AppUpdateEvents.release(from: notification),
+                          self?.availableUpdateRelease?.version != release.version
+                    else {
+                        return
+                    }
+
+                    self?.availableUpdateRelease = release
+                    self?.refreshMenuState()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     private func refreshMenuState() {
@@ -294,6 +370,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             recordingStatus: appState.status,
             hasPlayableLastRecording: hasPlayableLastRecording,
             hasLastRecording: appState.lastRecording != nil,
+            hasUpdateAvailable: availableUpdateRelease != nil,
             showRecordingIndicator: appState.privacySettings.showRecordingIndicator,
             needsRecordingPermissions: needsPermissionAttention
         )
@@ -317,6 +394,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .foregroundColor: NSColor.systemRed
             ]
         )
+        let shouldShowUpdate = availableUpdateRelease != nil
+            && appState.status != .recording
+            && !needsPermissionAttention
+        if let availableUpdateRelease {
+            updateAvailableItem?.title = "Update available: \(availableUpdateRelease.displayVersion)"
+            updateAvailableItem?.attributedTitle = NSAttributedString(
+                string: "Update available: \(availableUpdateRelease.displayVersion)",
+                attributes: [
+                    .font: NSFont.menuFont(ofSize: 0),
+                    .foregroundColor: NSColor.systemBlue
+                ]
+            )
+        }
+        updateAvailableItem?.isHidden = !shouldShowUpdate
+        updateLaterItem?.isHidden = !shouldShowUpdate
+        updateSkipItem?.isHidden = !shouldShowUpdate
+        updateSeparatorItem?.isHidden = !shouldShowUpdate
         playLastItem?.isEnabled = displayState.canPlayLastRecording
         openLastFolderItem?.isEnabled = true
         captureScreenshotItem?.isEnabled = appState.preferredScreenshotFolderURL != nil
@@ -326,7 +420,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         statusItem?.button?.imagePosition = .imageOnly
         statusItem?.button?.title = displayState.statusItemTitle
-        statusItem?.button?.toolTip = "\(displayState.accessibilityDescription) (\(KeyboardShortcutCatalog.showWindowGlobal.displayText))"
+        if let availableUpdateRelease,
+           displayState.tint == .update {
+            statusItem?.button?.toolTip = "ToRec update available: \(availableUpdateRelease.displayVersion) (\(KeyboardShortcutCatalog.showWindowGlobal.displayText))"
+        } else {
+            statusItem?.button?.toolTip = "\(displayState.accessibilityDescription) (\(KeyboardShortcutCatalog.showWindowGlobal.displayText))"
+        }
         statusItem?.button?.contentTintColor = nil
     }
 
@@ -342,6 +441,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if symbolName == "play" || symbolName == "play.fill" {
             return playMenuBarImage(
                 isFilled: symbolName == "play.fill",
+                showsUpdateBadge: false,
+                accessibilityDescription: accessibilityDescription
+            )
+        }
+
+        if symbolName == "play.update" {
+            return playMenuBarImage(
+                isFilled: false,
+                showsUpdateBadge: true,
                 accessibilityDescription: accessibilityDescription
             )
         }
@@ -378,6 +486,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func playMenuBarImage(
         isFilled: Bool,
+        showsUpdateBadge: Bool = false,
         accessibilityDescription: String
     ) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18))
@@ -401,9 +510,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             play.stroke()
         }
 
+        if showsUpdateBadge {
+            NSColor.systemBlue.setFill()
+            let badge = NSBezierPath(ovalIn: NSRect(x: 12.4, y: 12.1, width: 4.8, height: 4.8))
+            badge.fill()
+        }
+
         image.unlockFocus()
         image.isTemplate = false
         return image
+    }
+
+    private func runAutomaticUpdateCheckIfNeeded(reason: String) {
+        let now = Date()
+        guard AppUpdateReminderPolicy.shouldRunAutomaticCheck(
+            now: now,
+            state: updateReminderState,
+            isRecording: appState.status == .recording
+        ),
+        !isCheckingForUpdates else {
+            return
+        }
+
+        AppUpdateReminderPolicy.markAutomaticCheck(state: &updateReminderState, now: now)
+        AppUpdateReminderStore.save(updateReminderState)
+        isCheckingForUpdates = true
+
+        Task {
+            do {
+                let result = try await AppUpdateChecker().check(
+                    platform: .macOS,
+                    currentVersion: BuildInfo.appVersion
+                )
+                let shouldSurface = AppUpdateReminderPolicy.shouldSurfaceUpdate(
+                    result: result,
+                    state: updateReminderState,
+                    now: Date(),
+                    isRecording: appState.status == .recording
+                )
+
+                await MainActor.run {
+                    isCheckingForUpdates = false
+                    if shouldSurface {
+                        availableUpdateRelease = result.latestRelease
+                        AppUpdateEvents.postAvailable(result.latestRelease)
+                    }
+                    refreshMenuState()
+                    AppLogger.file(
+                        .info,
+                        category: "app",
+                        "menu update check reason=\(reason) current=\(result.currentVersion) latest=\(result.latestRelease.version) available=\(result.isUpdateAvailable) surfaced=\(shouldSurface)"
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    isCheckingForUpdates = false
+                    AppLogger.file(.error, category: "app", "menu update check failed reason=\(reason) error=\(String(describing: error))")
+                }
+            }
+        }
     }
 
     private func permissionQuestionMenuBarImage(accessibilityDescription: String) -> NSImage {
@@ -579,6 +744,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         NSWorkspace.shared.open(url)
+    }
+
+    @objc private func openAvailableUpdate() {
+        guard let availableUpdateRelease else {
+            return
+        }
+
+        NSWorkspace.shared.open(availableUpdateRelease.downloadURL)
+    }
+
+    @objc private func remindLaterForAvailableUpdate() {
+        guard let availableUpdateRelease else {
+            return
+        }
+
+        AppUpdateReminderPolicy.remindLater(
+            state: &updateReminderState,
+            release: availableUpdateRelease,
+            now: Date()
+        )
+        AppUpdateReminderStore.save(updateReminderState)
+        let version = availableUpdateRelease.version
+        self.availableUpdateRelease = nil
+        AppUpdateEvents.postDismissed(version: version)
+        refreshMenuState()
+    }
+
+    @objc private func skipAvailableUpdate() {
+        guard let availableUpdateRelease else {
+            return
+        }
+
+        AppUpdateReminderPolicy.skip(state: &updateReminderState, release: availableUpdateRelease)
+        AppUpdateReminderStore.save(updateReminderState)
+        let version = availableUpdateRelease.version
+        self.availableUpdateRelease = nil
+        AppUpdateEvents.postDismissed(version: version)
+        refreshMenuState()
     }
 
     @objc private func captureScreenshotFromMenu() {

@@ -80,8 +80,8 @@ struct AppUpdateTests {
     func updateReminderRespectsLaterAndSkippedVersions() {
         let now = Date(timeIntervalSince1970: 1_800_000)
         let release = AppUpdateRelease(
-            version: "0.1.6",
-            displayVersion: "v0.1.6",
+            version: "0.1.7",
+            displayVersion: "v0.1.7",
             build: "7",
             releaseURL: URL(string: "https://example.com/release")!,
             downloadURL: URL(string: "https://example.com/ToRec.dmg")!,
@@ -104,11 +104,11 @@ struct AppUpdateTests {
 
     @Test
     func bugReportURLIncludesVersionAndPlatform() throws {
-        let url = try #require(AppSupportLinks.bugReportURL(version: "v0.1.6", platform: .macOS))
+        let url = try #require(AppSupportLinks.bugReportURL(version: "v0.1.7", platform: .macOS))
         let absolute = url.absoluteString
 
         #expect(absolute.contains("torec-releases/issues/new"))
-        #expect(absolute.contains("version:%20v0.1.6"))
+        #expect(absolute.contains("version:%20v0.1.7"))
         #expect(absolute.contains("platform:%20macos"))
     }
 }
