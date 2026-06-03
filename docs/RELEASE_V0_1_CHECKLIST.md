@@ -1,14 +1,15 @@
-# Release v0.1.4 Checklist
+# Release v0.1.5 Checklist
 
 ## Scope
 
-Release target: ToRec v0.1.4 macOS dmg-icon-fix build.
+Release target: ToRec v0.1.5 macOS permissions-update-check build.
 
 Artifact:
 
 ```text
-dist/ToRec-v0.1.4-macOS.zip
-dist/ToRec-v0.1.4-macOS.dmg
+dist/ToRec-v0.1.5-macOS.zip
+dist/ToRec-v0.1.5-macOS.dmg
+dist/latest.json
 ```
 
 Do not create or publish the GitHub release from this checklist alone. GitHub tag and release draft require a separate explicit command.
@@ -19,8 +20,9 @@ Do not create or publish the GitHub release from this checklist alone. GitHub ta
 - [ ] `./scripts/build_macos.sh` passes.
 - [ ] `./scripts/package_macos.sh` passes.
 - [ ] `dist/ToRec.app` exists.
-- [ ] `dist/ToRec-v0.1.4-macOS.zip` exists.
-- [ ] `dist/ToRec-v0.1.4-macOS.dmg` exists.
+- [ ] `dist/ToRec-v0.1.5-macOS.zip` exists.
+- [ ] `dist/ToRec-v0.1.5-macOS.dmg` exists.
+- [ ] `dist/latest.json` exists.
 - [ ] Package output shows expected app version.
 - [ ] Package output shows expected git commit hash.
 - [ ] `git status --short --branch` is clean before final tagging/release draft.
@@ -32,8 +34,9 @@ swift test --package-path apps/macos
 ./scripts/build_macos.sh
 ./scripts/package_macos.sh
 test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.4-macOS.zip
-test -f dist/ToRec-v0.1.4-macOS.dmg
+test -f dist/ToRec-v0.1.5-macOS.zip
+test -f dist/ToRec-v0.1.5-macOS.dmg
+test -f dist/latest.json
 git status --short --branch
 ```
 
@@ -287,8 +290,9 @@ plutil -p metadata.json
 
 ## 9. Release Artifact
 
-- [ ] Final zip artifact path is `dist/ToRec-v0.1.4-macOS.zip`.
-- [ ] Final DMG artifact path is `dist/ToRec-v0.1.4-macOS.dmg`.
+- [ ] Final zip artifact path is `dist/ToRec-v0.1.5-macOS.zip`.
+- [ ] Final DMG artifact path is `dist/ToRec-v0.1.5-macOS.dmg`.
+- [ ] Final update manifest path is `dist/latest.json`.
 - [ ] Zip contains `ToRec.app`.
 - [ ] Zip does not contain `INSTALL.md` or `RELEASE_NOTES.md`.
 - [ ] DMG contains `ToRec.app`, an `Applications` shortcut, and visible install/Gatekeeper instructions.
@@ -301,11 +305,12 @@ plutil -p metadata.json
 Artifact check:
 
 ```sh
-ls -lh dist/ToRec-v0.1.4-macOS.zip dist/ToRec-v0.1.4-macOS.dmg
-zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | head
-! zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+ls -lh dist/ToRec-v0.1.5-macOS.zip dist/ToRec-v0.1.5-macOS.dmg
+python3 -m json.tool dist/latest.json >/dev/null
+zipinfo -1 dist/ToRec-v0.1.5-macOS.zip | head
+! zipinfo -1 dist/ToRec-v0.1.5-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
 TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
-hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.4-macOS.dmg
+hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.5-macOS.dmg
 test -d "$TMP_MOUNT/ToRec.app"
 test -L "$TMP_MOUNT/Applications"
 ls -ldO "$TMP_MOUNT/.background" | grep hidden
@@ -320,28 +325,29 @@ rmdir "$TMP_MOUNT"
 - [ ] Confirm target release commit.
 - [ ] Confirm branch status is clean.
 - [ ] Confirm no uncommitted artifacts are required.
-- [ ] Create tag `v0.1.4` only after release decision.
+- [ ] Create tag `v0.1.5` only after release decision.
 - [ ] Create GitHub release notes draft only after release decision.
 - [ ] Do not publish release without explicit command.
 - [ ] Release notes include what works, local-only behavior, install steps, permissions, known limitations, and next steps.
-- [ ] Attach `dist/ToRec-v0.1.4-macOS.zip` and `dist/ToRec-v0.1.4-macOS.dmg` to draft release.
+- [ ] Attach `dist/ToRec-v0.1.5-macOS.zip` and `dist/ToRec-v0.1.5-macOS.dmg` to draft release.
+- [ ] Publish `dist/latest.json` to `tolcheev/torec-releases/main/latest.json` after the release artifacts are uploaded.
 
 Suggested tag command after explicit approval:
 
 ```sh
-git tag v0.1.4
-git push origin v0.1.4
+git tag v0.1.5
+git push origin v0.1.5
 ```
 
 Suggested draft release command after explicit approval:
 
 ```sh
-gh release create v0.1.4 \
-  dist/ToRec-v0.1.4-macOS.zip \
-  dist/ToRec-v0.1.4-macOS.dmg \
+gh release create v0.1.5 \
+  dist/ToRec-v0.1.5-macOS.zip \
+  dist/ToRec-v0.1.5-macOS.dmg \
   --draft \
-  --title "ToRec v0.1.4 macOS dmg-icon-fix build" \
-  --notes-file docs/RELEASE_NOTES_V0_1_4.md
+  --title "ToRec v0.1.5 macOS permissions-update-check build" \
+  --notes-file docs/RELEASE_NOTES_V0_1_5.md
 ```
 
 ## Go/No-Go

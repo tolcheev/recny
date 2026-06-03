@@ -47,7 +47,7 @@ public enum PermissionOnboardingFormatter {
         case (.screenSystemAudio, .missing):
             return "Required for source/system.m4a and mixed preview. Request access before recording."
         case (.screenSystemAudio, .notDetermined):
-            return "Use Fix Permissions to request system audio access before recording. macOS may ask you to enable it in System Settings."
+            return "Use Fix Permissions to request system audio access before recording. macOS calls this Screen & System Audio Recording, but ToRec records only audio, not screen video."
         case (.screenSystemAudio, .unknown):
             return "ToRec cannot determine system audio permission."
 

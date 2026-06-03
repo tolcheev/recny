@@ -4,7 +4,7 @@ This is the experimental Windows client for ToRec.
 
 ## Current Scope
 
-Version: `0.2.2-beta`
+Version: `0.2.3-beta`
 
 Implemented:
 
@@ -19,6 +19,7 @@ Implemented:
 - `metadata.json` per recording.
 - Records window with Play and Open Folder.
 - Diagnostics window and local file log.
+- Manual `Check for Updates` action from the main window and tray menu.
 
 Not implemented in this beta:
 

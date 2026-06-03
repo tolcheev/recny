@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 using ToRec.Windows.Core.Recording;
+using ToRec.Windows.Core.Updates;
 
 namespace ToRec.Windows;
 
@@ -80,6 +81,14 @@ public sealed class MainForm : Form
         };
         diagnosticsButton.Click += (_, _) => new DiagnosticsForm(_storageRoot, _controller.LastError).Show();
 
+        var updatesButton = new Button
+        {
+            Text = "Updates",
+            Width = 120,
+            Height = 34
+        };
+        updatesButton.Click += async (_, _) => await CheckForUpdatesAsync();
+
         var folderButton = new Button
         {
             Text = "Open Folder",
@@ -110,6 +119,7 @@ public sealed class MainForm : Form
         secondaryButtons.Controls.Add(recordsButton);
         secondaryButtons.Controls.Add(folderButton);
         secondaryButtons.Controls.Add(diagnosticsButton);
+        secondaryButtons.Controls.Add(updatesButton);
 
         var content = new Panel
         {
@@ -186,6 +196,41 @@ public sealed class MainForm : Form
     {
         Directory.CreateDirectory(path);
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path)
+        {
+            UseShellExecute = true
+        });
+    }
+
+    private static async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var result = await new AppUpdateChecker().CheckWindowsAsync();
+            if (!result.IsUpdateAvailable)
+            {
+                MessageBox.Show(result.DisplayText, "ToRec Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var answer = MessageBox.Show(
+                $"{result.DisplayText}\n\nOpen the download page now?",
+                "ToRec Updates",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+            if (answer == DialogResult.Yes)
+            {
+                OpenUrl(result.LatestRelease.DownloadUrl);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not check updates: {ex.Message}", "ToRec Updates", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private static void OpenUrl(string url)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
         {
             UseShellExecute = true
         });

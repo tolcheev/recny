@@ -30,7 +30,7 @@ The MVP is a local-first recorder for Vlad, a QA/AQA mentor, who needs reliable 
 
 ## Windows Beta
 
-Windows support is an experimental v0.2 beta, not feature-parity with macOS yet.
+Windows support is an experimental v0.2.3 beta, not feature-parity with macOS yet.
 
 Implemented:
 
@@ -42,6 +42,7 @@ Implemented:
 - system-audio recording through WASAPI loopback;
 - local records list;
 - local diagnostics and logs.
+- manual update check from the main window and tray menu.
 
 Not implemented yet:
 
@@ -143,7 +144,7 @@ The current shell is a SwiftPM-based macOS app target. The build script compiles
 
 The build script injects app metadata into the bundle:
 
-- app version: `v0.1.4-dmg-icon-fix`
+- app version: `v0.1.5`
 - build date
 - git commit hash
 
@@ -159,8 +160,9 @@ This creates:
 
 ```text
 dist/ToRec.app
-dist/ToRec-v0.1.4-macOS.zip
-dist/ToRec-v0.1.4-macOS.dmg
+dist/ToRec-v0.1.5-macOS.zip
+dist/ToRec-v0.1.5-macOS.dmg
+dist/latest.json
 ```
 
 The zip is app-only and contains just `ToRec.app`. The DMG contains only `ToRec.app`, an `Applications` shortcut, a visual arrow from the app to Applications, and visible Gatekeeper recovery steps. It intentionally does not include an installer shell script because macOS Gatekeeper can block downloaded `.command` files before they run.
@@ -175,7 +177,7 @@ The best free testing path is the standard unsigned-app flow: drag the app into 
 
 For trusted internal testing:
 
-1. Open `ToRec-v0.1.4-macOS.dmg`.
+1. Open `ToRec-v0.1.5-macOS.dmg`.
 2. Drag `ToRec.app` into `Applications`.
 3. Open Finder -> Applications.
 4. Right-click `ToRec` -> Open.
@@ -235,7 +237,7 @@ Settings currently cover preferred microphone selection, required MVP output ind
 
 Active settings are persisted locally with `UserDefaults`. MVP defaults keep microphone selection on `Auto, recommended`, Standard audio quality, required system audio and mixed export enabled, auto-start enabled, Launch at Login enabled, the Dock icon hidden, a 3 minute cooldown, 20 second detection duration, and a 60 second short-recording threshold. ToRec is menu-bar-first by default; use the menu bar icon or global `Ctrl+Option+R` to show the app window when the Dock icon is hidden. Custom hotkey capture, local-only mode, and Focus Mode reminder are visible as disabled placeholders until their runtime behavior exists.
 
-Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path.
+Settings/About and Diagnostics/App include the app version, build date, git commit hash, and local storage path. Settings/About also provides a manual `Check for Updates` action. Update checks read the public GitHub manifest at `https://raw.githubusercontent.com/tolcheev/torec-releases/main/latest.json`; ToRec never silently replaces itself.
 
 ## Launch At Login
 

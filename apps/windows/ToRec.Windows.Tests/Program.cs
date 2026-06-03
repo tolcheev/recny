@@ -1,6 +1,7 @@
 using ToRec.Windows.Core.Recording;
 using ToRec.Windows.Core.Storage;
 using ToRec.Windows.Core.AutoStart;
+using ToRec.Windows.Core.Updates;
 
 namespace ToRec.Windows.Tests;
 
@@ -17,7 +18,9 @@ internal static class Program
             ("auto-start start decision carries source process id", AutoStartStartDecisionCarriesSourceProcessId),
             ("auto-start resets when activity is interrupted", AutoStartResetsWhenActivityIsInterrupted),
             ("auto-start keeps recording while source audio continues", AutoStartKeepsRecordingWhileSourceAudioContinues),
-            ("auto-start stops auto recordings after inactive grace", AutoStartStopsAutoRecordingsAfterInactiveGrace)
+            ("auto-start stops auto recordings after inactive grace", AutoStartStopsAutoRecordingsAfterInactiveGrace),
+            ("update manifest decodes windows release", UpdateManifestDecodesWindowsRelease),
+            ("version comparison handles beta and stable releases", VersionComparisonHandlesBetaAndStableReleases)
         };
 
         foreach (var test in tests)
@@ -192,6 +195,46 @@ internal static class Program
             "autostart");
 
         Assert(afterWindowSwitch.Action == AutoStartActionKind.None);
+    }
+
+    private static void UpdateManifestDecodesWindowsRelease()
+    {
+        const string json = """
+        {
+          "schema_version": 1,
+          "generated_at": "2026-06-03T08:00:00Z",
+          "macos": {
+            "version": "0.1.5",
+            "display_version": "v0.1.5",
+            "build": "6",
+            "release_url": "https://github.com/tolcheev/torec-releases/releases/tag/torec-test-builds-2026-06-03-v5",
+            "download_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v5/ToRec-v0.1.5-macOS.dmg",
+            "sha256_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v5/ToRec-v0.1.5-macOS.dmg.sha256",
+            "notes": "Permission and update fixes."
+          },
+          "windows": {
+            "version": "0.2.3-beta",
+            "display_version": "v0.2.3-beta",
+            "build": "3",
+            "release_url": "https://github.com/tolcheev/torec-releases/releases/tag/torec-test-builds-2026-06-03-v5",
+            "download_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v5/ToRec-Windows-v0.2.3-beta.zip",
+            "sha256_url": "https://github.com/tolcheev/torec-releases/releases/download/torec-test-builds-2026-06-03-v5/ToRec-Windows-v0.2.3-beta.zip.sha256",
+            "notes": "Windows update checks."
+          }
+        }
+        """;
+
+        var manifest = AppUpdateChecker.DecodeManifest(json);
+
+        Assert(manifest.Windows.Version == "0.2.3-beta");
+        Assert(manifest.Windows.DownloadUrl.EndsWith("ToRec-Windows-v0.2.3-beta.zip"));
+    }
+
+    private static void VersionComparisonHandlesBetaAndStableReleases()
+    {
+        Assert(AppVersion.Parse("v0.2.2-beta") < AppVersion.Parse("0.2.3-beta"));
+        Assert(AppVersion.Parse("0.2.3-beta") < AppVersion.Parse("0.2.3"));
+        Assert(AppVersion.Parse("0.2.3") > AppVersion.Parse("0.2.3-beta"));
     }
 
     private static string TempRoot()

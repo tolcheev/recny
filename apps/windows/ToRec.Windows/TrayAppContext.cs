@@ -1,5 +1,6 @@
 using System.Windows.Forms;
 using ToRec.Windows.Core.Recording;
+using ToRec.Windows.Core.Updates;
 
 namespace ToRec.Windows;
 
@@ -35,6 +36,7 @@ public sealed class TrayAppContext : ApplicationContext
         menu.Items.Add("Records", null, (_, _) => new RecordsForm(_storageRoot).Show());
         menu.Items.Add("Open Records Folder", null, (_, _) => OpenPath(_storageRoot));
         menu.Items.Add("Diagnostics", null, (_, _) => new DiagnosticsForm(_storageRoot, _controller.LastError).Show());
+        menu.Items.Add("Check for Updates", null, async (_, _) => await CheckForUpdatesAsync());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, async (_, _) => await ExitAsync());
 
@@ -117,6 +119,41 @@ public sealed class TrayAppContext : ApplicationContext
     {
         Directory.CreateDirectory(path);
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path)
+        {
+            UseShellExecute = true
+        });
+    }
+
+    private static async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var result = await new AppUpdateChecker().CheckWindowsAsync();
+            if (!result.IsUpdateAvailable)
+            {
+                MessageBox.Show(result.DisplayText, "ToRec Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var answer = MessageBox.Show(
+                $"{result.DisplayText}\n\nOpen the download page now?",
+                "ToRec Updates",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+            if (answer == DialogResult.Yes)
+            {
+                OpenUrl(result.LatestRelease.DownloadUrl);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not check updates: {ex.Message}", "ToRec Updates", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private static void OpenUrl(string url)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
         {
             UseShellExecute = true
         });

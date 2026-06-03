@@ -6,7 +6,13 @@ import TOrbitRecorderCore
 enum PermissionActionHandler {
     static func handlePrimaryFixAction(appState: AppState) {
         Task { @MainActor in
-            await requestMissingPermissions(appState: appState)
+            await requestMissingPermissions(appState: appState, mode: .normal)
+        }
+    }
+
+    static func handleForcedRecheckAction(appState: AppState) {
+        Task { @MainActor in
+            await requestMissingPermissions(appState: appState, mode: .forced)
         }
     }
 
@@ -77,14 +83,13 @@ enum PermissionActionHandler {
         NSWorkspace.shared.open(url)
     }
 
-    private static func requestMissingPermissions(appState: AppState) async {
+    private static func requestMissingPermissions(appState: AppState, mode: PermissionRecheckMode) async {
         appState.beginPermissionOnboarding(message: "Checking recording permissions...")
         appState.refreshMicrophoneDevices()
-        // The user explicitly asked to re-verify permissions. Drop the
-        // persisted "probe succeeded" cache so a TCC reset (or a stale
-        // approval) between launches cannot make us skip the system audio
-        // probe.
-        if appState.recordingSettings.systemAudioEnabled {
+        if PermissionRecheckPolicy.shouldInvalidateSystemAudioProbeCache(
+            mode: mode,
+            systemAudioEnabled: appState.recordingSettings.systemAudioEnabled
+        ) {
             appState.invalidateSystemAudioPermissionCache()
         }
         appState.refreshPermissionSnapshot()

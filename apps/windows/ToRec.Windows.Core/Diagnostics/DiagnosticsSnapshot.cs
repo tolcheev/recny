@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using NAudio.Wave;
+using ToRec.Windows.Core.Updates;
 
 namespace ToRec.Windows.Core.Diagnostics;
 
@@ -15,7 +16,7 @@ public sealed record DiagnosticsSnapshot(
 {
     public static DiagnosticsSnapshot Create(string storageRoot, string? lastError)
     {
-        var appVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "0.2.2";
+        var appVersion = AppUpdateChecker.EntryAssemblyDisplayVersion();
         var nAudioVersion = typeof(WaveInEvent).Assembly.GetName().Version?.ToString() ?? "unknown";
         return new DiagnosticsSnapshot(
             appVersion,

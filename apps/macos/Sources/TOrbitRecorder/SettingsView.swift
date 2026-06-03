@@ -11,6 +11,10 @@ struct SettingsView: View {
     @State private var transcriptionSetupMessage: String?
     @State private var transcriptionSetupError: String?
     @State private var isPreparingTranscription = false
+    @State private var updateCheckMessage: String?
+    @State private var updateCheckError: String?
+    @State private var latestUpdateRelease: AppUpdateRelease?
+    @State private var isCheckingForUpdates = false
 
     var body: some View {
         ScrollView {
@@ -484,6 +488,49 @@ struct SettingsView: View {
             SettingsInfoRow(label: "Build date", value: BuildInfo.buildDate)
             SettingsInfoRow(label: "Git commit", value: BuildInfo.gitCommit)
             SettingsInfoRow(label: "Local storage", value: appState.outputFolderPath, monospaced: true)
+
+            Divider()
+
+            HStack(spacing: 8) {
+                Button {
+                    checkForUpdates()
+                } label: {
+                    Label(isCheckingForUpdates ? "Checking..." : "Check for Updates", systemImage: "arrow.down.circle")
+                }
+                .disabled(isCheckingForUpdates)
+
+                Button {
+                    openUpdateDownload()
+                } label: {
+                    Label("Download Update", systemImage: "square.and.arrow.down")
+                }
+                .disabled(latestUpdateRelease == nil)
+
+                Button {
+                    openUpdateReleasePage()
+                } label: {
+                    Label("Release Page", systemImage: "safari")
+                }
+                .disabled(latestUpdateRelease == nil)
+            }
+
+            Text("Updates are downloaded from the public GitHub release page. ToRec does not overwrite itself automatically.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if let updateCheckMessage {
+                Text(updateCheckMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
+            if let updateCheckError {
+                Text(updateCheckError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+            }
         }
     }
 
@@ -623,6 +670,55 @@ struct SettingsView: View {
         NSPasteboard.general.setString(command, forType: .string)
         transcriptionSetupError = nil
         transcriptionSetupMessage = "Install command copied."
+    }
+
+    private func checkForUpdates() {
+        guard !isCheckingForUpdates else {
+            return
+        }
+
+        isCheckingForUpdates = true
+        updateCheckError = nil
+        updateCheckMessage = "Checking latest ToRec release..."
+
+        Task {
+            do {
+                let result = try await AppUpdateChecker().check(
+                    platform: .macOS,
+                    currentVersion: BuildInfo.appVersion
+                )
+                latestUpdateRelease = result.isUpdateAvailable ? result.latestRelease : nil
+                updateCheckMessage = result.displayText
+                updateCheckError = nil
+                AppLogger.file(
+                    .info,
+                    category: "app",
+                    "update check completed current=\(result.currentVersion) latest=\(result.latestRelease.version) available=\(result.isUpdateAvailable)"
+                )
+            } catch {
+                latestUpdateRelease = nil
+                updateCheckMessage = nil
+                updateCheckError = "Could not check updates: \(String(describing: error))"
+                AppLogger.file(.error, category: "app", "update check failed error=\(String(describing: error))")
+            }
+            isCheckingForUpdates = false
+        }
+    }
+
+    private func openUpdateDownload() {
+        guard let latestUpdateRelease else {
+            return
+        }
+
+        NSWorkspace.shared.open(latestUpdateRelease.downloadURL)
+    }
+
+    private func openUpdateReleasePage() {
+        guard let latestUpdateRelease else {
+            return
+        }
+
+        NSWorkspace.shared.open(latestUpdateRelease.releaseURL)
     }
 
     private func joined(_ values: [String]) -> String {

@@ -733,10 +733,10 @@ public final class AppState: ObservableObject {
     }
 
     /// Drops cached "probe succeeded" flags (both in-run and persisted)
-    /// so that the next Fix Permissions click is forced to re-verify
-    /// system audio via the Core Audio probe. Necessary because macOS
-    /// TCC can be revoked or reset between launches without our app
-    /// being notified.
+    /// for the explicit Diagnostics -> Force Recheck flow. The normal
+    /// Fix Permissions path must not call this after a successful probe:
+    /// macOS can otherwise show the same system-audio prompt again even
+    /// when the user already granted the permission and restarted.
     public func invalidateSystemAudioPermissionCache() {
         systemAudioPermissionVerifiedThisRun = false
         systemAudioPermissionProbeSucceeded = false

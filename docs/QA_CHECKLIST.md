@@ -29,11 +29,12 @@ Use this checklist for manual macOS MVP validation. Prefer testing the installed
 
 ```sh
 test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.4-macOS.zip
-test -f dist/ToRec-v0.1.4-macOS.dmg
-zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -Fx ToRec.app/
-! zipinfo -1 dist/ToRec-v0.1.4-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
-hdiutil attach -readonly dist/ToRec-v0.1.4-macOS.dmg
+test -f dist/ToRec-v0.1.5-macOS.zip
+test -f dist/ToRec-v0.1.5-macOS.dmg
+test -f dist/latest.json
+zipinfo -1 dist/ToRec-v0.1.5-macOS.zip | grep -Fx ToRec.app/
+! zipinfo -1 dist/ToRec-v0.1.5-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+hdiutil attach -readonly dist/ToRec-v0.1.5-macOS.dmg
 # DMG should show ToRec.app, Applications, and install/Gatekeeper instructions.
 ```
 
@@ -47,7 +48,7 @@ hdiutil attach -readonly dist/ToRec-v0.1.4-macOS.dmg
 
 ```sh
 TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
-hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.4-macOS.dmg
+hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.5-macOS.dmg
 test -d "$TMP_MOUNT/ToRec.app"
 test -L "$TMP_MOUNT/Applications"
 ls -ldO "$TMP_MOUNT/.background" | grep hidden
@@ -92,6 +93,9 @@ open /Applications/ToRec.app
   - Microphone prompt, if microphone is not determined
   - System audio prompt, if system audio is not determined
 - [ ] If macOS skips the system-audio prompt because access was already granted, the onboarding checklist stays visible and shows the system-audio verification message before Start is enabled.
+- [ ] After system-audio access has already been granted and the app has been restarted, clicking the normal `Fix Permissions` / `Recheck` path does not clear the successful system-audio probe cache and does not repeatedly show the macOS `Screen & System Audio Recording` prompt.
+- [ ] Diagnostics -> `Force Recheck Permissions` is the only UI path that intentionally clears the successful system-audio probe cache.
+- [ ] Permission copy explains that macOS calls this `Screen & System Audio Recording`, but ToRec records system audio only and does not write screen video.
 - [ ] Main UI no longer shows Fix Permissions.
 - [ ] Clicking `Start Recording` does not show a macOS permission prompt. If a permission prompt appears on Start, the onboarding gate is broken.
 - [ ] Diagnostics shows Microphone as granted/authorized.
@@ -199,6 +203,8 @@ plutil -p metadata.json
 - [ ] Records filters include status, date range, source app, tags, and audio health.
 - [ ] Settings opens.
 - [ ] Settings -> About shows version, build date, commit hash, and local storage path.
+- [ ] Settings -> About -> Check for Updates reports either the latest version or a newer version from the public release manifest.
+- [ ] Settings -> About -> Download Update opens the public GitHub download URL when a newer version is available.
 - [ ] Diagnostics opens.
 - [ ] Diagnostics shows permissions, selected input, recommended input, last error, logs, and recoverables.
 - [ ] Diagnostics shows the last 100 local `app.log` lines.

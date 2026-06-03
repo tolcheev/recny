@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="ToRec"
 LEGACY_APP_NAME="TOrbitRecorder"
-PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.4}"
+PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.5}"
 DMG_VOLUME_NAME="${DMG_VOLUME_NAME:-$APP_NAME $PACKAGE_VERSION}"
 BUILD_APP="$ROOT_DIR/apps/macos/.build/app/$APP_NAME.app"
 DIST_DIR="$ROOT_DIR/dist"
@@ -151,9 +151,16 @@ rm -f "$DMG_RW"
     env LC_ALL=C LANG=C /usr/bin/shasum -a 256 "$(basename "$DIST_DMG")" > "$(basename "$DIST_DMG_SHA256")"
 )
 
+TOREC_UPDATE_MANIFEST_PATH="$DIST_DIR/latest.json" \
+    TOREC_MACOS_VERSION="${PACKAGE_VERSION#v}" \
+    TOREC_MACOS_DISPLAY_VERSION="$PACKAGE_VERSION" \
+    TOREC_MACOS_BUILD="${BUILD_NUMBER:-6}" \
+    "$ROOT_DIR/scripts/write_update_manifest.py" >/dev/null
+
 echo "Version: $PACKAGE_VERSION"
 echo "App bundle: $DIST_APP"
 echo "Archive: $DIST_ZIP"
 echo "SHA256: $DIST_SHA256"
 echo "DMG: $DIST_DMG"
 echo "DMG SHA256: $DIST_DMG_SHA256"
+echo "Update manifest: $DIST_DIR/latest.json"

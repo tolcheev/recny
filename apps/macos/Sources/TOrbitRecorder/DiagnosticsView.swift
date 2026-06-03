@@ -74,7 +74,18 @@ struct DiagnosticsView: View {
                     } label: {
                         Label("Recheck", systemImage: "arrow.clockwise")
                     }
+
+                    Button {
+                        PermissionActionHandler.handleForcedRecheckAction(appState: appState)
+                    } label: {
+                        Label("Force Recheck Permissions", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+                    }
                 }
+
+                Text("Use Force Recheck only after changing macOS Privacy settings or when Diagnostics still shows stale permission state. Normal Recheck does not ask macOS for the same system-audio permission again.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

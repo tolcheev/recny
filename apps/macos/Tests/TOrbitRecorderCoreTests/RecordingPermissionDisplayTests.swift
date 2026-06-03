@@ -176,7 +176,7 @@ struct RecordingPermissionDisplayTests {
             PermissionOnboardingFormatter.explanation(
                 for: .screenSystemAudio,
                 state: .notDetermined
-            ) == "Use Fix Permissions to request system audio access before recording. macOS may ask you to enable it in System Settings."
+            ) == "Use Fix Permissions to request system audio access before recording. macOS calls this Screen & System Audio Recording, but ToRec records only audio, not screen video."
         )
         #expect(
             PermissionOnboardingFormatter.inlineActionTitle(
