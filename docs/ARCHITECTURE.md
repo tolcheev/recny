@@ -2,7 +2,7 @@
 
 ## Repository Boundary
 
-This repository contains the standalone ToRec desktop client.
+This repository contains the standalone Recny desktop client.
 
 The T-Orbit backend is not part of this repository. The MVP does not upload recordings, sync metadata, call cloud AI services, or depend on T-Orbit availability.
 
@@ -50,7 +50,7 @@ It produces source metadata:
 - trigger
 - rule id
 
-V1 evaluates the active app and bundle id, running app snapshots, local whitelist/blacklist, microphone activity, system audio activity, Zoom per-process Core Audio input/output activity, recording state, cooldown, and minimum detection duration. It does not inspect browser URLs and does not use browser extensions.
+V1 evaluates the active app and bundle id, running app snapshots, local whitelist/blacklist, microphone activity, system audio activity, Zoom per-process Core Audio input/output activity, browser window-title hints, recording state, cooldown, and minimum detection duration. It does not inspect browser URLs directly and does not use browser extensions. Zoom Web can start from explicit Zoom window titles plus system-audio activity even when the local Zoom microphone is muted; generic browser-call titles still require microphone activity.
 
 ### Recording Engine
 

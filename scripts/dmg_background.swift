@@ -2,7 +2,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-let outputPrefix = CommandLine.arguments.dropFirst().first ?? "/tmp/torec_dmg_bg"
+let outputPrefix = CommandLine.arguments.dropFirst().first ?? "/tmp/recny_dmg_bg"
 
 func render(scale: Int) -> NSBitmapImageRep {
     let logicalWidth: CGFloat = 660
@@ -102,7 +102,7 @@ func render(scale: Int) -> NSBitmapImageRep {
 
     badge("1", centerX: 46, centerY: 498)
     NSAttributedString(
-        string: "Drag ToRec to Applications",
+        string: "Drag Recny to Applications",
         attributes: [
             .font: NSFont.systemFont(ofSize: 13, weight: .bold),
             .foregroundColor: dark(0.82),
@@ -110,7 +110,7 @@ func render(scale: Int) -> NSBitmapImageRep {
         ]
     ).draw(in: CGRect(x: 70, y: 490, width: 460, height: 18))
     NSAttributedString(
-        string: "Перетащи ToRec в Программы",
+        string: "Перетащи Recny в Программы",
         attributes: [
             .font: NSFont.systemFont(ofSize: 11, weight: .medium),
             .foregroundColor: dark(0.55),
@@ -147,7 +147,7 @@ func render(scale: Int) -> NSBitmapImageRep {
 
     badge("2", centerX: 46, centerY: 272)
     NSAttributedString(
-        string: "First launch: Finder -> Applications -> right-click ToRec -> Open",
+        string: "First launch: Finder -> Applications -> right-click Recny -> Open",
         attributes: [
             .font: NSFont.systemFont(ofSize: 13, weight: .bold),
             .foregroundColor: dark(0.82),
@@ -155,7 +155,7 @@ func render(scale: Int) -> NSBitmapImageRep {
         ]
     ).draw(in: CGRect(x: 70, y: 264, width: 560, height: 18))
     NSAttributedString(
-        string: "Первый запуск: Finder -> Программы -> правый клик ToRec -> Открыть",
+        string: "Первый запуск: Finder -> Программы -> правый клик Recny -> Открыть",
         attributes: [
             .font: NSFont.systemFont(ofSize: 11, weight: .medium),
             .foregroundColor: dark(0.55),

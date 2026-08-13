@@ -1,6 +1,6 @@
-# ToRec Windows Beta
+# Recny Windows Beta
 
-This is the experimental Windows client for ToRec.
+This is the experimental Windows client for Recny.
 
 ## Current Scope
 
@@ -36,7 +36,7 @@ Not implemented in this beta:
 Default root:
 
 ```text
-%USERPROFILE%\Recordings\TOrbitRecorder\
+%USERPROFILE%\Recordings\Recny\
 ```
 
 Each recording creates:
@@ -59,20 +59,20 @@ The `.wav` files are the reliable local output. `.m4a` files are best-effort exp
 ## Build Locally On Windows
 
 ```powershell
-dotnet restore apps/windows/ToRec.Windows/ToRec.Windows.csproj
-dotnet build apps/windows/ToRec.Windows/ToRec.Windows.csproj -c Release --no-restore
-dotnet run --project apps/windows/ToRec.Windows.Tests/ToRec.Windows.Tests.csproj -c Release
-dotnet publish apps/windows/ToRec.Windows/ToRec.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+dotnet restore apps/windows/Recny.Windows/Recny.Windows.csproj
+dotnet build apps/windows/Recny.Windows/Recny.Windows.csproj -c Release --no-restore
+dotnet run --project apps/windows/Recny.Windows.Tests/Recny.Windows.Tests.csproj -c Release
+dotnet publish apps/windows/Recny.Windows/Recny.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
 ## Test Instructions
 
-1. Run `ToRec.exe`.
-2. Confirm a ToRec icon appears in the Windows tray.
+1. Run `Recny.exe`.
+2. Confirm a Recny icon appears in the Windows tray.
 3. Start a Zoom/Meet/KTalk/Teams/Telegram/Discord call and wait at least 10 seconds.
-4. Confirm ToRec starts recording automatically.
-5. Switch to another window/app during the call and confirm ToRec keeps recording.
-6. End the call and confirm ToRec stops after about 10 seconds.
+4. Confirm Recny starts recording automatically.
+5. Switch to another window/app during the call and confirm Recny keeps recording.
+6. End the call and confirm Recny stops after about 10 seconds.
 7. Open `Records` and play the latest recording.
 8. Open the recording folder and confirm `metadata.json`, `source/mic.wav`, `source/system.wav`, and `export/mixed.wav` exist.
 

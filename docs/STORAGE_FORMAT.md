@@ -8,7 +8,7 @@
 
 The MVP stores all recordings locally. The recording folder plus `metadata.json` is the canonical record.
 
-The default root can be changed from Settings and is persisted locally. Reset to default returns the app to `~/Recordings/TOrbitRecorder/`.
+The default root keeps the historical `TOrbitRecorder` folder name to preserve existing recordings. It can be changed from Settings and is persisted locally. Reset to default returns the app to `~/Recordings/TOrbitRecorder/`.
 
 The root contains both user recordings and app internals. In normal use, the app opens `Library/` from the `Library` button so the user does not need to browse `db/`, `logs/`, or internal `Inbox/` staging folders.
 
@@ -102,6 +102,7 @@ Failed sessions may have missing final audio files, but `metadata.json` should b
 The app may create local derived files inside the same session folder:
 
 - `export/mixed_balanced.m4a`: balanced audio export when volume leveling succeeds.
+- `export/share/*.m4a`: user-facing share copies created from the preferred playable audio. File names use the edited recording title plus `dd_MM_yy`, for example `wildberries_09_06_26.m4a`; the canonical MVP files remain unchanged.
 - `analysis/audio_analysis.json`: lightweight audio analysis used by diagnostics and Records.
 - `export/clip_*.m4a`: non-destructive user-created audio clips from Records trim actions.
 - `transcript/transcript.*`: explicit local transcription outputs created after optional Parakeet setup in Settings.
@@ -157,7 +158,7 @@ Deleting a local record removes the session folder and the SQLite index row. Man
   "id": "rec_2026-05-23_14-30-00_ab12cd",
   "schema_version": 1,
   "owner_id": "local:vlad",
-  "workspace_id": "local:t-orbit-recorder",
+  "workspace_id": "local:recny",
   "mentor_id": "local:vlad",
   "title": "Student call",
   "started_at": "2026-05-23T14:30:00Z",

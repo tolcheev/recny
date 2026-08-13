@@ -3,18 +3,18 @@
 import PackageDescription
 
 let package = Package(
-    name: "TOrbitRecorder",
+    name: "Recny",
     platforms: [
         .macOS(.v15)
     ],
     products: [
-        .library(name: "TOrbitRecorderCore", targets: ["TOrbitRecorderCore"]),
-        .executable(name: "TOrbitRecorder", targets: ["TOrbitRecorder"])
+        .library(name: "RecnyCore", targets: ["RecnyCore"]),
+        .executable(name: "Recny", targets: ["Recny"])
     ],
     targets: [
         .target(
-            name: "TOrbitRecorderCore",
-            path: "Sources/TOrbitRecorderCore",
+            name: "RecnyCore",
+            path: "Sources/RecnyCore",
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("AudioToolbox"),
@@ -24,33 +24,33 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "TOrbitRecorder",
-            dependencies: ["TOrbitRecorderCore"],
-            path: "Sources/TOrbitRecorder",
+            name: "Recny",
+            dependencies: ["RecnyCore"],
+            path: "Sources/Recny",
             exclude: ["Resources/Info.plist"]
         ),
         .executableTarget(
-            name: "TOrbitRecorderMicSmokeTest",
-            dependencies: ["TOrbitRecorderCore"],
-            path: "Sources/TOrbitRecorderMicSmokeTest",
+            name: "RecnyMicSmokeTest",
+            dependencies: ["RecnyCore"],
+            path: "Sources/RecnyMicSmokeTest",
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("ScreenCaptureKit")
             ]
         ),
         .executableTarget(
-            name: "TOrbitRecorderSystemAudioSmokeTest",
-            dependencies: ["TOrbitRecorderCore"],
-            path: "Sources/TOrbitRecorderSystemAudioSmokeTest",
+            name: "RecnySystemAudioSmokeTest",
+            dependencies: ["RecnyCore"],
+            path: "Sources/RecnySystemAudioSmokeTest",
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("ScreenCaptureKit")
             ]
         ),
         .testTarget(
-            name: "TOrbitRecorderCoreTests",
-            dependencies: ["TOrbitRecorderCore"],
-            path: "Tests/TOrbitRecorderCoreTests"
+            name: "RecnyCoreTests",
+            dependencies: ["RecnyCore"],
+            path: "Tests/RecnyCoreTests"
         )
     ]
 )

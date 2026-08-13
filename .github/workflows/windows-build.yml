@@ -29,34 +29,34 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore
-        run: dotnet restore apps/windows/ToRec.Windows/ToRec.Windows.csproj
+        run: dotnet restore apps/windows/Recny.Windows/Recny.Windows.csproj
 
       - name: Build
-        run: dotnet build apps/windows/ToRec.Windows/ToRec.Windows.csproj -c Release --no-restore
+        run: dotnet build apps/windows/Recny.Windows/Recny.Windows.csproj -c Release --no-restore
 
       - name: Tests
-        run: dotnet run --project apps/windows/ToRec.Windows.Tests/ToRec.Windows.Tests.csproj -c Release
+        run: dotnet run --project apps/windows/Recny.Windows.Tests/Recny.Windows.Tests.csproj -c Release
 
       - name: Publish
         run: >
-          dotnet publish apps/windows/ToRec.Windows/ToRec.Windows.csproj
+          dotnet publish apps/windows/Recny.Windows/Recny.Windows.csproj
           -c Release
           -r win-x64
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
-          -o dist/windows/ToRec-Windows-v0.2.5-beta
+          -o dist/windows/Recny-Windows-v0.2.5-beta
 
       - name: Add release notes
         shell: pwsh
-        run: Copy-Item docs/RELEASE_NOTES_WINDOWS_V0_2_5.md dist/windows/ToRec-Windows-v0.2.5-beta/README.md
+        run: Copy-Item docs/RELEASE_NOTES_WINDOWS_V0_2_5.md dist/windows/Recny-Windows-v0.2.5-beta/README.md
 
       - name: Zip
         shell: pwsh
-        run: Compress-Archive -Path dist/windows/ToRec-Windows-v0.2.5-beta/* -DestinationPath dist/windows/ToRec-Windows-v0.2.5-beta.zip -Force
+        run: Compress-Archive -Path dist/windows/Recny-Windows-v0.2.5-beta/* -DestinationPath dist/windows/Recny-Windows-v0.2.5-beta.zip -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ToRec-Windows-v0.2.5-beta
-          path: dist/windows/ToRec-Windows-v0.2.5-beta.zip
+          name: Recny-Windows-v0.2.5-beta
+          path: dist/windows/Recny-Windows-v0.2.5-beta.zip

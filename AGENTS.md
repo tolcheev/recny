@@ -1,4 +1,4 @@
-# T-Orbit Recorder
+# Recny
 
 ## Product goal
 

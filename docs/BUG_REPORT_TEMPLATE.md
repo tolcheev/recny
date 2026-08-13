@@ -1,6 +1,6 @@
 # Bug Report Template
 
-Copy this template into Codex when reporting a TOrbitRecorder bug.
+Copy this template into Codex when reporting a Recny bug.
 
 ````markdown
 ## Summary
@@ -14,9 +14,9 @@ Short one-line description:
 - macOS version:
 - Mac model:
 - App path:
-  - [ ] /Applications/ToRec.app
-  - [ ] dist/ToRec.app
-  - [ ] apps/macos/.build/app/ToRec.app
+  - [ ] /Applications/Recny.app
+  - [ ] dist/Recny.app
+  - [ ] apps/macos/.build/app/Recny.app
   - [ ] Other:
 
 ## Permissions Status

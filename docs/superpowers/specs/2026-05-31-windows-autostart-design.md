@@ -2,7 +2,7 @@
 
 ## Context
 
-Windows must support the main ToRec promise: launch the app once, leave it in the tray, and let it record likely calls automatically. Manual recording is only a fallback.
+Windows must support the main Recny promise: launch the app once, leave it in the tray, and let it record likely calls automatically. Manual recording is only a fallback.
 
 ## Behavior
 
@@ -19,7 +19,7 @@ Use Windows audio sessions through WASAPI/NAudio:
 - known desktop call apps can trigger from active audio sessions;
 - browser apps require a call-like window title so YouTube/music does not start recording by itself;
 - after auto-start, active recordings are held by the same source process/app audio session, not by the active window;
-- ToRec's own process is ignored.
+- Recny's own process is ignored.
 
 Known desktop call apps:
 

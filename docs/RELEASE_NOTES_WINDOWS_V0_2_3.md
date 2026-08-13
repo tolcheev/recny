@@ -1,4 +1,4 @@
-# ToRec Windows v0.2.3 Beta
+# Recny Windows v0.2.3 Beta
 
 ## What Changed Since v0.2.2
 
@@ -10,15 +10,15 @@
 
 ## Install
 
-1. Download `ToRec-Windows-v0.2.3-beta.zip`.
+1. Download `Recny-Windows-v0.2.3-beta.zip`.
 2. Extract the archive.
-3. Run `ToRec.exe`.
+3. Run `Recny.exe`.
 4. If Windows SmartScreen blocks the app, click `More info` -> `Run anyway`.
 
 ## Update Checks
 
 The app checks:
 
-`https://raw.githubusercontent.com/tolcheev/torec-releases/main/latest.json`
+`https://raw.githubusercontent.com/tolcheev/recny-releases/main/latest.json`
 
-ToRec opens the GitHub download URL. It does not overwrite or replace itself automatically.
+Recny opens the GitHub download URL. It does not overwrite or replace itself automatically.

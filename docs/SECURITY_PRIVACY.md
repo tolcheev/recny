@@ -2,7 +2,7 @@
 
 ## MVP Position
 
-ToRec MVP is local-first.
+Recny MVP is local-first.
 
 The app stores recordings, metadata, transcripts, notes, screenshots, and logs on the user's Mac and does not upload them to cloud storage, T-Orbit, AI providers, or external services.
 
@@ -79,7 +79,7 @@ Allowed log content:
 
 Avoid logging unnecessary participant names, raw transcript text, raw browser/window titles, raw custom tags, or long file contents. File logs should record tag counts instead of tag values and should keep auto-start decision messages free of raw window titles.
 
-Local destructive actions must only operate inside the configured ToRec storage root. If a local index row points outside that root, the app must refuse the action instead of deleting or opening the path.
+Local destructive actions must only operate inside the configured Recny storage root. If a local index row points outside that root, the app must refuse the action instead of deleting or opening the path.
 
 ## Encryption
 

@@ -2,13 +2,13 @@
 
 ## Scope
 
-Release target: ToRec v0.1.7 macOS update-reminder-bug-report build.
+Release target: Recny v0.1.7 macOS update-reminder-bug-report build.
 
 Artifact:
 
 ```text
-dist/ToRec-v0.1.7-macOS.zip
-dist/ToRec-v0.1.7-macOS.dmg
+dist/Recny-v0.1.7-macOS.zip
+dist/Recny-v0.1.7-macOS.dmg
 dist/latest.json
 ```
 
@@ -19,9 +19,9 @@ Do not create or publish the GitHub release from this checklist alone. GitHub ta
 - [ ] `swift test --package-path apps/macos` passes.
 - [ ] `./scripts/build_macos.sh` passes.
 - [ ] `./scripts/package_macos.sh` passes.
-- [ ] `dist/ToRec.app` exists.
-- [ ] `dist/ToRec-v0.1.7-macOS.zip` exists.
-- [ ] `dist/ToRec-v0.1.7-macOS.dmg` exists.
+- [ ] `dist/Recny.app` exists.
+- [ ] `dist/Recny-v0.1.7-macOS.zip` exists.
+- [ ] `dist/Recny-v0.1.7-macOS.dmg` exists.
 - [ ] `dist/latest.json` exists.
 - [ ] Package output shows expected app version.
 - [ ] Package output shows expected git commit hash.
@@ -33,9 +33,9 @@ Commands:
 swift test --package-path apps/macos
 ./scripts/build_macos.sh
 ./scripts/package_macos.sh
-test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.7-macOS.zip
-test -f dist/ToRec-v0.1.7-macOS.dmg
+test -d dist/Recny.app
+test -f dist/Recny-v0.1.7-macOS.zip
+test -f dist/Recny-v0.1.7-macOS.dmg
 test -f dist/latest.json
 git status --short --branch
 ```
@@ -43,15 +43,16 @@ git status --short --branch
 ## 2. Install
 
 - [ ] Install app to `/Applications`.
-- [ ] Launch app from `/Applications/ToRec.app`.
-- [ ] Do not test release permissions with `.build/app/ToRec.app`.
+- [ ] Launch app from `/Applications/Recny.app`.
+- [ ] Do not test release permissions with `.build/app/Recny.app`.
 - [ ] Do not mix `.build/app`, `dist/`, and `/Applications` while validating permissions.
 - [ ] Microphone permission is granted.
 - [ ] System audio permission is granted through the Core Audio tap permission path.
-- [ ] If macOS shows `Only System Audio Recording`, ToRec is enabled there.
+- [ ] If macOS shows `Only System Audio Recording`, Recny is enabled there.
 - [ ] `Fix Permissions` requests microphone access and runs the Core Audio capture-start permission probe before Start Recording is enabled.
 - [ ] During the system-audio macOS prompt, the app remains in the yellow permissions-needed/onboarding state, not `Ready`.
-- [ ] After the microphone prompt, ToRec is frontmost again before the system-audio prompt appears.
+- [ ] A fresh local/ad-hoc rebuild with the same app version does not reuse an older system-audio `Ready` cache unless the current build date has already completed the Core Audio probe.
+- [ ] After the microphone prompt, Recny is frontmost again before the system-audio prompt appears.
 - [ ] App does not request macOS Notifications permission.
 - [ ] App is restarted after changing permissions in System Settings.
 - [ ] macOS menu bar shows the compact text-free outline play status item while idle.
@@ -64,7 +65,7 @@ Commands:
 
 ```sh
 ./scripts/install_macos.sh
-open /Applications/ToRec.app
+open /Applications/Recny.app
 ```
 
 Permission locations:
@@ -112,6 +113,13 @@ If shown: Screen & System Audio Recording -> Only System Audio Recording
 - [ ] App selects MacBook/built-in microphone instead of AirPods microphone.
 - [ ] UI shows selected microphone.
 - [ ] If only Bluetooth headset mic is available, recording is blocked and the UI shows that AirPods/Bluetooth microphones are blocked.
+
+### Virtual Meeting Inputs
+
+- [ ] `Microsoft Teams Audio` and `ZoomAudioDevice` are labeled `Blocked` in Settings/Diagnostics.
+- [ ] App selects MacBook/built-in microphone instead of `Microsoft Teams Audio` or `ZoomAudioDevice`.
+- [ ] A saved preferred `Microsoft Teams Audio` / `ZoomAudioDevice` input is ignored and cleared before recording.
+- [ ] If only a virtual meeting input is available, recording is blocked and the UI says Microsoft Teams/Zoom virtual microphone is blocked.
 
 ### External Mic If Available
 
@@ -170,8 +178,9 @@ plutil -p metadata.json
 - [ ] Records details show files, metadata, tags, and markers if present.
 - [ ] Records details panel scrolls vertically and keeps all action buttons reachable in the default window size.
 - [ ] Deleting a recording folder manually in Finder, then clicking Records Refresh, removes the stale row from Records.
-- [ ] Records More -> Share Audio and details -> Share open the native macOS share sheet for the preferred local audio file.
-- [ ] Records Copy Audio Path copies the preferred local audio file path.
+- [ ] Records row Open selects the final dated audio file under `export/share/` in Finder.
+- [ ] Records More -> Share Audio and details -> Share open the native macOS share sheet for the final dated audio file under `export/share/`.
+- [ ] Records Copy Audio Path copies the final dated audio file path.
 - [ ] Records Trim Audio exports a non-empty `export/clip_*.m4a` without modifying original audio files.
 - [ ] Records Trim & Share opens the native macOS share sheet for the created clip.
 - [ ] Settings -> Local transcription exposes optional setup status and prepares the Parakeet model only when the user clicks the setup action.
@@ -191,8 +200,9 @@ plutil -p metadata.json
 - [ ] Global `Ctrl+Option+R` brings the main window to front while another app is active.
 - [ ] Menu bar Start/Stop works.
 - [ ] Menu bar Play Last Recording works when latest mixed preview exists.
-- [ ] Menu bar Open Library opens the user-facing recordings folder.
-- [ ] Menu bar Open Records, Settings, Diagnostics, and Quit work.
+- [ ] Menu bar Records opens the in-app records list.
+- [ ] Menu bar Open Library Folder opens the user-facing recordings folder.
+- [ ] Menu bar Settings, Diagnostics, and Quit work.
 
 ## 6. Auto-Start
 
@@ -214,7 +224,11 @@ plutil -p metadata.json
 - [ ] Confirm mic activity and system audio activity.
 - [ ] Wait detection duration.
 - [ ] Recording starts or asks first according to mode.
-- [ ] Browser + system audio only does not start recording.
+- [ ] Open Zoom Web in ChatGPT Atlas at `app.zoom.us` and confirm auto-start triggers after the detection duration.
+- [ ] Keep the local Zoom Web microphone muted, receive remote/system audio, and confirm explicit `app.zoom.us` / `zoom.us` / `Zoom Meeting...` titles still trigger after the detection duration.
+- [ ] Bring Recny to the foreground over an active ChatGPT Atlas Zoom Web meeting and confirm the running Atlas Zoom title still triggers after the detection duration.
+- [ ] Confirm `Zoom Meeting...`, `app.zoom.us`, and `zoom.us` browser titles are treated as call-like.
+- [ ] Generic browser + system audio only does not start recording.
 - [ ] YouTube-like browser title with no mic activity does not start recording.
 
 ### Cooldown
@@ -290,14 +304,14 @@ plutil -p metadata.json
 
 ## 9. Release Artifact
 
-- [ ] Final zip artifact path is `dist/ToRec-v0.1.7-macOS.zip`.
-- [ ] Final DMG artifact path is `dist/ToRec-v0.1.7-macOS.dmg`.
+- [ ] Final zip artifact path is `dist/Recny-v0.1.7-macOS.zip`.
+- [ ] Final DMG artifact path is `dist/Recny-v0.1.7-macOS.dmg`.
 - [ ] Final update manifest path is `dist/latest.json`.
-- [ ] Zip contains `ToRec.app`.
+- [ ] Zip contains `Recny.app`.
 - [ ] Zip does not contain `INSTALL.md` or `RELEASE_NOTES.md`.
-- [ ] DMG contains `ToRec.app`, an `Applications` shortcut, and visible install/Gatekeeper instructions.
-- [ ] DMG does not contain `Install ToRec.command` or `Open Privacy Settings`; downloaded helper scripts/shortcuts can create a second Gatekeeper failure path.
-- [ ] `ToRec.app` has the play-triangle app icon.
+- [ ] DMG contains `Recny.app`, an `Applications` shortcut, and visible install/Gatekeeper instructions.
+- [ ] DMG does not contain `Install Recny.command` or `Open Privacy Settings`; downloaded helper scripts/shortcuts can create a second Gatekeeper failure path.
+- [ ] `Recny.app` has the play-triangle app icon.
 - [ ] Zip opens on a clean local unpack.
 - [ ] App launches from unpacked artifact or `/Applications`.
 - [ ] Artifact is attached to draft GitHub release only after checks pass.
@@ -305,16 +319,16 @@ plutil -p metadata.json
 Artifact check:
 
 ```sh
-ls -lh dist/ToRec-v0.1.7-macOS.zip dist/ToRec-v0.1.7-macOS.dmg
+ls -lh dist/Recny-v0.1.7-macOS.zip dist/Recny-v0.1.7-macOS.dmg
 python3 -m json.tool dist/latest.json >/dev/null
-zipinfo -1 dist/ToRec-v0.1.7-macOS.zip | head
-! zipinfo -1 dist/ToRec-v0.1.7-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
-TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
-hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.7-macOS.dmg
-test -d "$TMP_MOUNT/ToRec.app"
+zipinfo -1 dist/Recny-v0.1.7-macOS.zip | head
+! zipinfo -1 dist/Recny-v0.1.7-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+TMP_MOUNT="$(mktemp -d /tmp/recny-dmg-verify.XXXXXX)"
+hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/Recny-v0.1.7-macOS.dmg
+test -d "$TMP_MOUNT/Recny.app"
 test -L "$TMP_MOUNT/Applications"
 ls -ldO "$TMP_MOUNT/.background" | grep hidden
-test ! -e "$TMP_MOUNT/Install ToRec.command"
+test ! -e "$TMP_MOUNT/Install Recny.command"
 test ! -e "$TMP_MOUNT/Open Privacy Settings"
 hdiutil detach "$TMP_MOUNT"
 rmdir "$TMP_MOUNT"
@@ -329,8 +343,8 @@ rmdir "$TMP_MOUNT"
 - [ ] Create GitHub release notes draft only after release decision.
 - [ ] Do not publish release without explicit command.
 - [ ] Release notes include what works, local-only behavior, install steps, permissions, known limitations, and next steps.
-- [ ] Attach `dist/ToRec-v0.1.7-macOS.zip` and `dist/ToRec-v0.1.7-macOS.dmg` to draft release.
-- [ ] Publish `dist/latest.json` to `tolcheev/torec-releases/main/latest.json` after the release artifacts are uploaded.
+- [ ] Attach `dist/Recny-v0.1.7-macOS.zip` and `dist/Recny-v0.1.7-macOS.dmg` to draft release.
+- [ ] Publish `dist/latest.json` to `tolcheev/recny-releases/main/latest.json` after the release artifacts are uploaded.
 
 Suggested tag command after explicit approval:
 
@@ -343,10 +357,10 @@ Suggested draft release command after explicit approval:
 
 ```sh
 gh release create v0.1.7 \
-  dist/ToRec-v0.1.7-macOS.zip \
-  dist/ToRec-v0.1.7-macOS.dmg \
+  dist/Recny-v0.1.7-macOS.zip \
+  dist/Recny-v0.1.7-macOS.dmg \
   --draft \
-  --title "ToRec v0.1.7 macOS update-reminder-bug-report build" \
+  --title "Recny v0.1.7 macOS update-reminder-bug-report build" \
   --notes-file docs/RELEASE_NOTES_V0_1_7.md
 ```
 

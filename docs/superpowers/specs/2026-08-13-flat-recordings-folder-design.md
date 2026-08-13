@@ -13,7 +13,7 @@ The storage root gains a `Recordings/` directory. It contains a flat list:
   Recordings/
     zoom_10-30__13.08.26.m4a
     safari_15-06__12.08.26.m4a
-    torec_09-24__11.08.26.m4a
+    recny_09-24__11.08.26.m4a
 ```
 
 There are no subdirectories inside `Recordings/`.
@@ -24,7 +24,7 @@ The basename format is:
 <source>_<HH-mm>__<dd.MM.yy>.m4a
 ```
 
-The source is lowercase and filesystem-safe. Known Zoom variants become `zoom`; manual ToRec recordings become `torec`; browser recordings use the detected browser name such as `safari`. Unsupported punctuation and path separators become a single hyphen.
+The source is lowercase and filesystem-safe. Known Zoom variants become `zoom`; manual Recny recordings become `recny`; browser recordings use the detected browser name such as `safari`. Unsupported punctuation and path separators become a single hyphen.
 
 Examples:
 

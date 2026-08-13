@@ -1,4 +1,4 @@
-# ToRec v0.1.6 macOS Update Reminder / Bug Report Build
+# Recny v0.1.6 macOS Update Reminder / Bug Report Build
 
 ## What Changed Since v0.1.5
 
@@ -11,13 +11,13 @@
 
 ## Install
 
-1. Download `ToRec-v0.1.6-macOS.dmg`.
-2. Drag `ToRec.app` to `Applications`.
-3. First launch: Finder -> Applications -> right-click ToRec -> Open.
+1. Download `Recny-v0.1.6-macOS.dmg`.
+2. Drag `Recny.app` to `Applications`.
+3. First launch: Finder -> Applications -> right-click Recny -> Open.
 4. If macOS blocks launch, click `Done`, then System Settings -> Privacy & Security -> Security -> `Open Anyway`.
 
 ## Notes
 
-- ToRec still does not auto-replace itself. The update action opens the public GitHub download.
+- Recny still does not auto-replace itself. The update action opens the public GitHub download.
 - The app still does not request macOS Notifications permission.
 - Recordings remain local under `~/Recordings/TOrbitRecorder/`.

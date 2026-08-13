@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="ToRec"
-LEGACY_APP_NAME="TOrbitRecorder"
+APP_NAME="Recny"
+LEGACY_APP_NAMES=("ToRec" "TOrbitRecorder")
 PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.7}"
 DMG_VOLUME_NAME="${DMG_VOLUME_NAME:-$APP_NAME $PACKAGE_VERSION}"
 BUILD_APP="$ROOT_DIR/apps/macos/.build/app/$APP_NAME.app"
@@ -44,15 +44,19 @@ rm -rf \
     "$DIST_DIR"/"$APP_NAME"-*-macOS.dmg \
     "$DIST_DIR"/"$APP_NAME"-*-macOS.dmg.sha256 \
     "$DIST_DIR"/"$APP_NAME"-*-macOS-rw.dmg \
-    "$DIST_DIR"/"$LEGACY_APP_NAME"-*-macOS.zip \
-    "$DIST_DIR"/"$LEGACY_APP_NAME"-*-macOS.zip.sha256 \
     "$DIST_DIR/$APP_NAME-macOS-MVP.zip" \
-    "$DIST_DIR/$LEGACY_APP_NAME.app" \
     "$DMG_ROOT" \
     "$DMG_BACKGROUND" \
     "$DMG_BACKGROUND_PREFIX"_1x.png \
     "$DMG_BACKGROUND_PREFIX"_2x.png \
     "$DMG_BACKGROUND_GENERATOR"
+
+for legacy_app_name in "${LEGACY_APP_NAMES[@]}"; do
+    rm -rf \
+        "$DIST_DIR"/"$legacy_app_name"-*-macOS.zip \
+        "$DIST_DIR"/"$legacy_app_name"-*-macOS.zip.sha256 \
+        "$DIST_DIR/$legacy_app_name.app"
+done
 
 cp -R "$BUILD_APP" "$DIST_APP"
 
@@ -82,7 +86,7 @@ if [[ -d "/Volumes/$DMG_VOLUME_NAME" ]]; then
     hdiutil detach "/Volumes/$DMG_VOLUME_NAME" >/dev/null 2>&1 || true
 fi
 
-DMG_MOUNT="$(mktemp -d /tmp/torec-dmg-mount.XXXXXX)"
+DMG_MOUNT="$(mktemp -d /tmp/recny-dmg-mount.XXXXXX)"
 MOUNT_DIR="$DMG_MOUNT"
 ATTACH_OUTPUT="$(hdiutil attach -readwrite -noverify -noautoopen -mountpoint "$MOUNT_DIR" "$DMG_RW")"
 if [[ ! -d "$MOUNT_DIR" ]]; then
@@ -151,10 +155,10 @@ rm -f "$DMG_RW"
     env LC_ALL=C LANG=C /usr/bin/shasum -a 256 "$(basename "$DIST_DMG")" > "$(basename "$DIST_DMG_SHA256")"
 )
 
-TOREC_UPDATE_MANIFEST_PATH="$DIST_DIR/latest.json" \
-    TOREC_MACOS_VERSION="${PACKAGE_VERSION#v}" \
-    TOREC_MACOS_DISPLAY_VERSION="$PACKAGE_VERSION" \
-    TOREC_MACOS_BUILD="${BUILD_NUMBER:-8}" \
+RECNY_UPDATE_MANIFEST_PATH="$DIST_DIR/latest.json" \
+    RECNY_MACOS_VERSION="${PACKAGE_VERSION#v}" \
+    RECNY_MACOS_DISPLAY_VERSION="$PACKAGE_VERSION" \
+    RECNY_MACOS_BUILD="${BUILD_NUMBER:-8}" \
     "$ROOT_DIR/scripts/write_update_manifest.py" >/dev/null
 
 echo "Version: $PACKAGE_VERSION"

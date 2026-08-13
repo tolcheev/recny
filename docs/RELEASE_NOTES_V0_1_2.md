@@ -1,15 +1,15 @@
-# ToRec v0.1.2 macOS MVP
+# Recny v0.1.2 macOS MVP
 
 Internal Apple Silicon macOS build for local-first call recording.
 
 ## What Changed Since v0.1.1
 
-- User-facing app name changed from T-Orbit Recorder to ToRec.
-- Packaged app bundle is now `ToRec.app`.
-- Release archive is now `ToRec-v0.1.2-macOS.zip`.
+- User-facing app name changed from T-Orbit Recorder to Recny.
+- Packaged app bundle is now `Recny.app`.
+- Release archive is now `Recny-v0.1.2-macOS.zip`.
 - The bundle identifier remains `com.torbit.recorder` for permission continuity.
-- The executable name remains `TOrbitRecorder` internally to avoid risky SwiftPM target churn before testing.
-- Installer removes the legacy `/Applications/TOrbitRecorder.app` while installing `/Applications/ToRec.app`.
+- The executable and SwiftPM targets are named `Recny` and `RecnyCore`.
+- Installer removes legacy `/Applications/ToRec.app` and `/Applications/TOrbitRecorder.app` bundles while installing `/Applications/Recny.app`.
 - Local storage remains `~/Recordings/TOrbitRecorder/` so existing recordings continue to load.
 
 ## What Works
@@ -50,20 +50,20 @@ Internal Apple Silicon macOS build for local-first call recording.
 
 ## Install
 
-1. Download `ToRec-v0.1.2-macOS.zip`.
+1. Download `Recny-v0.1.2-macOS.zip`.
 2. Unzip it.
-3. Move `ToRec.app` to `/Applications`.
-4. Open `/Applications/ToRec.app`.
+3. Move `Recny.app` to `/Applications`.
+4. Open `/Applications/Recny.app`.
 5. Grant:
    - Microphone;
    - Screen & System Audio Recording / Only System Audio Recording.
-6. Quit and reopen the same `/Applications/ToRec.app` after changing permissions.
+6. Quit and reopen the same `/Applications/Recny.app` after changing permissions.
 
-This is an internal ad-hoc signed build, not a notarized public macOS release. If Gatekeeper blocks it, use Finder -> Applications -> right-click `ToRec` -> Open. For trusted internal testing only:
+This is an internal ad-hoc signed build, not a notarized public macOS release. If Gatekeeper blocks it, use Finder -> Applications -> right-click `Recny` -> Open. For trusted internal testing only:
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/ToRec.app
-open /Applications/ToRec.app
+xattr -dr com.apple.quarantine /Applications/Recny.app
+open /Applications/Recny.app
 ```
 
 ## Known Limitations
@@ -78,5 +78,5 @@ open /Applications/ToRec.app
 
 - `swift test --package-path apps/macos`
 - `scripts/package_macos.sh`
-- `codesign --verify --deep --strict --verbose=2 dist/ToRec.app`
+- `codesign --verify --deep --strict --verbose=2 dist/Recny.app`
 - `spctl` Gatekeeper check is expected to reject this internal ad-hoc build until Developer ID notarization is added.

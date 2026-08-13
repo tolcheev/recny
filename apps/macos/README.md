@@ -1,4 +1,4 @@
-# ToRec macOS App
+# Recny macOS App
 
 Native macOS menu bar app for the MVP shell.
 
@@ -10,10 +10,10 @@ From the repository root:
 scripts/build_macos.sh
 ```
 
-The script uses SwiftPM because the current MVP shell has no Xcode project yet. It builds the `TOrbitRecorder` executable and assembles a local app bundle at:
+The script uses SwiftPM because the current MVP shell has no Xcode project yet. It builds the `Recny` executable and assembles a local app bundle at:
 
 ```text
-apps/macos/.build/app/ToRec.app
+apps/macos/.build/app/Recny.app
 ```
 
 ## Current Scope
@@ -23,12 +23,13 @@ apps/macos/.build/app/ToRec.app
 - `AppState` core state layer.
 - `RecordingController` protocol.
 - Real microphone recording through AVFoundation into `source/mic.m4a`.
+- Deterministic microphone selection blocks AirPods/Bluetooth headset microphones and virtual meeting inputs such as Microsoft Teams Audio / ZoomAudioDevice.
 - Real system audio recording through the native macOS audio capture path into `source/system.m4a`.
 - System audio capture is audio-only; no screen video stream is written.
 - Mixed audio preview through AVFoundation into `export/mixed.m4a`.
 - Crash recovery metadata in `recovery.json` and active segment files under `source/segments/`.
 - Recoverable interrupted recordings surfaced in the UI with a Recover Recording action.
-- Auto-start Engine v2 with active app detection, process-audio signals, browser call-title heuristics, allowlist/blocklist settings, cooldown, and minimum detection duration.
+- Auto-start Engine v2 with active app detection, Zoom/Teams call-window signals, process-audio signals, browser call-title heuristics including muted Zoom Web in ChatGPT Atlas, allowlist/blocklist settings, cooldown, and minimum detection duration.
 - Settings screen persisted locally with sections for Recording, Auto-start, Storage, Hotkeys, and Privacy.
 - `StubRecordingController` that changes state without writing audio.
 - Compact post-call tagging panel after Stop.
@@ -47,14 +48,13 @@ Screen video recording, cloud upload, T-Orbit sync, and AI are intentionally not
 Active MVP settings:
 
 - Recording: system audio enabled, mixed preview enabled.
-- Auto-start: enabled flag, whitelist apps, blacklist apps, detection duration, cooldown minutes, short recording threshold.
+- Auto-start: enabled flag, whitelist apps including Zoom, Microsoft Teams, Yandex Telemost, and ChatGPT Atlas, blacklist apps, detection duration, cooldown minutes, short recording threshold. Existing installs with the old default whitelist migrate to include Microsoft Teams, Yandex Telemost, and ChatGPT Atlas, and to remove Telegram and Discord from default-like whitelists. If manually allowlisted, Telegram and Discord require same-process input and output audio, not just global microphone and system-audio activity.
 - Storage: root folder, choose folder, open folder, reset to default.
 - Privacy: show recording indicator.
 
 Disabled placeholders:
 
 - Audio quality preset beyond the current Standard AAC 48 kHz profile.
-- Microphone device selection beyond the default system input.
 - Editable custom hotkey capture.
 - Start/stop global hotkey.
 - Add marker hotkey.
@@ -66,7 +66,7 @@ Disabled placeholders:
 If the current macOS user has granted microphone access to the terminal process, run:
 
 ```sh
-swift run --package-path apps/macos TOrbitRecorderMicSmokeTest --duration 10 --root /tmp/TOrbitRecorderMicSmokeTest
+swift run --package-path apps/macos RecnyMicSmokeTest --duration 10 --root /tmp/RecnyMicSmokeTest
 ```
 
 If permission is `not_determined`, `denied`, or `restricted`, the smoke test exits before recording and prints the exact authorization status.
@@ -76,7 +76,7 @@ If permission is `not_determined`, `denied`, or `restricted`, the smoke test exi
 Play audible audio from another macOS app, then run:
 
 ```sh
-swift run --package-path apps/macos TOrbitRecorderSystemAudioSmokeTest --duration 10 --root /tmp/TOrbitRecorderSystemAudioSmokeTest
+swift run --package-path apps/macos RecnySystemAudioSmokeTest --duration 10 --root /tmp/RecnySystemAudioSmokeTest
 ```
 
-The command writes `/tmp/TOrbitRecorderSystemAudioSmokeTest/source/system.m4a` and fails explicitly if ScreenCaptureKit cannot start or no system audio samples are captured. Grant Screen & System Audio Recording permission to the terminal process if macOS prompts for it, then rerun the command.
+The command writes `/tmp/RecnySystemAudioSmokeTest/source/system.m4a` and fails explicitly if ScreenCaptureKit cannot start or no system audio samples are captured. Grant Screen & System Audio Recording permission to the terminal process if macOS prompts for it, then rerun the command.

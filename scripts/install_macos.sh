@@ -2,19 +2,21 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="ToRec"
-LEGACY_APP_NAME="TOrbitRecorder"
-PROCESS_NAME="TOrbitRecorder"
+APP_NAME="Recny"
+LEGACY_APP_NAMES=("ToRec" "TOrbitRecorder")
+PROCESS_NAMES=("Recny" "TOrbitRecorder")
 DIST_APP="$ROOT_DIR/dist/$APP_NAME.app"
 INSTALL_APP="/Applications/$APP_NAME.app"
-LEGACY_INSTALL_APP="/Applications/$LEGACY_APP_NAME.app"
 DRY_RUN="${DRY_RUN:-0}"
 AUTO_QUIT="${AUTO_QUIT:-1}"
-STORAGE_ROOT="${TORBIT_RECORDINGS_ROOT:-$HOME/Recordings/TOrbitRecorder}"
+STORAGE_ROOT="${RECNY_RECORDINGS_ROOT:-${TORBIT_RECORDINGS_ROOT:-$HOME/Recordings/TOrbitRecorder}}"
 ALLOW_INSTALL_WHILE_RECORDING="${ALLOW_INSTALL_WHILE_RECORDING:-0}"
 
 running_pids() {
-    pgrep -x "$PROCESS_NAME" || true
+    local process_name
+    for process_name in "${PROCESS_NAMES[@]}"; do
+        pgrep -x "$process_name" || true
+    done | sort -u
 }
 
 is_running() {
@@ -62,7 +64,9 @@ if is_running; then
         echo "$APP_NAME is running. Asking the app to quit before install..."
         osascript -e "tell application id \"com.torbit.recorder\" to quit" >/dev/null 2>&1 || true
         osascript -e "tell application \"$APP_NAME\" to quit" >/dev/null 2>&1 || true
-        osascript -e "tell application \"$LEGACY_APP_NAME\" to quit" >/dev/null 2>&1 || true
+        for legacy_app_name in "${LEGACY_APP_NAMES[@]}"; do
+            osascript -e "tell application \"$legacy_app_name\" to quit" >/dev/null 2>&1 || true
+        done
 
         for _ in {1..10}; do
             if ! is_running; then
@@ -74,7 +78,7 @@ if is_running; then
         if is_running; then
             print_running_instances
             echo "$APP_NAME is still running. Quit every listed copy from the menu bar, then rerun this script." >&2
-            echo "For debugging only, inspect running copies with: pgrep -fl TOrbitRecorder" >&2
+            echo "For debugging only, inspect running copies with: pgrep -fl 'Recny|TOrbitRecorder'" >&2
             exit 1
         fi
     else
@@ -85,19 +89,23 @@ fi
 
 if [[ "$DRY_RUN" == "1" ]]; then
     echo "Dry run only. Would replace: $INSTALL_APP"
-    echo "Dry run only. Would remove legacy app if present: $LEGACY_INSTALL_APP"
+    for legacy_app_name in "${LEGACY_APP_NAMES[@]}"; do
+        echo "Dry run only. Would remove legacy app if present: /Applications/$legacy_app_name.app"
+    done
     echo "Dry run only. Would open: $INSTALL_APP"
     echo
     echo "Next steps after a real install:"
-    echo "1. Grant Microphone permission to ToRec."
-    echo "2. Grant system audio permission to ToRec."
-    echo "3. Quit and reopen ToRec after changing audio permissions."
+    echo "1. Grant Microphone permission to Recny."
+    echo "2. Grant system audio permission to Recny."
+    echo "3. Quit and reopen Recny after changing audio permissions."
     echo "4. Recordings are stored in ~/Recordings/TOrbitRecorder/."
     exit 0
 fi
 
 rm -rf "$INSTALL_APP"
-rm -rf "$LEGACY_INSTALL_APP"
+for legacy_app_name in "${LEGACY_APP_NAMES[@]}"; do
+    rm -rf "/Applications/$legacy_app_name.app"
+done
 cp -R "$DIST_APP" "$INSTALL_APP"
 xattr -cr "$INSTALL_APP"
 open "$INSTALL_APP"
@@ -108,7 +116,7 @@ echo
 echo "Next steps:"
 echo "1. Grant Microphone permission in System Settings -> Privacy & Security -> Microphone."
 echo "2. Grant system audio permission in System Settings -> Privacy & Security -> Screen & System Audio Recording."
-echo "   If macOS shows Only System Audio Recording, enable ToRec there too."
-echo "3. Quit and reopen ToRec after changing audio permissions."
+echo "   If macOS shows Only System Audio Recording, enable Recny there too."
+echo "3. Quit and reopen Recny after changing audio permissions."
 echo "4. Recordings are stored in ~/Recordings/TOrbitRecorder/."
 echo "5. Shareable packages are in $ROOT_DIR/dist/."

@@ -2,7 +2,7 @@
 
 ## Product Goal
 
-ToRec is a lightweight native macOS app for automatic audio recording of calls without OBS.
+Recny is a lightweight native macOS app for automatic audio recording of calls without OBS.
 
 The MVP must solve one problem: when an important call happens, Vlad should get a reliable local audio recording without manually configuring OBS, routing tools, cloud services, or AI workflows.
 
@@ -49,6 +49,7 @@ The MVP is intentionally not a media studio, meeting bot, cloud recorder, or T-O
 - MVP tags saved to `metadata.json` and local SQLite.
 - Recording list filtering by date, status, source app, title, and tag.
 - Local library actions: Open in Finder, Play mixed preview, share through macOS share sheet, trim a local clip, capture a still screenshot, edit title, add tags, and delete with confirmation.
+- Shared audio files use a user-facing copy name based on the edited title and `dd_MM_yy` recording date, for example `wildberries_09_06_26.m4a`; internal MVP audio paths stay stable.
 - Local Settings screen for preferred microphone, required MVP output indicators, auto-start rules, storage root, screenshot hotkeys, disabled custom-hotkey placeholders, and privacy controls.
 - Local storage under `~/Recordings/TOrbitRecorder/`.
 - Lifecycle and failure logs.

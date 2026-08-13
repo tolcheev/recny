@@ -2,14 +2,14 @@
 
 ## Objective
 
-Create a separate Windows beta client that builds a shareable `ToRec.exe` zip on GitHub Actions.
+Create a separate Windows beta client that builds a shareable `Recny.exe` zip on GitHub Actions.
 
 ## Steps
 
 1. Update Windows documentation to mark v0.2 beta as active scope.
-2. Add `apps/windows/ToRec.Windows.Core` with recording, storage, metadata, diagnostics, and post-processing code.
-3. Add `apps/windows/ToRec.Windows` Windows Forms tray app.
-4. Add `apps/windows/ToRec.Windows.Tests` as a package-light console test runner.
+2. Add `apps/windows/Recny.Windows.Core` with recording, storage, metadata, diagnostics, and post-processing code.
+3. Add `apps/windows/Recny.Windows` Windows Forms tray app.
+4. Add `apps/windows/Recny.Windows.Tests` as a package-light console test runner.
 5. Add `.github/workflows/windows-build.yml` to build, test, publish, zip, and upload the Windows artifact.
 6. Update README with Windows beta install and use instructions.
 7. Push the branch and use GitHub Actions to validate on a real Windows runner.
@@ -23,7 +23,7 @@ Create a separate Windows beta client that builds a shareable `ToRec.exe` zip on
 - A recording creates `source/`, `export/`, and `metadata.json`.
 - Diagnostics exposes storage path and last error.
 - Local tests verify path layout, metadata writing, and metadata scanning.
-- GitHub Actions produces a zip containing `ToRec.exe`.
+- GitHub Actions produces a zip containing `Recny.exe`.
 
 ## Validation Commands
 
@@ -36,10 +36,10 @@ git diff --check
 Windows runner validation:
 
 ```sh
-dotnet restore apps/windows/ToRec.Windows/ToRec.Windows.csproj
-dotnet build apps/windows/ToRec.Windows/ToRec.Windows.csproj -c Release --no-restore
-dotnet run --project apps/windows/ToRec.Windows.Tests/ToRec.Windows.Tests.csproj -c Release
-dotnet publish apps/windows/ToRec.Windows/ToRec.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+dotnet restore apps/windows/Recny.Windows/Recny.Windows.csproj
+dotnet build apps/windows/Recny.Windows/Recny.Windows.csproj -c Release --no-restore
+dotnet run --project apps/windows/Recny.Windows.Tests/Recny.Windows.Tests.csproj -c Release
+dotnet publish apps/windows/Recny.Windows/Recny.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
 ## Rollback

@@ -43,7 +43,7 @@ Default selection is `Auto, recommended`:
 
 1. Prefer external microphones: Shure, MV7, Hollyland, USB microphones, audio interfaces, and other non-built-in external microphone devices.
 2. Fall back to the built-in MacBook microphone: `MacBook Pro Microphone` or `Built-in Microphone`.
-3. Fall back to other non-Bluetooth input devices.
+3. Fall back to other non-Bluetooth and non-virtual input devices.
 
 AirPods, AirPods Pro, AirPods Max, Bluetooth headset, and hands-free profile microphones are blocked for recording. They must not be selected automatically, must not be honored as a manual preferred input, and must not be used as a restore target after recording. If no non-Bluetooth input is available, recording is blocked and the app must show:
 
@@ -51,7 +51,13 @@ AirPods, AirPods Pro, AirPods Max, Bluetooth headset, and hands-free profile mic
 AirPods/Bluetooth microphone is blocked for recording. Connect the MacBook or USB microphone.
 ```
 
-The selected microphone name is visible in the main recorder UI and can be overridden from Settings > Recording > Preferred microphone. A preferred Bluetooth headset microphone is always ignored for recording.
+Virtual meeting inputs are blocked too: `Microsoft Teams Audio`, `Teams Audio`, `ZoomAudioDevice`, and `Zoom Audio Device` must not be selected automatically, must not be honored as a manual preferred input, and must not be used as a restore target after recording. If no non-virtual input is available, recording is blocked and the app must show:
+
+```text
+Microsoft Teams/Zoom virtual microphone is blocked for recording. Use the MacBook, USB, or external microphone.
+```
+
+The selected microphone name is visible in the main recorder UI and can be overridden from Settings > Recording > Preferred microphone. A preferred Bluetooth headset microphone or virtual meeting microphone is always ignored for recording.
 
 Settings labels each available input as `Recommended`, `Built-in`, `Blocked`, or `Available`. Diagnostics shows the selected input, the recommended Auto input, and the reason for the current selection. Device changes are refreshed while the app runs; Auto can pick a newly connected external microphone for the next recording, but the active recording input is not changed mid-session.
 
@@ -124,11 +130,13 @@ While `isSystemAudioPermissionRequestInProgress` is set:
 
 Only after the probe verifies real audio frames are `noteSystemAudioPermissionRequestSucceeded()` and the persisted `systemAudioPermissionProbeSucceeded` flag set. The Ready state is therefore impossible to reach while the system-audio TCC prompt is still visible.
 
+The persisted system-audio probe cache is keyed by app version, build date, git commit, and probe implementation version. Development/ad-hoc rebuilds can keep the same version and commit while changing the code-signing requirement, so build date is part of the key. A new local build must run the Core Audio probe again instead of reusing an older `Ready` state.
+
 ## Auto-Started Stop Guard
 
 Auto-started recordings are allowed to continue while the user switches away from Zoom or another call app. Foreground app changes are not a reliable signal that the call ended.
 
-The app stops an auto-started recording only after the call signal has been absent for the configured grace period. The default grace period is 10 seconds, and auto-start monitoring polls once per second so the real stop time stays close to that target. For Zoom, Core Audio process activity from `us.zoom.xos` is the preferred signal: active Zoom input or output keeps recording alive while the user works in another app. Meeting/home window titles are used when macOS exposes them. If both Zoom window titles and per-process audio activity are unavailable, global system-audio activity is the last fallback and microphone activity is ignored because the recorder can keep input devices marked as running. Manual recordings do not use this guard and must be stopped by the user.
+The app stops an auto-started recording only after the call signal has been absent for the configured grace period. The default grace period is 10 seconds, and auto-start monitoring polls once per second so the real stop time stays close to that target. For Zoom, Core Audio process activity from `us.zoom.xos` is the preferred signal: active Zoom input or output keeps recording alive while the user works in another app. Meeting/home window titles are used when macOS exposes them. If both Zoom window titles and per-process audio activity are unavailable, global system-audio activity is the last fallback and microphone activity is ignored because the recorder can keep input devices marked as running. For Yandex Telemost, process input activity or a call-like meeting window is required; output-only process activity and global microphone/system activity do not start or keep a Telemost recording alive. Telegram and Discord are not in the default auto-start whitelist; if explicitly allowlisted, their keep-alive signal must come from the same app using both Core Audio input and output. Playback-only output or unrelated microphone activity does not keep the recording alive. Manual recordings do not use this guard and must be stopped by the user.
 
 The guard logs:
 

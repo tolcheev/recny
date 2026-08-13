@@ -17,7 +17,7 @@ From the repository root:
 ```sh
 scripts/build_macos.sh
 scripts/package_macos.sh
-open -n dist/TOrbitRecorder.app
+open -n dist/Recny.app
 ```
 
 The app runs as a menu bar app. Use the menu bar icon or the main panel for Show Window, Start Recording or Stop Recording, Play Last Recording, Open Library, Open Records, Settings, Diagnostics, and Quit.
@@ -48,7 +48,7 @@ Expected menu items:
 - `Diagnostics`
 - `Quit`
 
-1. Open `dist/TOrbitRecorder.app`.
+1. Open `dist/Recny.app`.
 2. Confirm the menu bar item is visible.
 3. Choose menu bar -> Show Window.
 4. Confirm the existing main window comes to front and the app becomes active.
@@ -92,9 +92,9 @@ Expected shortcuts:
 
 Manual check:
 
-1. Open TOrbitRecorder from `/Applications` or `dist/`.
+1. Open Recny from `/Applications` or `dist/`.
 2. Confirm Show Dock icon is off in Settings -> Behavior, then use the menu bar item -> Show Window.
-3. Confirm T-Orbit Recorder comes to front.
+3. Confirm Recny comes to front.
 4. Press `Cmd+Shift+L` and confirm Records opens.
 5. Press `Cmd+Shift+D` and confirm Diagnostics opens.
 6. Press `Cmd+Shift+O` and confirm Finder opens the user-facing `Library/` recordings folder.
@@ -125,32 +125,32 @@ Manual check:
 
 ```sh
 ./scripts/install_macos.sh
-open /Applications/TOrbitRecorder.app
+open /Applications/Recny.app
 ```
 
 2. Open Settings -> Behavior.
 3. Confirm `Launch at Login` is already checked.
 4. Confirm the helper text says it is enabled, enabled via local login agent, or says approval is required.
-5. If approval is required, open System Settings -> General -> Login Items and enable TOrbitRecorder.
+5. If approval is required, open System Settings -> General -> Login Items and enable Recny.
 6. Open Diagnostics and confirm Behavior shows:
    - Launch at Login preference
    - macOS login item status
    - running bundle path
    - no Launch at Login error, or a human-readable error if registration failed
-7. Quit TOrbitRecorder.
+7. Quit Recny.
 8. Log out and log back in, or restart the Mac.
-9. Confirm TOrbitRecorder launches after login and the menu bar item appears.
-10. Turn `Launch at Login` off and confirm T-Orbit Recorder is removed or disabled from Login Items. If Diagnostics reported the local login agent fallback, confirm `~/Library/LaunchAgents/com.torbit.recorder.login.plist` is removed.
+9. Confirm Recny launches after login and the menu bar item appears.
+10. Turn `Launch at Login` off and confirm Recny is removed or disabled from Login Items. If Diagnostics reported the local login agent fallback, confirm `~/Library/LaunchAgents/com.torbit.recorder.login.plist` is removed.
 
 Known dev-build caveat:
 
-- Test from one stable app bundle path, preferably `/Applications/TOrbitRecorder.app`.
-- Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat them as different app bundles.
+- Test from one stable app bundle path, preferably `/Applications/Recny.app`.
+- Switching between `.build/app/Recny.app`, `dist/Recny.app`, and `/Applications/Recny.app` can make macOS treat them as different app bundles.
 - If the toggle fails, reinstall to `/Applications`, reopen that exact bundle, and retry.
 
 ## Preflight
 
-1. Quit any old `TOrbitRecorder` instance.
+1. Quit any old `Recny` instance.
 2. Build and open the app.
 3. Open Settings.
 4. Confirm Recording settings:
@@ -221,9 +221,9 @@ Each row shows one user-facing state:
 
 Grant permissions in macOS System Settings:
 
-- Privacy & Security -> Microphone -> `TOrbitRecorder`
-- Privacy & Security -> Screen & System Audio Recording -> `TOrbitRecorder`
-- If macOS shows a separate `Only System Audio Recording` section, enable `TOrbitRecorder` there too.
+- Privacy & Security -> Microphone -> `Recny`
+- Privacy & Security -> Screen & System Audio Recording -> `Recny`
+- If macOS shows a separate `Only System Audio Recording` section, enable `Recny` there too.
 
 If Microphone is `Not determined`, use the onboarding button to trigger the macOS microphone prompt. If it becomes `Denied`, enable it manually in System Settings.
 
@@ -237,46 +237,46 @@ Expected first-launch flow:
 
 1. Click `Fix Permissions`.
 2. Approve the microphone prompt if macOS shows it.
-3. Approve the system-audio prompt when macOS shows it, or open System Settings and enable `TOrbitRecorder` if macOS uses the Settings-style prompt.
+3. Approve the system-audio prompt when macOS shows it, or open System Settings and enable `Recny` if macOS uses the Settings-style prompt.
 4. Confirm the app does not cover the system-audio prompt after microphone approval.
-5. If onboarding shows `Restart required`, click `Restart App`; the app should quit and reopen `/Applications/TOrbitRecorder.app` by itself.
+5. If onboarding shows `Restart required`, click `Restart App`; the app should quit and reopen `/Applications/Recny.app` by itself.
 6. Confirm the main button changes back to `Start Recording`.
 
 If system audio is denied or still missing after a failed start:
 
 1. Click `Open System Audio Settings`.
-2. Enable `TOrbitRecorder`.
+2. Enable `Recny`.
 3. Return to the app.
-4. If the app shows `Permission is enabled. Restart T-Orbit Recorder to apply it.`, click `Restart App` in onboarding. It should reopen `/Applications/TOrbitRecorder.app` after the old process exits.
+4. If the app shows `Permission is enabled. Restart Recny to apply it.`, click `Restart App` in onboarding. It should reopen `/Applications/Recny.app` after the old process exits.
 5. Reopen the same app bundle shown by onboarding. Normal manual test path:
 
 ```sh
-open /Applications/TOrbitRecorder.app
+open /Applications/Recny.app
 ```
 
-If the app shows `Restart required`, quit `TOrbitRecorder` completely and reopen the same app bundle:
+If the app shows `Restart required`, quit `Recny` completely and reopen the same app bundle:
 
 ```sh
 osascript -e 'tell application id "com.torbit.recorder" to quit' || true
-open /Applications/TOrbitRecorder.app
+open /Applications/Recny.app
 ```
 
-When testing system audio permission, use the same app bundle path after granting permission. Switching between `.build/app/TOrbitRecorder.app`, `dist/TOrbitRecorder.app`, and `/Applications/TOrbitRecorder.app` can make macOS treat the build as a different app until it is approved and restarted. This is why permission can look enabled in System Settings while the currently running process still reports missing access.
+When testing system audio permission, use the same app bundle path after granting permission. Switching between `.build/app/Recny.app`, `dist/Recny.app`, and `/Applications/Recny.app` can make macOS treat the build as a different app until it is approved and restarted. This is why permission can look enabled in System Settings while the currently running process still reports missing access.
 
-Dev packages use the stable bundle identifier `com.torbit.recorder`, but ad-hoc signing still changes the code hash after rebuilds. If you previously approved an older build and the prompt still appears, toggle `TOrbitRecorder` off and on again in Screen & System Audio Recording once, then restart `/Applications/TOrbitRecorder.app`.
+Dev packages use the stable bundle identifier `com.torbit.recorder`, but ad-hoc signing still changes the code hash after rebuilds. If you previously approved an older build and the prompt still appears, toggle `Recny` off and on again in Screen & System Audio Recording once, then restart `/Applications/Recny.app`.
 
-For normal manual testing, prefer `/Applications/TOrbitRecorder.app` over `.build/app/TOrbitRecorder.app`.
+For normal manual testing, prefer `/Applications/Recny.app` over `.build/app/Recny.app`.
 
-If the macOS Screen Recording prompt appears even though `TOrbitRecorder` is enabled in System Settings, check for duplicate app copies:
+If the macOS Screen Recording prompt appears even though `Recny` is enabled in System Settings, check for duplicate app copies:
 
 ```sh
-pgrep -fl TOrbitRecorder
+pgrep -fl Recny
 ```
 
 There should be one process. If `.build`, `dist`, and `/Applications` copies are all running, quit them all, then reopen only:
 
 ```sh
-open /Applications/TOrbitRecorder.app
+open /Applications/Recny.app
 ```
 
 The app blocks new duplicate launches, but already-running older copies must still be quit manually before reliable permission testing.
@@ -376,7 +376,7 @@ Expected behavior:
 - Analysis is saved:
   - `analysis/audio_analysis.json`
 - Records rows show `Balanced` plus `Audio OK`, `Audio warning`, or `Audio failed`.
-- Play opens the built-in T-Orbit Recorder player and uses `mixed_balanced.m4a` by default when it exists.
+- Play opens the built-in Recny player and uses `mixed_balanced.m4a` by default when it exists.
 - Diagnostics -> Audio Processing can play Current and Original.
 - Records row -> More can play Balanced, play Original, open the folder, reveal `audio_analysis.json`, reprocess audio, or edit note/tags.
 - Records details show audio health when audio health is warning/failed.
@@ -515,7 +515,7 @@ Check collapsed filters:
 Check actions:
 
 - Open recording folder
-- Play mixed preview in the built-in T-Orbit Recorder player
+- Play mixed preview in the built-in Recny player
 - Edit title/participant/context note/tags through `More -> Edit Note / Tags` or the details `Edit / Tag` action
 - Add/remove tags and context notes in the tag dialog
 - Reveal Audio Analysis from details when `analysis/audio_analysis.json` exists
@@ -608,7 +608,7 @@ Known caveat: V2 does not inspect URLs or meeting rooms. If the active browser w
 
 Microphone:
 
-1. Revoke Microphone permission for `TOrbitRecorder`.
+1. Revoke Microphone permission for `Recny`.
 2. Quit and reopen the app.
 3. Click Start Recording.
 4. Confirm the UI shows Error and microphone permission denied.
@@ -616,7 +616,7 @@ Microphone:
 
 System audio:
 
-1. Revoke system audio permission for `TOrbitRecorder`.
+1. Revoke system audio permission for `Recny`.
 2. Quit and reopen the app.
 3. Click Start Recording.
 4. Confirm the UI shows Error or system audio permission denied.
@@ -634,7 +634,7 @@ Symptom:
 Fix:
 
 1. Run the app bundle, not only the CLI smoke test.
-2. Grant Microphone permission to `TOrbitRecorder`.
+2. Grant Microphone permission to `Recny`.
 3. Quit and reopen the app.
 4. Retry Start Recording.
 
@@ -653,12 +653,12 @@ Symptom:
 Fix:
 
 1. Open System Settings -> Privacy & Security -> Screen & System Audio Recording.
-2. Enable `TOrbitRecorder`. If macOS shows `Only System Audio Recording`, enable it there too.
-3. Quit and reopen the exact same `TOrbitRecorder.app` bundle you are testing.
+2. Enable `Recny`. If macOS shows `Only System Audio Recording`, enable it there too.
+3. Quit and reopen the exact same `Recny.app` bundle you are testing.
 4. Play audible audio from another app.
 5. Retry recording.
 
-If System Settings already shows `TOrbitRecorder` enabled but the app still reports a system audio permission error, click `Request System Audio Access` once in onboarding. If the probe succeeds, the app should switch to `Granted` immediately and stay granted after restart. If it fails, quit the app completely, reopen the same `/Applications/TOrbitRecorder.app` bundle, and approve that bundle in System Settings.
+If System Settings already shows `Recny` enabled but the app still reports a system audio permission error, click `Request System Audio Access` once in onboarding. If the probe succeeds, the app should switch to `Granted` immediately and stay granted after restart. If it fails, quit the app completely, reopen the same `/Applications/Recny.app` bundle, and approve that bundle in System Settings.
 
 Developer reset if TCC gets stuck:
 
@@ -685,7 +685,7 @@ Fix:
 4. Re-run the system audio smoke test:
 
 ```sh
-swift run --package-path apps/macos TOrbitRecorderSystemAudioSmokeTest --duration 10 --root apps/macos/.build/e2e/system
+swift run --package-path apps/macos RecnySystemAudioSmokeTest --duration 10 --root apps/macos/.build/e2e/system
 ```
 
 ### No Mic Audio
@@ -697,7 +697,7 @@ Symptom:
 
 Fix:
 
-1. Check Microphone permission for `TOrbitRecorder`.
+1. Check Microphone permission for `Recny`.
 2. Check macOS Sound input device.
 3. Open Settings -> Recording -> Preferred microphone and confirm Auto selects an external or built-in microphone before AirPods.
 4. Confirm the microphone input level moves in System Settings.

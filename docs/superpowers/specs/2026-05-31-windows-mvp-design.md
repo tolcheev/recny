@@ -2,14 +2,14 @@
 
 ## Context
 
-The shipped macOS MVP remains the primary ToRec client. Windows support is now a separate beta client so a student on Windows can test call recording without OBS.
+The shipped macOS MVP remains the primary Recny client. Windows support is now a separate beta client so a student on Windows can test call recording without OBS.
 
 Superseded scope note: the first manual-only Windows artifact was not enough for the product. Windows beta now includes automatic call start/stop in `docs/superpowers/specs/2026-05-31-windows-autostart-design.md`.
 
 ## Goals
 
 - Build a lightweight native Windows recorder under `apps/windows`.
-- Produce a Windows zip artifact that contains a runnable `ToRec.exe`.
+- Produce a Windows zip artifact that contains a runnable `Recny.exe`.
 - Record microphone input and system audio locally.
 - Save source tracks, a mixed export, and metadata per recording.
 - Provide a tray-first UI with auto-start, manual Start/Stop fallback, and basic diagnostics.
@@ -37,7 +37,7 @@ Use C#/.NET 8 with Windows Forms and NAudio:
 Windows v0.2 stores recordings under:
 
 ```text
-%USERPROFILE%\Recordings\TOrbitRecorder\Library\YYYY\MM\<session-id>\
+%USERPROFILE%\Recordings\Recny\Library\YYYY\MM\<session-id>\
   source/
     mic.wav
     system.wav
@@ -63,7 +63,7 @@ The Windows client has:
 
 ## Logging And Failure Rules
 
-- Write lifecycle logs under `%USERPROFILE%\Recordings\TOrbitRecorder\logs\app.log`.
+- Write lifecycle logs under `%USERPROFILE%\Recordings\Recny\logs\app.log`.
 - Log recorder start, stop, file paths, post-processing results, and failures.
 - If microphone or WASAPI loopback capture cannot start, fail visibly and leave diagnostics.
 - Do not create fake success metadata when capture fails before any usable files are opened.
@@ -77,7 +77,7 @@ GitHub Actions builds on `windows-latest`:
 3. Run the lightweight Windows console tests.
 4. Publish a self-contained `win-x64` single-file app.
 5. Zip the published folder.
-6. Upload `ToRec-Windows-v0.2.2-beta.zip` as an Actions artifact.
+6. Upload `Recny-Windows-v0.2.2-beta.zip` as an Actions artifact.
 
 The zip can then be attached to a prerelease after the build passes.
 

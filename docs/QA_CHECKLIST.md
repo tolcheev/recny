@@ -8,7 +8,7 @@ Use this checklist for manual macOS MVP validation. Prefer testing the installed
 - [ ] macOS version:
 - [ ] App version:
 - [ ] Git commit:
-- [ ] App path: `/Applications/ToRec.app`
+- [ ] App path: `/Applications/Recny.app`
 - [ ] Recording root: `~/Recordings/TOrbitRecorder/`
 
 ## 1. Install
@@ -28,14 +28,14 @@ Use this checklist for manual macOS MVP validation. Prefer testing the installed
 - [ ] Package exists:
 
 ```sh
-test -d dist/ToRec.app
-test -f dist/ToRec-v0.1.7-macOS.zip
-test -f dist/ToRec-v0.1.7-macOS.dmg
+test -d dist/Recny.app
+test -f dist/Recny-v0.1.7-macOS.zip
+test -f dist/Recny-v0.1.7-macOS.dmg
 test -f dist/latest.json
-zipinfo -1 dist/ToRec-v0.1.7-macOS.zip | grep -Fx ToRec.app/
-! zipinfo -1 dist/ToRec-v0.1.7-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
-hdiutil attach -readonly dist/ToRec-v0.1.7-macOS.dmg
-# DMG should show ToRec.app, Applications, and install/Gatekeeper instructions.
+zipinfo -1 dist/Recny-v0.1.7-macOS.zip | grep -Fx Recny.app/
+! zipinfo -1 dist/Recny-v0.1.7-macOS.zip | grep -E 'INSTALL.md|RELEASE_NOTES.md'
+hdiutil attach -readonly dist/Recny-v0.1.7-macOS.dmg
+# DMG should show Recny.app, Applications, and install/Gatekeeper instructions.
 ```
 
 - [ ] Install passes:
@@ -47,12 +47,12 @@ hdiutil attach -readonly dist/ToRec-v0.1.7-macOS.dmg
 - [ ] DMG does not expose blocked helper scripts or extra icons:
 
 ```sh
-TMP_MOUNT="$(mktemp -d /tmp/torec-dmg-verify.XXXXXX)"
-hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/ToRec-v0.1.7-macOS.dmg
-test -d "$TMP_MOUNT/ToRec.app"
+TMP_MOUNT="$(mktemp -d /tmp/recny-dmg-verify.XXXXXX)"
+hdiutil attach -readonly -nobrowse -noverify -noautoopen -mountpoint "$TMP_MOUNT" dist/Recny-v0.1.7-macOS.dmg
+test -d "$TMP_MOUNT/Recny.app"
 test -L "$TMP_MOUNT/Applications"
 ls -ldO "$TMP_MOUNT/.background" | grep hidden
-test ! -e "$TMP_MOUNT/Install ToRec.command"
+test ! -e "$TMP_MOUNT/Install Recny.command"
 test ! -e "$TMP_MOUNT/Open Privacy Settings"
 hdiutil detach "$TMP_MOUNT"
 rmdir "$TMP_MOUNT"
@@ -61,12 +61,14 @@ rmdir "$TMP_MOUNT"
 - [ ] App opens from `/Applications`:
 
 ```sh
-open /Applications/ToRec.app
+open /Applications/Recny.app
 ```
 
 - [ ] Menu bar item is visible.
 - [ ] With microphone or system-audio permission missing, the menu bar item shows a large red question mark.
 - [ ] With microphone or system-audio permission missing, app launch brings the main window forward and shows `Blocked` plus the red `Recording is blocked` panel.
+- [ ] With microphone or system-audio permission missing, the main window layout does not clip the permission checklist or footer; if the system prompt or small window reduces available height, the central permission content scrolls while footer actions remain reachable.
+- [ ] With permission onboarding visible, the main window does not show a second duplicate idle `Recording is blocked` card below the checklist.
 - [ ] With microphone or system-audio permission missing, the menu bar recording action is `Fix Recording Permissions`, not `Start Recording`.
 - [ ] App does not request macOS Notifications permission on first launch.
 - [ ] Show Window brings the existing window to front without creating duplicates.
@@ -75,10 +77,10 @@ open /Applications/ToRec.app
 ## 2. Permissions
 
 - [ ] Microphone permission is granted:
-  - System Settings -> Privacy & Security -> Microphone -> ToRec enabled
+  - System Settings -> Privacy & Security -> Microphone -> Recny enabled
 - [ ] System audio permission is granted through the Core Audio tap path:
-  - System Settings -> Privacy & Security -> Screen & System Audio Recording -> Only System Audio Recording -> ToRec enabled, if macOS shows the separate section
-  - Otherwise, System Settings -> Privacy & Security -> Screen & System Audio Recording -> ToRec enabled
+  - System Settings -> Privacy & Security -> Screen & System Audio Recording -> Only System Audio Recording -> Recny enabled, if macOS shows the separate section
+  - Otherwise, System Settings -> Privacy & Security -> Screen & System Audio Recording -> Recny enabled
 - [ ] `Fix Permissions` triggers the system-audio macOS prompt while the yellow permissions panel is still visible.
 - [ ] The app does not show `Ready` or enable `Start Recording` until the Core Audio capture-start probe has completed.
 - [ ] After the microphone prompt is accepted, the Recorder window returns to the front before the system-audio prompt appears.
@@ -86,16 +88,17 @@ open /Applications/ToRec.app
 
 ```sh
 osascript -e 'tell application id "com.torbit.recorder" to quit' || true
-open /Applications/ToRec.app
+open /Applications/Recny.app
 ```
 
 - [ ] Click `Fix Permissions` and confirm both required macOS prompts are handled before Start is enabled:
   - Microphone prompt, if microphone is not determined
   - System audio prompt, if system audio is not determined
 - [ ] If macOS skips the system-audio prompt because access was already granted, the onboarding checklist stays visible and shows the system-audio verification message before Start is enabled.
+- [ ] After installing a fresh local/ad-hoc rebuild with the same app version, the app does not reuse an older system-audio `Ready` cache unless the current build date has already completed the Core Audio probe.
 - [ ] After system-audio access has already been granted and the app has been restarted, clicking the normal `Fix Permissions` / `Recheck` path does not clear the successful system-audio probe cache and does not repeatedly show the macOS `Screen & System Audio Recording` prompt.
 - [ ] Diagnostics -> `Force Recheck Permissions` is the only UI path that intentionally clears the successful system-audio probe cache.
-- [ ] Permission copy explains that macOS calls this `Screen & System Audio Recording`, but ToRec records system audio only and does not write screen video.
+- [ ] Permission copy explains that macOS calls this `Screen & System Audio Recording`, but Recny records system audio only and does not write screen video.
 - [ ] Main UI no longer shows Fix Permissions.
 - [ ] Clicking `Start Recording` does not show a macOS permission prompt. If a permission prompt appears on Start, the onboarding gate is broken.
 - [ ] Diagnostics shows Microphone as granted/authorized.
@@ -143,6 +146,14 @@ open /Applications/ToRec.app
 - [ ] Main UI shows MacBook microphone, not AirPods.
 - [ ] Diagnostics reason says AirPods/Bluetooth microphone was avoided because another input is available.
 - [ ] If only AirPods are available, recording is blocked and the UI says AirPods/Bluetooth microphone is blocked for recording.
+
+### Virtual Meeting Inputs
+
+- [ ] With `Microsoft Teams Audio` and MacBook microphone available, Auto selects MacBook microphone.
+- [ ] With `ZoomAudioDevice` and MacBook microphone available, Auto selects MacBook microphone.
+- [ ] Settings labels `Microsoft Teams Audio` and `ZoomAudioDevice` as `Blocked`.
+- [ ] If a blocked virtual input was saved as Preferred microphone, relaunch clears the preference and selects a non-virtual input.
+- [ ] If only `Microsoft Teams Audio` or `ZoomAudioDevice` is available, recording is blocked and the UI says Microsoft Teams/Zoom virtual microphone is blocked.
 
 ### External Mic Connected
 
@@ -195,6 +206,8 @@ plutil -p metadata.json
 - [ ] Records opens as a separate window.
 - [ ] Records shows all local recordings from `Library/` and `Inbox/` metadata, not only the first 80 rows.
 - [ ] Default untitled rows are numbered as `Recording #N`.
+- [ ] Each Records row exposes primary actions `Play`, `Open`, and `Rename` without requiring the details panel or Settings.
+- [ ] Clicking row `Rename` opens the rename/tags dialog with the title field focused.
 - [ ] Long badges/details wrap cleanly and do not hide row actions.
 - [ ] Records details panel scrolls vertically and all action buttons remain reachable in the default window size.
 - [ ] Deleting a recording folder manually in Finder, then clicking Records Refresh, removes the stale row from Records.
@@ -205,7 +218,8 @@ plutil -p metadata.json
 - [ ] Settings -> About shows version, build date, commit hash, and local storage path.
 - [ ] Settings -> About -> Check for Updates reports either the latest version or a newer version from the public release manifest.
 - [ ] Settings -> About -> Download Update opens the public GitHub download URL when a newer version is available.
-- [ ] Main window footer shows `ToRec v...`, `Check for Updates`, and `Report Bug`.
+- [ ] Main window footer shows `Recny v...`, `Check for Updates`, and `Report Bug`.
+- [ ] Main window footer stays reachable when the permission onboarding checklist and the red blocked-recording panel are visible.
 - [ ] If a newer version exists, the footer shows `Download`, `Later`, and `Skip`.
 - [ ] If a newer version exists while idle, the macOS menu bar icon shows a subtle update badge and the menu shows `Update available`, `Remind Later`, and `Skip This Version`.
 - [ ] During recording, the recording icon/state remains primary and update notification actions do not visually replace it.
@@ -227,10 +241,11 @@ plutil -p metadata.json
 - [ ] Records details show marker timestamps and labels if older/imported metadata contains markers.
 - [ ] Records details show audio health, gain values, and audio analysis availability.
 - [ ] Records details can open `analysis/audio_analysis.json` when it exists.
-- [ ] Records More -> Share Audio opens the native macOS share sheet for the preferred local audio file.
-- [ ] Records details -> Share opens the native macOS share sheet for the preferred local audio file.
+- [ ] Records row Open selects the final dated audio file under `export/share/` in Finder.
+- [ ] Records More -> Share Audio opens the native macOS share sheet for the final dated audio file under `export/share/`.
+- [ ] Records details -> Share opens the native macOS share sheet for the final dated audio file under `export/share/`.
 - [ ] Preferred share file order is `export/mixed_balanced.m4a`, then `export/mixed.m4a`, then `source/mic.m4a`, then `source/system.m4a`.
-- [ ] Copy Audio Path copies the same preferred local audio file path to the clipboard.
+- [ ] Copy Audio Path copies the same final dated audio file path to the clipboard.
 - [ ] Share Audio and Copy Audio Path are disabled when no non-empty local audio file exists.
 - [ ] Records More -> Trim Audio opens the trim sheet with start/end controls.
 - [ ] Trim Only creates a non-empty `export/clip_*.m4a` and does not modify `source/mic.m4a`, `source/system.m4a`, `export/mixed.m4a`, or `export/mixed_balanced.m4a`.
@@ -256,8 +271,8 @@ plutil -p metadata.json
 - [ ] Join or simulate a call with microphone active.
 - [ ] Switch to another app while Zoom keeps running.
 - [ ] Recording starts automatically, or Ask first prompt appears.
-- [ ] Records source displays `Zoom`, not `TOrbitRecorder`.
-- [ ] New metadata source app is `Zoom`, not `TOrbitRecorder`.
+- [ ] Records source displays `Zoom`, not `Recny`.
+- [ ] New metadata source app is `Zoom`, not `Recny`.
 - [ ] Metadata source trigger is `autostart`.
 - [ ] Metadata includes rule id, confidence, and human-readable reason.
 - [ ] End the Zoom conference while leaving the Zoom app open.
@@ -266,6 +281,46 @@ plutil -p metadata.json
 - [ ] If Zoom window titles are unavailable and Zoom process audio is idle, recording auto-stops about 10 seconds later even if another app is producing global system audio.
 - [ ] If Core Audio process activity is unavailable, global system-audio fallback keeps recording alive; microphone-only fallback does not.
 
+### Microsoft Teams
+
+- [ ] Auto-start mode is `Auto` or `Ask first`.
+- [ ] Open native Microsoft Teams on macOS.
+- [ ] Join a meeting so the foreground window title looks like `Meeting with ...`.
+- [ ] Keep microphone active; another participant does not need to speak yet.
+- [ ] Recording starts automatically, or Ask first prompt appears.
+- [ ] Switch to another app while Teams keeps running.
+- [ ] Recording remains active; window/app switching alone does not stop it.
+- [ ] Records source displays `Microsoft Teams`.
+- [ ] Metadata rule id is `autostart.v2.teams_meeting_window` when the Teams meeting window triggered the start.
+
+### Yandex Telemost
+
+- [ ] Auto-start mode is `Auto` or `Ask first`.
+- [ ] Open native Yandex Telemost on macOS.
+- [ ] Join a Telemost call with microphone active.
+- [ ] Recording starts automatically, or Ask first prompt appears.
+- [ ] Switch to Telegram, browser, notes, or Recny while Telemost keeps running.
+- [ ] Recording remains active; window/app switching alone does not stop it.
+- [ ] Records source displays `Yandex Telemost`.
+- [ ] Metadata rule id is `autostart.v2.telemost_process_audio`, `autostart.v2.telemost_meeting_window`, or `autostart.v2.known_call_app`.
+- [ ] End the Telemost call while leaving Telegram/browser open.
+- [ ] Recording auto-stops about 10 seconds after Telemost process/window audio signal is lost.
+- [ ] Active Telegram/browser audio does not keep the Telemost recording alive after the Telemost call ends.
+
+### Telegram / Discord
+
+- [ ] Auto-start mode is `Auto` or `Ask first`.
+- [ ] Confirm Telegram and Discord are absent from the default auto-start whitelist.
+- [ ] Add Telegram or Discord manually to the whitelist only for this optional regression check.
+- [ ] Open native Telegram or Discord on macOS.
+- [ ] Join a real voice/video call where the same app has Core Audio input and output activity.
+- [ ] Recording starts after the configured detection duration, or Ask first prompt appears.
+- [ ] Metadata rule id is `autostart.v2.known_call_app` and the reason says the app process is using input and output audio.
+- [ ] End the call while leaving the app open.
+- [ ] Recording auto-stops about 10 seconds after the app no longer has both process input and output activity.
+- [ ] Play a Telegram/Discord video or existing recording while another app has microphone activity.
+- [ ] Confirm auto-start does not start from playback-only Telegram/Discord output plus unrelated microphone activity.
+
 ### Browser Call
 
 - [ ] Open browser call page with a call-like title, such as Meet, Zoom, Teams, Interview, or Call.
@@ -273,6 +328,10 @@ plutil -p metadata.json
 - [ ] Play/receive system audio.
 - [ ] Recording starts automatically, or Ask first prompt appears.
 - [ ] Logs explain browser call detection.
+- [ ] In ChatGPT Atlas, join Zoom Web at `app.zoom.us` and confirm auto-start begins after the configured detection duration when microphone and system audio are active.
+- [ ] In ChatGPT Atlas, join Zoom Web at `app.zoom.us`, keep the local Zoom microphone muted, receive remote/system audio, and confirm auto-start begins after the configured detection duration.
+- [ ] While the ChatGPT Atlas Zoom Web meeting is still active, bring the Recny window to the foreground and confirm auto-start still begins after the configured detection duration from the running Atlas window title.
+- [ ] In ChatGPT Atlas, confirm both a `Zoom Meeting ...` window title and an `app.zoom.us` title/domain are treated as browser call signals.
 
 ### Browser False Positive Check
 
@@ -319,6 +378,13 @@ plutil -p metadata.json
 - [ ] AirPods + MacBook microphone available -> MacBook microphone selected.
 - [ ] AirPods + external mic available -> external mic selected.
 - [ ] Only AirPods available -> no recording input is selected; Start Recording is blocked.
+
+### Virtual Meeting Mic Avoidance
+
+- [ ] Microsoft Teams Audio + MacBook microphone available -> MacBook microphone selected.
+- [ ] ZoomAudioDevice + MacBook microphone available -> MacBook microphone selected.
+- [ ] Only Microsoft Teams Audio or ZoomAudioDevice available -> no recording input is selected; Start Recording is blocked.
+- [ ] Start Recording never changes the macOS input to Microsoft Teams Audio, ZoomAudioDevice, AirPods, or a hands-free Bluetooth profile.
 
 ### Output Folder Unavailable
 

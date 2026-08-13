@@ -24,32 +24,33 @@ The main window deliberately avoids database controls, raw technical status, rec
 
 ## Menu Bar Behavior
 
-ToRec is controlled primarily from the macOS menu bar. The menu exposes:
+Recny is controlled primarily from the macOS menu bar. The menu exposes:
 
 - Show Window
 - Start Recording / Stop Recording
+- Records
 - Play Last Recording
-- Open Library
-- Open Records
+- Open Library Folder
+- Capture Full Screenshot
 - Settings
 - Diagnostics
 - Quit
 
 `Show Window` activates the app and brings the existing main window forward instead of creating duplicate windows. Closing the main window with the red close button does not quit the app; it keeps running in the menu bar and can be reopened from `Show Window`.
 
-The menu bar item is a compact text-free play icon that can be hidden with Hidden Bar or similar menu bar utilities. On first launch, ToRec writes a default saved status-item position so Hidden Bar does not immediately place the new item in its hidden section. The idle and error states use an outline play icon. If microphone or system-audio recording permission is missing, idle/error uses a large red question mark and a red `Recording Blocked: Fix Permissions` menu item. When `Show recording indicator` is enabled, the recording state uses a filled play icon. Recorder state is also exposed through the menu tooltip and the main app windows.
+The menu bar item is a compact text-free play icon that can be hidden with Hidden Bar or similar menu bar utilities. On first launch, Recny writes a default saved status-item position so Hidden Bar does not immediately place the new item in its hidden section. The idle and error states use an outline play icon. If microphone or system-audio recording permission is missing, idle/error uses a large red question mark and a red `Recording Blocked: Fix Permissions` menu item. When `Show recording indicator` is enabled, the recording state uses a filled play icon. Recorder state is also exposed through the menu tooltip and the main app windows.
 
-ToRec does not request macOS Notifications permission. Auto-start, screenshot, and recorder lifecycle feedback stay in the app UI and local logs so first launch only asks for recording-related permissions.
+Recny does not request macOS Notifications permission. Auto-start, screenshot, and recorder lifecycle feedback stay in the app UI and local logs so first launch only asks for recording-related permissions.
 
 If Quit is selected while recording is active, the app asks for confirmation before stopping the recording and quitting.
 
-`Open Library` opens the user-facing `Library/` folder in Finder. `Open Records` opens the in-app searchable records list. The storage root still contains internal folders such as `Inbox`, `db`, and `logs`, but those are not the default Finder destination for normal use.
+`Records` opens the in-app searchable records list. `Open Library Folder` opens the user-facing `Library/` folder in Finder. The storage root still contains internal folders such as `Inbox`, `db`, and `logs`, but those are not the default Finder destination for normal use.
 
 App-active keyboard shortcuts mirror the primary menu actions:
 
 - `Cmd+Shift+R`: Start/Stop Recording
-- `Cmd+Shift+O`: Open Library
-- `Cmd+Shift+L`: Open Records
+- `Cmd+Shift+L`: Records
+- `Cmd+Shift+O`: Open Library Folder
 - `Cmd+Shift+D`: Open Diagnostics
 - `Cmd+Shift+S`: Capture Full Screenshot
 
@@ -66,6 +67,8 @@ Marker shortcuts are hidden from the default UI until the marker workflow is use
 
 Auto-started recordings use an auto-stop guard. Zoom recordings prefer Core Audio process activity from `us.zoom.xos`: active Zoom input/output keeps recording alive even when Zoom is in the background. A meeting/conference window also keeps recording active when macOS exposes titles. If titles and per-process audio are unavailable, the app falls back to global system-audio activity and ignores microphone activity for auto-stop. The default auto-stop grace period is 10 seconds, with one-second monitoring polls to keep the visible behavior close to 10 seconds. Manual recordings never auto-stop.
 
+Browser calls use a stricter start guard: the browser must be in the allowlist, system audio must be active, and the active title must look like a call. Generic browser-call titles still require microphone activity. Zoom Web has a narrower exception for muted local microphones: explicit `Zoom Meeting...`, `app.zoom.us`, or `zoom.us` titles can start after the detection duration from system audio alone.
+
 ## Main Window States
 
 UI v3 keeps the main window as a compact recorder surface instead of a library dashboard:
@@ -76,7 +79,7 @@ UI v3 keeps the main window as a compact recorder surface instead of a library d
 
 The main screen no longer shows file sizes, folder names, raw metadata, recoverable sessions, filters, or a recording list. Those details remain in Library and Diagnostics.
 
-Microphone selection stays visible without exposing device internals: the main screen shows the selected input name, and AirPods/Bluetooth headset microphones are shown as blocked rather than as recording fallbacks.
+Microphone selection stays visible without exposing device internals: the main screen shows the selected input name, and AirPods/Bluetooth headset microphones plus virtual meeting inputs such as Microsoft Teams Audio and ZoomAudioDevice are shown as blocked rather than as recording fallbacks.
 
 ### Idle
 
@@ -88,6 +91,8 @@ The center recording area shows:
 - auto-start state
 
 If required permissions are missing, Start is replaced with `Fix Permissions`, the header status becomes `Blocked`, and a red `Recording is blocked` panel explains that calls will not be recorded until access is fixed. The menu-bar icon switches to a large red question mark, the menu-bar recording action becomes `Fix Recording Permissions`, and launch brings the main window forward so the blocked state is not missed before a call.
+
+The permission onboarding checklist is treated as long content. When it is visible, the main status area scrolls vertically and the footer actions stay outside that scroll area. The normal idle recording card is suppressed in this onboarding state because the permission card already carries the red blocked-recording reason. This prevents the microphone/system-audio checklist and the macOS permission prompt from clipping the top of the window or hiding Records, Library, Settings, Screenshot, version, update, and bug-report actions on smaller screens.
 
 ### Recording
 
@@ -119,18 +124,19 @@ Library is a separate window opened from the main footer or menu bar. It default
 
 - search by title, participant, tags, and source app
 - collapsed filters for status, date range, source app, tags, and audio health
-- recording rows with title, started time, duration, source app, audio summary, audio health badge, human status badge, and compact tags
+- recording rows with title, started time, duration, source app, audio summary, audio health badge, human status badge, compact tags, and primary `Play`, `Open`, `Rename` actions
 - compact row actions: Play, Open, and an icon-only More menu
+- Open reveals the final user-facing audio file in Finder instead of the technical session folder
 - Play expands an inline mini-player inside the selected recording row instead of opening a separate playback window
 - a details panel for the selected recording with primary actions directly under the title, followed by files, audio analysis summary, metadata summary, tags, and markers
 - an `Open Library Folder` action for jumping to local storage
-- More actions: Share Audio, Copy Audio Path, Trim Audio, Capture Full Screenshot, Transcribe Locally, Edit Note / Tags, Reprocess Audio, Reveal Audio Analysis, and Delete Local Recording
+- More actions: Share Audio, Copy Audio Path, Trim Audio, Capture Full Screenshot, Transcribe Locally, Rename / Tags, Reprocess Audio, Reveal Audio Analysis, and Delete Local Recording
 
 Records refresh synchronizes the local SQLite index with `metadata.json` files under `Library/` and `Inbox/`. Folders restored or created on disk appear after refresh, and rows whose folders were deleted in Finder are removed instead of staying as broken `missing file` entries.
 
-The details panel is vertically scrollable and groups actions into wrapping rows directly near the top so Play, Open, Edit, Share, Trim, Screenshot, Copy Path, Analysis, and Delete stay reachable without scrolling in the default Records window when possible. The details-panel Share button anchors the native macOS share sheet to the button itself, so AirDrop/Telegram/Mail choices appear beside the control the user clicked.
+The details panel is vertically scrollable and groups actions into wrapping rows directly near the top so Play, Open, Edit, Share, Trim, Screenshot, Copy Path, Analysis, and Delete stay reachable without scrolling in the default Records window when possible. Rename is also a primary row action, so the daily flow is `Records -> Rename -> Save` without opening Settings or relying on the details panel. The details-panel Share button anchors the native macOS share sheet to the button itself, so AirDrop/Telegram/Mail choices appear beside the control the user clicked.
 
-Sharing is implemented through the native macOS share sheet and never uploads by itself. It uses the best available local audio file in this order: `export/mixed_balanced.m4a`, `export/mixed.m4a`, `source/mic.m4a`, then `source/system.m4a`. `Copy Audio Path` copies the same preferred file path for manual Telegram, bot, messenger, or file-upload workflows.
+Sharing is implemented through the native macOS share sheet and never uploads by itself. It uses the best available local audio file in this order: `export/mixed_balanced.m4a`, `export/mixed.m4a`, `source/mic.m4a`, then `source/system.m4a`, then creates a dated user-facing copy under `export/share/` before handing it to Finder, the share sheet, or `Copy Audio Path`. This avoids exposing users to `source/`, `export/`, and `metadata.json` when they only need to send the final audio.
 
 `Trim Audio` opens a compact sheet with start/end sliders and exports a non-destructive local `export/clip_*.m4a`. The primary action is `Trim & Share`, which opens the same macOS share sheet for the created clip. `Trim Only` leaves the clip in the recording folder.
 

@@ -1,4 +1,4 @@
-# ToRec Windows v0.2.4 Beta
+# Recny Windows v0.2.4 Beta
 
 ## What Changed Since v0.2.3
 
@@ -9,13 +9,13 @@
 
 ## Install
 
-1. Download `ToRec-Windows-v0.2.4-beta.zip`.
+1. Download `Recny-Windows-v0.2.4-beta.zip`.
 2. Extract the archive.
-3. Run `ToRec.exe`.
+3. Run `Recny.exe`.
 4. If SmartScreen blocks the app, choose `More info` -> `Run anyway`.
 
 ## Notes
 
 - Auto-start remains beta behavior.
-- ToRec still opens the public GitHub release download instead of replacing itself.
-- Recordings stay local under `%USERPROFILE%\Recordings\TOrbitRecorder\`.
+- Recny still opens the public GitHub release download instead of replacing itself.
+- Recordings stay local under `%USERPROFILE%\Recordings\Recny\`.

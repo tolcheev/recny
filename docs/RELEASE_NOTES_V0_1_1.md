@@ -1,4 +1,4 @@
-# TOrbitRecorder v0.1.1 macOS MVP
+# Recny v0.1.1 macOS MVP
 
 Internal Apple Silicon macOS build for local-first call recording.
 
@@ -40,20 +40,20 @@ Internal Apple Silicon macOS build for local-first call recording.
 
 ## Install
 
-1. Download `TOrbitRecorder-v0.1.1-macOS.zip`.
+1. Download `Recny-v0.1.1-macOS.zip`.
 2. Unzip it.
-3. Move `TOrbitRecorder.app` to `/Applications`.
-4. Open `/Applications/TOrbitRecorder.app`.
+3. Move `Recny.app` to `/Applications`.
+4. Open `/Applications/Recny.app`.
 5. Grant:
    - Microphone;
    - Screen & System Audio Recording / Only System Audio Recording.
-6. Quit and reopen the same `/Applications/TOrbitRecorder.app` after changing permissions.
+6. Quit and reopen the same `/Applications/Recny.app` after changing permissions.
 
-This is an internal ad-hoc signed build, not a notarized public macOS release. If Gatekeeper blocks it, use Finder -> Applications -> right-click `TOrbitRecorder` -> Open. For trusted internal testing only:
+This is an internal ad-hoc signed build, not a notarized public macOS release. If Gatekeeper blocks it, use Finder -> Applications -> right-click `Recny` -> Open. For trusted internal testing only:
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/TOrbitRecorder.app
-open /Applications/TOrbitRecorder.app
+xattr -dr com.apple.quarantine /Applications/Recny.app
+open /Applications/Recny.app
 ```
 
 ## Known Limitations
