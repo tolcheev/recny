@@ -93,14 +93,7 @@ public enum PermissionOnboardingFormatter {
             return nil
         }
 
-        switch (requirement, state) {
-        case (.microphone, .notDetermined),
-             (.screenSystemAudio, .notDetermined),
-             (.storage, .notDetermined):
-            return nil
-        default:
-            return actionTitle(for: requirement, state: state)
-        }
+        return actionTitle(for: requirement, state: state)
     }
 
     public static func requiresRestart(_ snapshot: RecorderPermissionSnapshot) -> Bool {

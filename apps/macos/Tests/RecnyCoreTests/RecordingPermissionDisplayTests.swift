@@ -182,13 +182,13 @@ struct RecordingPermissionDisplayTests {
             PermissionOnboardingFormatter.inlineActionTitle(
                 for: .microphone,
                 state: .notDetermined
-            ) == nil
+            ) == "Request Microphone Access"
         )
         #expect(
             PermissionOnboardingFormatter.inlineActionTitle(
                 for: .screenSystemAudio,
                 state: .notDetermined
-            ) == nil
+            ) == "Request System Audio Access"
         )
         #expect(
             PermissionOnboardingFormatter.inlineActionTitle(

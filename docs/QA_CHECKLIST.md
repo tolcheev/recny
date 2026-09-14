@@ -82,6 +82,7 @@ open /Applications/Recny.app
   - System Settings -> Privacy & Security -> Screen & System Audio Recording -> Only System Audio Recording -> Recny enabled, if macOS shows the separate section
   - Otherwise, System Settings -> Privacy & Security -> Screen & System Audio Recording -> Recny enabled
 - [ ] `Fix Permissions` triggers the system-audio macOS prompt while the yellow permissions panel is still visible.
+- [ ] When microphone or system audio is `Not determined`, the permission rows show visible `Request ... Access` buttons; clicking them starts the matching macOS prompt.
 - [ ] The app does not show `Ready` or enable `Start Recording` until the Core Audio capture-start probe has completed.
 - [ ] After the microphone prompt is accepted, the Recorder window returns to the front before the system-audio prompt appears.
 - [ ] App was restarted after permission changes:
