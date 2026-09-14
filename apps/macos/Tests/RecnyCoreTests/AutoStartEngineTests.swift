@@ -840,6 +840,36 @@ struct AutoStartEngineTests {
     }
 
     @Test
+    func telemostMeetingTitleDoesNotOverrideInactiveProcessDuringTelegramPlayback() {
+        var engine = AutoStartEngine()
+        let settings = AutoStartSettings(whitelist: ["Yandex Telemost", "Telegram"])
+        let telemost = ActiveApplicationSnapshot(
+            name: "Yandex Telemost", bundleID: "ru.yandex.desktop.telemost",
+            windowTitle: "Встреча"
+        )
+        let audio = AudioActivitySnapshot(
+            microphoneActive: true, systemAudioActive: true,
+            processActivities: [
+                AudioProcessActivitySnapshot(processID: 100, bundleID: "ru.keepcoder.Telegram",
+                    isRunningInput: false, isRunningOutput: true),
+                AudioProcessActivitySnapshot(processID: 200, bundleID: "com.torbit.recorder",
+                    isRunningInput: true, isRunningOutput: false)
+            ]
+        )
+        for seconds in [0.0, 20.0] {
+            let decision = engine.evaluate(
+                AutoStartEvaluationContext(
+                    activeApplication: telemost, runningApplications: [telemost],
+                    audioActivity: audio, isAlreadyRecording: false, lastStoppedAt: nil,
+                    now: Date(timeIntervalSince1970: 1_716_468_000 + seconds)
+                ), settings: settings
+            )
+            #expect(decision.action == .ignore)
+            #expect(decision.recordingSource == nil)
+        }
+    }
+
+    @Test
     func telegramPlaybackWithGlobalMicrophoneActivityDoesNotStartWithoutTelegramInput() {
         var engine = AutoStartEngine()
         let settings = AutoStartSettings(

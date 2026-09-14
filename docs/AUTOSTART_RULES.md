@@ -257,3 +257,17 @@ V2 logs both start and non-start decisions. Repeated identical non-start decisio
 - T-Orbit backend schedule lookup.
 - Telegram integration beyond local app detection.
 - Organization-wide policy rules.
+
+## Telemost process evidence and playback (September 2026)
+
+When Core Audio process activity is available, Telemost must own an active input
+stream to start or keep an automatic recording. A remaining meeting window title
+must not override an inactive Telemost process. Window-title plus global microphone
+detection remains a fallback only when process activity is unavailable.
+
+Telegram video and mini-app playback alone must not start a recording, even if a
+separate app is using the microphone. An explicitly allowlisted Telegram still
+requires input and output activity from its own process. Playback in Telegram must
+not keep a finished Telemost call recording alive.
+
+Automatic call evaluation pauses while recording files are being finalized.

@@ -570,7 +570,6 @@ public final class AudioBalancedMixer: @unchecked Sendable {
             at: outputURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        try FileManager.default.removeItemIfExists(at: outputURL)
 
         let mix = try await makeComposition(from: candidates)
         guard !mix.audioTracks.isEmpty else {
@@ -695,9 +694,14 @@ public final class AudioBalancedMixer: @unchecked Sendable {
         }
         reader.add(readerOutput)
 
+        // Publish only a fully finalized mix. A stalled writer may still own
+        // its file descriptor while cancellation waits on the append queue.
+        let pendingURL = outputURL.deletingLastPathComponent()
+            .appendingPathComponent(".\(UUID().uuidString).pending.m4a")
+        defer { try? FileManager.default.removeItemIfExists(at: pendingURL) }
         let writer: AVAssetWriter
         do {
-            writer = try AVAssetWriter(outputURL: outputURL, fileType: .m4a)
+            writer = try AVAssetWriter(outputURL: pendingURL, fileType: .m4a)
         } catch {
             throw RecordingControllerError.mixedAudioSetupFailed(String(describing: error))
         }
@@ -726,11 +730,24 @@ public final class AudioBalancedMixer: @unchecked Sendable {
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let queue = DispatchQueue(label: "com.torbit.recorder.balanced-audio-writer")
-            let completion = BalancedMixContinuationCompletion(continuation: continuation)
+            let completion = AudioExportCompletion(continuation: continuation)
+
+            completion.startMonitoring {
+                AppLogger.file(.error, category: "recording", "audio export stalled output=\(outputURL.path(percentEncoded: false))")
+                // Cancellation shares the append queue. Never race append or
+                // finishWriting, and never block the watchdog on an AV call.
+                queue.async {
+                    reader.cancelReading()
+                    writer.cancelWriting()
+                }
+            }
 
             writerInput.requestMediaDataWhenReady(on: queue) {
                 while writerInput.isReadyForMoreMediaData && !completion.isFinished {
                     guard let sampleBuffer = readerOutput.copyNextSampleBuffer() else {
+                        guard !completion.isFinished else { return }
+                        AppLogger.file(.info, category: "recording", "audio export finishWriting begin output=\(outputURL.lastPathComponent)")
+                        completion.recordProgress()
                         writerInput.markAsFinished()
                         writer.finishWriting {
                             if let readerError = reader.error {
@@ -748,6 +765,7 @@ public final class AudioBalancedMixer: @unchecked Sendable {
                         return
                     }
 
+                    guard !completion.isFinished else { return }
                     if !writerInput.append(sampleBuffer) {
                         reader.cancelReading()
                         writerInput.markAsFinished()
@@ -755,9 +773,16 @@ public final class AudioBalancedMixer: @unchecked Sendable {
                         completion.finish(.failure(RecordingControllerError.mixedAudioWriteFailed(writer.error.map(String.init(describing:)) ?? "AVAssetWriter append failed")))
                         return
                     }
+                    completion.recordProgress()
                 }
             }
         }
+        if FileManager.default.fileExists(atPath: outputURL.path(percentEncoded: false)) {
+            _ = try FileManager.default.replaceItemAt(outputURL, withItemAt: pendingURL)
+        } else {
+            try FileManager.default.moveItem(at: pendingURL, to: outputURL)
+        }
+        AppLogger.file(.info, category: "recording", "audio export published output=\(outputURL.lastPathComponent)")
     }
 
     private static var readerAudioSettings: [String: Any] {
@@ -897,43 +922,6 @@ private struct BalancedAudioMixComposition {
     let audioTracks: [AVAssetTrack]
     let audioMix: AVAudioMix
     let usedSourceKinds: [String]
-}
-
-private final class BalancedMixContinuationCompletion: @unchecked Sendable {
-    private let lock = NSLock()
-    private var didFinish = false
-    private let continuation: CheckedContinuation<Void, Error>
-
-    var isFinished: Bool {
-        lock.withLock {
-            didFinish
-        }
-    }
-
-    init(continuation: CheckedContinuation<Void, Error>) {
-        self.continuation = continuation
-    }
-
-    func finish(_ result: Result<Void, Error>) {
-        let shouldResume = lock.withLock {
-            if didFinish {
-                return false
-            }
-            didFinish = true
-            return true
-        }
-
-        guard shouldResume else {
-            return
-        }
-
-        switch result {
-        case .success:
-            continuation.resume()
-        case .failure(let error):
-            continuation.resume(throwing: error)
-        }
-    }
 }
 
 private extension FileManager {

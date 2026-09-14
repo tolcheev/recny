@@ -446,3 +446,17 @@ Expected healthy stop sequence:
 - `audio leveling finished`
 - `metadata finalization finished`
 - `recording stop request finished`
+
+## Regression: playback triggers and stopping
+
+- With Telegram allowlisted, play video in a mini-app while another process uses
+  the microphone. Recording must not start from output-only Telegram activity.
+- Leave a Telemost meeting window visible after its process input becomes inactive.
+  Play audio in Telegram. No new Telemost recording should start; an existing
+  automatic recording should stop after its configured grace period.
+- Stop a recording: the elapsed time freezes and the header shows Saving until
+  finalization completes. Repeated stop requests must not start a second export.
+- Exercise writer callback loss and late completion with AudioExportCompletionTests.
+  No-progress exports fail after the deadline; progressing exports may run longer.
+- Verify failed mixing preserves source tracks and any previously completed mix.
+  A partial export must not appear as the recording's playable mixed file.

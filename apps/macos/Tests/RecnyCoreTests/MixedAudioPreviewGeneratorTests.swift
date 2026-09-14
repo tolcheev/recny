@@ -16,6 +16,7 @@ struct MixedAudioPreviewGeneratorTests {
         let systemURL = sourceURL.appendingPathComponent("system.m4a")
         let mixedURL = exportURL.appendingPathComponent("mixed.m4a")
         try FileManager.default.copyItem(at: Self.fixtureAudioURL(), to: micURL)
+        try Data("old mix".utf8).write(to: mixedURL)
 
         let result = try await MixedAudioPreviewGenerator().createPreview(
             micURL: micURL,
@@ -52,6 +53,25 @@ struct MixedAudioPreviewGeneratorTests {
                 outputURL: exportURL.appendingPathComponent("mixed.m4a")
             )
         }
+    }
+
+    @Test
+    func failedExportPreservesPreviousMixAndSource() async throws {
+        let root = Self.testOutputFolder()
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let source = root.appendingPathComponent("mic.m4a")
+        let output = root.appendingPathComponent("mixed.m4a")
+        let original = Data("previous completed mix".utf8)
+        let damaged = Data("damaged source".utf8)
+        try damaged.write(to: source)
+        try original.write(to: output)
+        await #expect(throws: RecordingControllerError.mixedAudioNoSourceTracks) {
+            try await MixedAudioPreviewGenerator().createPreview(
+                micURL: source, systemURL: root.appendingPathComponent("missing.m4a"), outputURL: output
+            )
+        }
+        #expect(try Data(contentsOf: output) == original)
+        #expect(try Data(contentsOf: source) == damaged)
     }
 
     private static func fixtureAudioURL() -> URL {

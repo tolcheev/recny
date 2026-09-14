@@ -1025,6 +1025,7 @@ public struct AutoStartEngine: Sendable {
         audioActivity: AudioActivitySnapshot
     ) -> AutoStartSignal? {
         guard isTelemost(app),
+              !audioActivity.processActivityAvailable,
               audioActivity.microphoneActive,
               meetingWindowLooksActive(app) == true
         else {

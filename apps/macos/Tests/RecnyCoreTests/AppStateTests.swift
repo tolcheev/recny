@@ -78,6 +78,23 @@ struct AppStateTests {
     }
 
     @Test
+    func durationFreezesWhileStopFinalizesFiles() async throws {
+        let controller = DelayedStopRecordingController(stopDelay: .seconds(1))
+        let appState = AppState(
+            recordingController: controller,
+            outputFolderURL: Self.testOutputFolder(),
+            permissionChecker: StaticPermissionChecker.allGranted
+        )
+        try await appState.startRecording()
+        let stop = Task { try await appState.stopRecording() }
+        while !appState.isStoppingRecording { await Task.yield() }
+        let durationAtStop = appState.currentRecordingDuration
+        try await Task.sleep(for: .milliseconds(550))
+        #expect(appState.currentRecordingDuration == durationAtStop)
+        try await stop.value
+    }
+
+    @Test
     func refusesDuplicateStart() async throws {
         let controller = StubRecordingController()
         let appState = AppState(
@@ -1022,6 +1039,98 @@ struct AppStateTests {
         let telemost = ActiveApplicationSnapshot(
             name: "Yandex Telemost",
             bundleID: "ru.yandex.desktop.telemost"
+        )
+        let telegram = ActiveApplicationSnapshot(name: "Telegram", bundleID: "ru.keepcoder.Telegram")
+        let startedAt = Date(timeIntervalSince1970: 1_716_468_000)
+
+        await appState.evaluateAutoStart(
+            activeApplication: telemost,
+            audioActivity: AudioActivitySnapshot(
+                microphoneActive: true,
+                systemAudioActive: true,
+                processActivities: [
+                    AudioProcessActivitySnapshot(
+                        processID: 700,
+                        bundleID: "ru.yandex.desktop.telemost",
+                        isRunningInput: true,
+                        isRunningOutput: true
+                    )
+                ]
+            ),
+            now: startedAt.addingTimeInterval(15)
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: telegram,
+            runningApplications: [telemost],
+            audioActivity: AudioActivitySnapshot(
+                microphoneActive: true,
+                systemAudioActive: true,
+                processActivities: [
+                    AudioProcessActivitySnapshot(
+                        processID: 700,
+                        bundleID: "ru.yandex.desktop.telemost",
+                        isRunningInput: false,
+                        isRunningOutput: false
+                    ),
+                    AudioProcessActivitySnapshot(
+                        processID: 701,
+                        bundleID: "ru.keepcoder.Telegram",
+                        isRunningInput: true,
+                        isRunningOutput: true
+                    )
+                ]
+            ),
+            now: startedAt.addingTimeInterval(25)
+        )
+        #expect(appState.status == .recording)
+
+        await appState.evaluateAutoStart(
+            activeApplication: telegram,
+            runningApplications: [telemost],
+            audioActivity: AudioActivitySnapshot(
+                microphoneActive: true,
+                systemAudioActive: true,
+                processActivities: [
+                    AudioProcessActivitySnapshot(
+                        processID: 700,
+                        bundleID: "ru.yandex.desktop.telemost",
+                        isRunningInput: false,
+                        isRunningOutput: false
+                    ),
+                    AudioProcessActivitySnapshot(
+                        processID: 701,
+                        bundleID: "ru.keepcoder.Telegram",
+                        isRunningInput: true,
+                        isRunningOutput: true
+                    )
+                ]
+            ),
+            now: startedAt.addingTimeInterval(36)
+        )
+        #expect(appState.status == .idle)
+    }
+
+    @Test
+    func autoStartedTelemostRecordingStopsDespiteStaleMeetingTitle() async throws {
+        let outputFolder = Self.testOutputFolder()
+        let appState = AppState(
+            recordingController: StubRecordingController(),
+            outputFolderURL: outputFolder,
+            permissionChecker: StaticPermissionChecker.allGranted,
+            autoStartSettings: AutoStartSettings(
+                isEnabled: true,
+                whitelist: ["Yandex Telemost", "Telegram"],
+                blacklist: [],
+                cooldownSeconds: 180,
+                minDetectionDurationSeconds: 15
+            )
+        )
+        let telemost = ActiveApplicationSnapshot(
+            name: "Yandex Telemost",
+            bundleID: "ru.yandex.desktop.telemost",
+            windowTitle: "Встреча"
         )
         let telegram = ActiveApplicationSnapshot(name: "Telegram", bundleID: "ru.keepcoder.Telegram")
         let startedAt = Date(timeIntervalSince1970: 1_716_468_000)

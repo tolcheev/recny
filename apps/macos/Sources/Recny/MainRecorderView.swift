@@ -139,7 +139,7 @@ struct MainRecorderView: View {
     private var headerStatusText: String {
         switch appState.status {
         case .recording:
-            return "Recording"
+            return appState.isStoppingRecording ? "Saving" : "Recording"
         case .error:
             return "Error"
         case .idle:

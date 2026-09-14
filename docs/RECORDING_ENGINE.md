@@ -294,3 +294,27 @@ Package-level tests should cover:
 - log event formatting
 
 Real capture validation remains a manual or device-level integration check because macOS permissions and audio devices are involved.
+
+## Stop finalization and stalled exports (September 2026)
+
+A stop request freezes the displayed elapsed time, clears the audio meters, and
+shows `Saving` while files are finalized. The recording end timestamp is captured
+before stopping the devices, so shutdown and export time do not extend its duration.
+
+Both original and balanced mixing use a shared callback watchdog. Each accepted
+sample resets the deadline; starting `finishWriting` resets it once more. Sixty
+seconds without progress fails that export and queues reader/writer cancellation.
+A progressing long recording is not subject to a total export time limit. Late
+callbacks cannot resume the awaiting operation twice. Cancellation uses the same
+serial queue as sample appends to avoid concurrent writer mutations.
+
+Exports write to a unique hidden `.pending.m4a` file. Only a completed writer
+publishes the final mix; failed or timed-out attempts remove the pending path and
+preserve any previously completed mix. The source microphone and system tracks
+remain available for recovery. Existing finalization records a failed export in
+metadata; the timeout is not a claim that a mix was saved successfully. Logs include
+`finishWriting` entry, publication, and stalled export paths.
+
+The watchdog bounds the writer stage, not every AVFoundation operation or audio
+analysis stage. Live capture and the original long-recording incident require
+manual validation on the affected installed build.

@@ -341,7 +341,12 @@ public final class AppState: ObservableObject {
             return
         }
 
+        refreshDuration()
         isStoppingRecording = true
+        durationTask?.cancel()
+        durationTask = nil
+        microphoneLevel = 0
+        systemAudioLevel = 0
         let stopRequestedAt = Date()
         AppLogger.recording.info("Recording stop requested")
         AppLogger.file(
@@ -948,6 +953,7 @@ public final class AppState: ObservableObject {
         audioActivity: AudioActivitySnapshot,
         now: Date
     ) async {
+        guard !isStoppingRecording else { return }
         if status == .recording {
             await evaluateAutoStop(
                 activeApplication: activeApplication,
@@ -1174,23 +1180,13 @@ public final class AppState: ObservableObject {
                 return false
             }
 
-            if let telemostMeetingWindowIsActive = meetingWindowLooksActive(telemostSnapshots) {
-                if telemostMeetingWindowIsActive {
-                    return true
-                }
-
-                if let telemostProcessAudioIsActive = telemostProcessAudioLooksActive(audioActivity) {
-                    return telemostProcessAudioIsActive
-                }
-
-                return false
+            // Process input belongs to the call app; global audio and a stale
+            // meeting title can come from playback or the recorder itself.
+            if let active = telemostProcessAudioLooksActive(audioActivity) {
+                return active
             }
 
-            if let telemostProcessAudioIsActive = telemostProcessAudioLooksActive(audioActivity) {
-                return telemostProcessAudioIsActive
-            }
-
-            return false
+            return meetingWindowLooksActive(telemostSnapshots) == true
         }
 
         if isGenericKnownCallRecordingSource(source) {

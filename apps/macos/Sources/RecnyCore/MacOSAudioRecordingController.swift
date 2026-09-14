@@ -121,6 +121,7 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             clearActiveRecordingState()
         }
 
+        let endedAt = Date()
         AppLogger.file(.info, category: "recording", "stop pipeline begin id=\(activeSession.id)")
         microphoneRecorder.stop()
         AppLogger.file(.info, category: "recording", "microphone writer stopped id=\(activeSession.id)")
@@ -140,7 +141,6 @@ public final class MacOSAudioRecordingController: NSObject, RecordingController,
             systemResult = nil
         }
 
-        let endedAt = Date()
         let duration = max(0, endedAt.timeIntervalSince(startedAt))
         let micURL = activeSession.sourceURL.appendingPathComponent("mic.m4a")
         let systemURL = activeSession.sourceURL.appendingPathComponent("system.m4a")
