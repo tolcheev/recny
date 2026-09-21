@@ -218,6 +218,7 @@ plutil -p metadata.json
 - [ ] Settings opens.
 - [ ] Settings -> About shows version, build date, commit hash, and local storage path.
 - [ ] Settings -> About -> Check for Updates reports either the latest version or a newer version from the public release manifest.
+- [ ] A local build label such as `v0.1.8-permission-fix` does not trigger an update when `CFBundleShortVersionString` matches the public `0.1.8` release.
 - [ ] Settings -> About -> Download Update opens the public GitHub download URL when a newer version is available.
 - [ ] Main window footer shows `Recny v...`, `Check for Updates`, and `Report Bug`.
 - [ ] Main window footer stays reachable when the permission onboarding checklist and the red blocked-recording panel are visible.

@@ -9,6 +9,27 @@ public enum BuildInfo {
         infoValue("RecnyAppVersion") ?? fallbackAppVersion
     }
 
+    public static var currentUpdateVersion: String {
+        updateVersion(
+            marketingVersion: infoValue("CFBundleShortVersionString"),
+            displayVersion: appVersion
+        )
+    }
+
+    public static func updateVersion(
+        marketingVersion: String?,
+        displayVersion: String
+    ) -> String {
+        let trimmedMarketingVersion = marketingVersion?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let trimmedMarketingVersion, !trimmedMarketingVersion.isEmpty else {
+            return displayVersion
+        }
+
+        return trimmedMarketingVersion
+    }
+
     public static var buildDate: String {
         infoValue("RecnyBuildDate") ?? fallbackBuildDate
     }

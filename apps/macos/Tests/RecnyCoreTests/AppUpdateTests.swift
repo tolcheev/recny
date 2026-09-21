@@ -62,6 +62,25 @@ struct AppUpdateTests {
     }
 
     @Test
+    func usesMarketingVersionForUpdateChecksWhenDisplayVersionHasLocalBuildLabel() {
+        let release = AppUpdateRelease(
+            version: "0.1.8",
+            displayVersion: "v0.1.8",
+            build: "10",
+            releaseURL: URL(string: "https://example.com/release")!,
+            downloadURL: URL(string: "https://example.com/Recny.dmg")!,
+            sha256URL: nil,
+            notes: nil
+        )
+        let currentVersion = BuildInfo.updateVersion(
+            marketingVersion: "0.1.8",
+            displayVersion: "v0.1.8-permission-fix"
+        )
+
+        #expect(!AppUpdateCheckResult(currentVersion: currentVersion, latestRelease: release).isUpdateAvailable)
+    }
+
+    @Test
     func automaticUpdateChecksRunAtMostDailyAndNeverDuringRecording() {
         let now = Date(timeIntervalSince1970: 1_800_000)
         var state = AppUpdateReminderState()

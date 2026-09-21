@@ -691,7 +691,7 @@ struct SettingsView: View {
             do {
                 let result = try await AppUpdateChecker().check(
                     platform: .macOS,
-                    currentVersion: BuildInfo.appVersion
+                    currentVersion: BuildInfo.currentUpdateVersion
                 )
                 latestUpdateRelease = result.isUpdateAvailable ? result.latestRelease : nil
                 updateCheckMessage = result.displayText

@@ -540,7 +540,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let result = try await AppUpdateChecker().check(
                     platform: .macOS,
-                    currentVersion: BuildInfo.appVersion
+                    currentVersion: BuildInfo.currentUpdateVersion
                 )
                 let shouldSurface = AppUpdateReminderPolicy.shouldSurfaceUpdate(
                     result: result,
