@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+dist/*
+!dist/INSTALL.md
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.swp
+bin/
+obj/

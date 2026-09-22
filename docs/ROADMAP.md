@@ -1,0 +1,134 @@
+# Roadmap
+
+## MVP: Local macOS Audio Recorder
+
+Goal: reliable automatic audio recording on Vlad's MacBook M4 Pro without OBS.
+
+Scope:
+
+- macOS Sequoia.
+- Audio-only recording.
+- Auto-start Engine v2 with browser false-positive reduction.
+- Microphone capture.
+- Full system audio capture.
+- Local storage.
+- Per-session `metadata.json`.
+- Post-call tagging.
+- Recordings list filtering by date, status, source app, title, and tag.
+- Local SQLite index with `recordings`, `tags`, and `recording_tags`.
+- Mixed `m4a` export.
+- Post-recording balanced audio preview in `export/mixed_balanced.m4a`.
+- Audio analysis in `analysis/audio_analysis.json`.
+- Logs for lifecycle and failures.
+
+Still outside the MVP:
+
+- Telegram integration.
+- T-Orbit sync.
+- Local transcription UX hardening and future cloud/sync transcription options.
+- Screen recording.
+- Windows client.
+- Browser URL or meeting-room detection.
+- Cloud upload and external storage.
+- Retention/autodelete.
+- Encryption.
+
+## Next: Local Library Polish
+
+Goal: make local recordings easier to browse and manage beyond the MVP list.
+
+Candidate work:
+
+- Search by category and participant.
+- Multi-tag filter combinations.
+- Bulk edit and delete.
+- Editable categories.
+- Advanced tag management.
+- Better handling for `Inbox/Unsorted/`, `Inbox/Short/`, and `Inbox/Failed/`.
+
+## Next: Audio Leveling Polish
+
+Goal: improve the v1 balanced preview without modifying raw source tracks.
+
+Candidate work:
+
+- Tune target loudness and gain limits with real call samples.
+- Add a true compressor/limiter stage if native gain planning is not enough.
+- Decide whether to keep intermediate `mic_leveled.m4a` and `system_leveled.m4a`.
+- Implement Voice Boost mode.
+- Add richer Diagnostics details for before/after loudness.
+
+See [AUDIO_LEVELING.md](AUDIO_LEVELING.md).
+
+## Next: Better Autostart
+
+Goal: reduce missed recordings and false positives.
+
+Candidate work:
+
+- More precise app detection.
+- Better audio activity heuristics.
+- Per-app local rules.
+- Better cooldowns and duplicate-session detection.
+- Manual correction of category and source metadata.
+
+## Future: Screen And External Storage
+
+Goal: support richer evidence and reduce local disk pressure.
+
+Candidate work:
+
+- Optional screen recording.
+- External storage upload for heavy files.
+- Upload retry queue.
+- Local/remote file link tracking.
+- Storage health checks.
+
+Screen recording remains outside the audio-only MVP and needs a separate permission, UI, storage, and privacy design before implementation.
+
+## Future: T-Orbit Sync
+
+Goal: connect recordings to T-Orbit workflows without moving capture logic into the backend.
+
+Expected split:
+
+- Recorder uploads or references heavy files.
+- T-Orbit stores metadata, tags, transcripts, notes, permissions, and links.
+- T-Orbit does not become required for local MVP recording.
+
+## Future: AI Module For Mentors
+
+Goal: help mentors review calls faster.
+
+Candidate work:
+
+- Transcription.
+- Student call summaries.
+- Lead call notes.
+- Interview debrief summaries.
+- Action items.
+- Mentor-facing insights.
+
+Automatic/cloud AI is not in MVP. Explicit local transcription is available only as a user-triggered action after optional local setup in Settings.
+
+## Future: Windows Client
+
+Goal: support student-side and interview-side recording workflows.
+
+Candidate work:
+
+- Windows client for students.
+- Automatic interview recording.
+- Cross-platform metadata compatibility.
+
+Windows is not in MVP.
+
+## Issue Backlog
+
+The GitHub issue tracker should carry separate follow-up issues for:
+
+- Telegram integration.
+- T-Orbit sync.
+- Cloud/synced transcription.
+- Screen recording.
+- Windows client.

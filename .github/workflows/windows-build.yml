@@ -1,0 +1,62 @@
+name: Windows Build
+
+on:
+  push:
+    branches:
+      - "codex/windows-mvp-scaffold"
+      - "main"
+      - "mvp/**"
+  pull_request:
+    paths:
+      - "apps/windows/**"
+      - ".github/workflows/windows-build.yml"
+      - "docs/WINDOWS_CLIENT.md"
+      - "docs/RELEASE_NOTES_WINDOWS_V0_2_5.md"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Windows beta
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore apps/windows/Recny.Windows/Recny.Windows.csproj
+
+      - name: Build
+        run: dotnet build apps/windows/Recny.Windows/Recny.Windows.csproj -c Release --no-restore
+
+      - name: Tests
+        run: dotnet run --project apps/windows/Recny.Windows.Tests/Recny.Windows.Tests.csproj -c Release
+
+      - name: Publish
+        run: >
+          dotnet publish apps/windows/Recny.Windows/Recny.Windows.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -o dist/windows/Recny-Windows-v0.2.5-beta
+
+      - name: Add release notes
+        shell: pwsh
+        run: Copy-Item docs/RELEASE_NOTES_WINDOWS_V0_2_5.md dist/windows/Recny-Windows-v0.2.5-beta/README.md
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path dist/windows/Recny-Windows-v0.2.5-beta/* -DestinationPath dist/windows/Recny-Windows-v0.2.5-beta.zip -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Recny-Windows-v0.2.5-beta
+          path: dist/windows/Recny-Windows-v0.2.5-beta.zip

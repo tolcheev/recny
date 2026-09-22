@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recny — локальная запись созвонов</title>
+    <meta
+      name="description"
+      content="Recny автоматически записывает микрофон и системный звук во время созвона. Файлы остаются на компьютере."
+    />
+    <meta property="og:title" content="Recny — локальная запись созвонов" />
+    <meta
+      property="og:description"
+      content="Автостарт, отдельные дорожки микрофона и системного звука, локальное хранение."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tolcheev.github.io/recny/" />
+    <meta name="theme-color" content="#f4f2ed" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='24' fill='%23cf2f28'/></svg>"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Перейти к содержанию</a>
+
+    <header class="topbar" aria-label="Навигация">
+      <a class="brand" href="./" aria-label="Recny, главная">
+        <span class="record-dot" aria-hidden="true"></span>
+        Recny
+      </a>
+      <a class="text-link" href="https://github.com/tolcheev/recny">Исходный код</a>
+    </header>
+
+    <main id="content">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="eyebrow">Бесплатно · Open source · Всё локально</p>
+        <h1 id="hero-title">Запись созвона включается сама.</h1>
+        <p class="hero-copy">
+          Recny замечает звонок в поддерживаемом приложении, записывает микрофон
+          и звук компьютера в отдельные файлы, затем собирает общий аудиофайл.
+          Записи остаются на вашем компьютере.
+        </p>
+
+        <div class="downloads" aria-label="Скачать Recny">
+          <a
+            class="download-link primary"
+            href="https://github.com/tolcheev/recny/releases/download/v0.1.8/Recny-v0.1.8-macOS.dmg"
+          >
+            <span>Скачать для macOS</span>
+            <small>v0.1.8 · Apple Silicon</small>
+          </a>
+          <a
+            class="download-link"
+            href="https://github.com/tolcheev/recny/releases/download/v0.2.5-windows-beta/Recny-Windows-v0.2.5-beta.zip"
+          >
+            <span>Скачать для Windows</span>
+            <small>v0.2.5 beta · x64</small>
+          </a>
+        </div>
+      </section>
+
+      <section class="facts" aria-label="Возможности Recny">
+        <article>
+          <span class="fact-number">01</span>
+          <h2>Автостарт</h2>
+          <p>Recny ждёт устойчивую активность звонка и запускает запись. Ручная кнопка тоже есть.</p>
+        </article>
+        <article>
+          <span class="fact-number">02</span>
+          <h2>Два источника</h2>
+          <p>Микрофон и системный звук сохраняются отдельно. Общий файл создаётся после остановки.</p>
+        </article>
+        <article>
+          <span class="fact-number">03</span>
+          <h2>Локальные файлы</h2>
+          <p>Приложение не загружает разговоры в облако. Папку хранения можно открыть из Recny.</p>
+        </article>
+        <article>
+          <span class="fact-number">04</span>
+          <h2>Открытый код</h2>
+          <p>Клиенты для macOS и Windows опубликованы на GitHub по лицензии MIT.</p>
+        </article>
+      </section>
+
+      <section class="guide" aria-labelledby="macos-title">
+        <div class="guide-heading">
+          <p class="section-label">Установка</p>
+          <h2 id="macos-title">macOS</h2>
+          <p>macOS Sequoia, Mac с Apple Silicon</p>
+        </div>
+        <ol>
+          <li><span>01</span>Скачайте DMG и перетащите <strong>Recny.app</strong> в Applications.</li>
+          <li><span>02</span>Откройте Finder → Applications. Нажмите на Recny правой кнопкой и выберите Open.</li>
+          <li><span>03</span>Если macOS снова заблокирует запуск, откройте System Settings → Privacy &amp; Security и нажмите Open Anyway.</li>
+          <li><span>04</span>Разрешите доступ к микрофону и Screen &amp; System Audio Recording.</li>
+        </ol>
+        <p class="notice">
+          Сборка подписана ad-hoc и не прошла Apple notarization, поэтому macOS
+          показывает предупреждение при первом запуске. Отключать Gatekeeper не нужно.
+        </p>
+      </section>
+
+      <section class="guide" aria-labelledby="windows-title">
+        <div class="guide-heading">
+          <p class="section-label">Установка</p>
+          <h2 id="windows-title">Windows</h2>
+          <p>Windows x64, экспериментальная beta</p>
+        </div>
+        <ol>
+          <li><span>01</span>Скачайте ZIP и распакуйте его в постоянную папку.</li>
+          <li><span>02</span>Запустите <strong>Recny.exe</strong>.</li>
+          <li><span>03</span>Если появится SmartScreen, нажмите More info, проверьте источник файла и выберите Run anyway.</li>
+          <li><span>04</span>Открывайте Recny через значок в системном трее.</li>
+        </ol>
+        <p class="notice">
+          У Windows-версии пока нет установщика. Это beta без полного паритета с macOS;
+          запись микрофона и системного звука работает через WASAPI.
+        </p>
+      </section>
+
+      <section class="privacy" aria-labelledby="privacy-title">
+        <p class="section-label">Хранение</p>
+        <h2 id="privacy-title">Разговор остаётся у вас.</h2>
+        <div class="privacy-grid">
+          <p>
+            На macOS записи лежат в
+            <code>~/Recordings/TOrbitRecorder/</code>. На Windows — в
+            <code>%USERPROFILE%\Recordings\Recny\</code>.
+          </p>
+          <p>
+            В приложении нет облачной загрузки, синхронизации с T-Orbit и фоновой
+            аналитики записей. Перед записью предупредите участников созвона.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Recny · MIT License · 2026</p>
+      <nav aria-label="Ссылки в подвале">
+        <a href="https://github.com/tolcheev/recny">GitHub</a>
+        <a href="https://github.com/tolcheev/recny/issues/new?template=bug_report.yml">Сообщить об ошибке</a>
+        <a href="https://github.com/tolcheev/recny/blob/main/SECURITY.md">Безопасность</a>
+      </nav>
+    </footer>
+  </body>
+</html>
