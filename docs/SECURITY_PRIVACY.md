@@ -59,7 +59,7 @@ The MVP must not:
 - call AI services
 - send transcripts, notes, tags, or participant data anywhere
 
-Explicit local transcription may launch user-installed local tools such as `parakeet-mlx` and `ffmpeg`. The app does not send audio or transcript text to a cloud API. Model download/preparation is optional and initiated from Settings -> Local transcription; Records does not trigger first-run model downloads.
+Explicit local transcription may launch user-installed local tools such as `parakeet-mlx` and `ffmpeg`. The app does not send audio or transcript text to a cloud API. Optional structured notes use a bundled Python helper and a separately installed MLX-LM runtime. Explicit Settings preparation downloads public model weights and stores their resolved revision; analysis uses local files with offline mode and no remote model code. The helper runs as a child process, not a server. Transcript text travels through local temporary files rather than command arguments. Python and native helper diagnostics are suppressed; only sanitized stage/error information is logged. Previous edited notes are retained locally when regenerated. See [local AI setup and limits](LOCAL_AI.md). Model download/preparation is optional and initiated from Settings -> Local transcription; Records does not trigger first-run model downloads.
 
 Future upload and sync work must be designed separately and documented before implementation.
 

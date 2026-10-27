@@ -1,6 +1,6 @@
 # Local transcription and structured notes
 
-Status: proposed design; awaiting review before implementation.
+Status: implemented. See `docs/LOCAL_AI_VALIDATION.md` for measured checks and known quality limits.
 
 ## Scope and decision
 
@@ -33,7 +33,7 @@ Move orchestration out of view-local tasks into a testable core coordinator. Ser
 
 Use the existing playback resolver for audio selection and record the selected source identity. Reuse a transcript only when its source identity still matches. Preserve a completed transcript when analysis fails. Offer retry of the failed stage. Cancellation terminates the helper and prevents late output from being committed. On restart, mark interrupted work as interrupted and offer explicit retry.
 
-Budget context using the selected tokenizer, including instructions and output allowance. For long recordings, extract facts from bounded transcript chunks and merge them through bounded reduction passes. Preserve source segment IDs through each pass and deduplicate overlap. Never silently truncate a long call. Treat transcript content as data, not instructions to the helper. The model has no tools or filesystem actions.
+Budget context using the selected tokenizer, including instructions and output allowance. For long recordings, extract facts from bounded transcript chunks and merge them through deterministic, bounded aggregation. Keep distinct items and merge exact duplicates; do not run a second lossy model summary. Preserve source segment IDs through each pass and deduplicate overlap. Never silently truncate a long call. Treat transcript content as data, not instructions to the helper. The model has no tools or filesystem actions.
 
 Persist normalized transcript segments separately from provider output. Use stable segment IDs, optional speaker labels, and timestamps where available. Do not equate system audio with a single identified speaker. Speaker diarization and separate-track alignment are outside this first release.
 
@@ -42,9 +42,9 @@ Persist normalized transcript segments separately from provider output. Use stab
 Keep existing transcript exports and legacy `call_note.md` readable. New files within the recording's `transcript/` directory:
 
 - `segments.json`: versioned normalized transcript and source identity.
-- `notes.json`: versioned structured result, source references, preset, model revision, prompt version, and creation time.
+- `notes.json`: versioned structured result, source references, preset, model revision, prompt version, and normalized transcript digest.
 - `notes.md`: human-readable, editable notes.
-- `processing.json`: persisted stage, source identity, and sanitized error category.
+- `processing.json`: persisted stage, recording ID, preset, mode, and sanitized error text. Source identity is stored with the transcript and notes.
 
 Validate helper output before publishing: expected schema, field types, bounded sizes, valid source segment IDs, and timestamp bounds. Schema validation does not prove factual accuracy. Use source-linked UI and evaluation recordings to check omissions and unsupported claims. Write outputs atomically; preserve previous valid artifacts on errors. Temporary prompts and model output stay inside the recording's working directory and are removed on completion or cancellation. Do not put transcript text in command arguments or logs. Log lifecycle, durations, identifiers, and sanitized failures only.
 

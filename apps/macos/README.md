@@ -80,3 +80,7 @@ swift run --package-path apps/macos RecnySystemAudioSmokeTest --duration 10 --ro
 ```
 
 The command writes `/tmp/RecnySystemAudioSmokeTest/source/system.m4a` and fails explicitly if ScreenCaptureKit cannot start or no system audio samples are captured. Grant Screen & System Audio Recording permission to the terminal process if macOS prompts for it, then rerun the command.
+
+## Local transcription and notes
+
+Completed recordings support optional local Parakeet transcription and editable structured notes using a separately prepared MLX model. Open Transcript & Notes in the library for timestamp playback, search, manual processing, cancellation, editing, and Markdown export. No audio or text is sent to an AI service. See [setup and limitations](../../docs/LOCAL_AI.md).
