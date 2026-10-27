@@ -15,6 +15,7 @@ let package = Package(
         .target(
             name: "RecnyCore",
             path: "Sources/RecnyCore",
+            resources: [.copy("Resources/recny_local_notes.py")],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("AudioToolbox"),

@@ -1,0 +1,4 @@
+# MLX-LM includes the compatible MLX, Transformers and Hugging Face Hub runtime.
+# Python 3.11+ on Apple Silicon. Install only into Recny's dedicated runtime.
+mlx-lm==0.32.2
+lm-format-enforcer==0.11.3

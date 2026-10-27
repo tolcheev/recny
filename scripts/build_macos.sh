@@ -24,6 +24,8 @@ rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$BIN_DIR/$EXECUTABLE_NAME" "$MACOS_DIR/$EXECUTABLE_NAME"
+# Keep the optional Python helper inside the signed application resources.
+cp -R "$BIN_DIR/Recny_RecnyCore.bundle" "$RESOURCES_DIR/Recny_RecnyCore.bundle"
 cp "$PACKAGE_DIR/Sources/Recny/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 python3 "$ROOT_DIR/scripts/make_macos_assets.py" app-icon "$RESOURCES_DIR/AppIcon.icns"
 chmod +x "$MACOS_DIR/$EXECUTABLE_NAME"
