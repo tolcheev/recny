@@ -16,12 +16,12 @@ struct LibraryView: View {
     @State private var trimCandidate: RecordingSummary?
     @State private var reprocessCandidate: RecordingSummary?
     @State private var reprocessingRecordingIDs: Set<String> = []
-    @State private var transcribingRecordingIDs: Set<String> = []
+    @ObservedObject private var localProcessing = LocalProcessingCoordinator.shared
+    @State private var documentsCandidate: RecordingSummary?
     @State private var screenshotRecordingIDs: Set<String> = []
     @State private var actionError: String?
     @State private var actionMessage: String?
     @State private var inlinePlayback: RecordingInlinePlaybackRequest?
-    @State private var localTranscriptionSetupStatus = LocalTranscriptionSetupInspector.status()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -56,7 +56,6 @@ struct LibraryView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             reloadLibrary()
-            refreshLocalTranscriptionSetup()
         }
         .onChange(of: searchText) { _, _ in
             ensureSelectionVisible()
@@ -73,6 +72,7 @@ struct LibraryView: View {
         .onChange(of: appState.recordings) { _, _ in
             ensureSelectionVisible()
             ensureInlinePlaybackVisible()
+            restoreLocalProcessing()
         }
         .sheet(item: $tagDraft) { draft in
             TagEditorView(draft: draft) { updatedDraft in
@@ -81,6 +81,14 @@ struct LibraryView: View {
                 try? appState.reloadRecordings()
                 ensureSelectionVisible()
             }
+        }
+        .sheet(item: $documentsCandidate) { recording in
+            RecordingDocumentsView(
+                recording: recording,
+                displayTitle: displayTitle(for: recording),
+                storageRootURL: appState.outputFolderURL,
+                onClose: { documentsCandidate = nil }
+            )
         }
         .sheet(item: $trimCandidate) { recording in
             AudioTrimSheet(
@@ -374,20 +382,18 @@ struct LibraryView: View {
                                     captureScreenshot(for: recording)
                                 },
                                 onTranscribe: {
-                                    transcribeLocally(for: recording)
+                                    openDocuments(for: recording)
                                 },
-                                canTranscribeLocally: localTranscriptionSetupStatus.canTranscribeWithoutSetup,
-                                transcriptionSetupHint: localTranscriptionSetupStatus.actionHint,
                                 onReprocess: {
                                     requestReprocess(for: recording)
                                 },
                                 isReprocessing: reprocessingRecordingIDs.contains(recording.id),
-                                isTranscribing: transcribingRecordingIDs.contains(recording.id),
+                                isTranscribing: localProcessing.isProcessing(recording.id),
                                 onEdit: {
                                     openTagEditor(for: recording)
                                 },
                                 onDelete: {
-                                    deleteCandidate = recording
+                                    requestDelete(recording)
                                 }
                             )
                         }
@@ -432,13 +438,11 @@ struct LibraryView: View {
                             captureScreenshot(for: selectedRecording)
                         },
                         onTranscribe: {
-                            transcribeLocally(for: selectedRecording)
+                            openDocuments(for: selectedRecording)
                         },
-                        canTranscribeLocally: localTranscriptionSetupStatus.canTranscribeWithoutSetup,
-                        transcriptionSetupHint: localTranscriptionSetupStatus.actionHint,
-                        isTranscribing: transcribingRecordingIDs.contains(selectedRecording.id),
+                        isTranscribing: localProcessing.isProcessing(selectedRecording.id),
                         onDelete: {
-                            deleteCandidate = selectedRecording
+                            requestDelete(selectedRecording)
                         }
                     )
                     .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -532,9 +536,9 @@ struct LibraryView: View {
     }
 
     private func reloadLibrary() {
-        refreshLocalTranscriptionSetup()
         try? appState.reloadRecordings()
         try? appState.reloadLastRecording()
+        restoreLocalProcessing()
         ensureSelectionVisible()
     }
 
@@ -785,64 +789,42 @@ struct LibraryView: View {
         }
     }
 
-    private func transcribeLocally(for recording: RecordingSummary) {
-        guard !transcribingRecordingIDs.contains(recording.id) else {
-            return
-        }
-
-        refreshLocalTranscriptionSetup()
-        guard localTranscriptionSetupStatus.canTranscribeWithoutSetup else {
-            actionError = localTranscriptionSetupStatus.actionHint
-            actionMessage = nil
-            return
-        }
-
-        guard let audio = RecordingPlaybackResolver.preferredShareableAudio(
-            sessionFolderURL: recording.sessionFolderURL
-        ) else {
-            actionError = LocalTranscriptionError.noUsableAudio.description
-            actionMessage = nil
-            return
-        }
-
-        transcribingRecordingIDs.insert(recording.id)
+    private func openDocuments(for recording: RecordingSummary) {
         selectedRecordingID = recording.id
-        actionError = nil
-        actionMessage = "Transcribing locally with prepared Parakeet model..."
+        inlinePlayback = nil
+        AudioPlaybackStopCenter.stopPlayback(inside: recording.sessionFolderURL)
+        documentsCandidate = recording
+    }
 
-        Task {
+    private func restoreLocalProcessing() {
+        let root = appState.outputFolderURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
+        for recording in appState.recordings {
+            let folder = recording.sessionFolderURL.resolvingSymlinksInPath().standardizedFileURL
+            guard folder.path.hasPrefix(root), FileManager.default.fileExists(atPath: folder.path) else { continue }
             do {
-                let result = try await LocalTranscriptionRunner().transcribe(
-                    recording: recording,
-                    audioURL: audio.url
-                )
-                actionError = nil
-                actionMessage = "Transcript note created: \(result.paths.noteMarkdownURL.lastPathComponent)."
-                NSWorkspace.shared.activateFileViewerSelecting([result.paths.noteMarkdownURL])
-                AppLogger.file(
-                    .info,
-                    category: "library",
-                    "local transcription requested recording=\(recording.id) provider=\(result.provider.rawValue)"
-                )
-            } catch let error as LocalTranscriptionError {
-                actionError = error.description
-                actionMessage = nil
-                AppLogger.file(.error, category: "library", "local transcription failed recording=\(recording.id) error=\(error.description)")
+                try localProcessing.restore(recordingID: recording.id, sessionFolderURL: folder)
             } catch {
-                actionError = String(describing: error)
-                actionMessage = nil
-                AppLogger.file(.error, category: "library", "local transcription failed recording=\(recording.id) error=\(String(describing: error))")
+                AppLogger.file(.warning, category: "local-ai", "restore_failed recording_id=\(recording.id)")
             }
-            transcribingRecordingIDs.remove(recording.id)
         }
     }
 
-    private func refreshLocalTranscriptionSetup() {
-        localTranscriptionSetupStatus = LocalTranscriptionSetupInspector.status()
+    private func requestDelete(_ recording: RecordingSummary) {
+        guard !localProcessing.isProcessing(recording.id) else {
+            actionError = "Cancel local processing and wait for it to stop before deleting this recording."
+            return
+        }
+        deleteCandidate = recording
     }
 
     private func deleteSelectedCandidate() {
         guard let recording = deleteCandidate else {
+            return
+        }
+
+        guard !localProcessing.isProcessing(recording.id) else {
+            deleteCandidate = nil
+            actionError = "Cancel local processing and wait for it to stop before deleting this recording."
             return
         }
 
@@ -954,8 +936,6 @@ private struct LibraryRecordingRow: View {
     let onTrim: () -> Void
     let onCaptureScreenshot: () -> Void
     let onTranscribe: () -> Void
-    let canTranscribeLocally: Bool
-    let transcriptionSetupHint: String
     let onReprocess: () -> Void
     let isReprocessing: Bool
     let isTranscribing: Bool
@@ -1062,10 +1042,9 @@ private struct LibraryRecordingRow: View {
                         }
 
                         Button(action: onTranscribe) {
-                            Label(isTranscribing ? "Transcribing..." : "Transcribe Locally", systemImage: "text.quote")
+                            Label(isTranscribing ? "Transcript & Notes · Processing" : "Transcript & Notes", systemImage: "text.quote")
                         }
-                        .disabled(shareableAudio == nil || isTranscribing || !canTranscribeLocally)
-                        .help(transcriptionSetupHint)
+                        .help("Read transcripts and notes or process this recording locally")
 
                         Button(action: onShowAnalysis) {
                             Label("Reveal Audio Analysis", systemImage: "doc.text.magnifyingglass")
@@ -1173,8 +1152,6 @@ private struct LibraryRecordingDetailsPanel: View {
     let onTrim: () -> Void
     let onCaptureScreenshot: () -> Void
     let onTranscribe: () -> Void
-    let canTranscribeLocally: Bool
-    let transcriptionSetupHint: String
     let isTranscribing: Bool
     let onDelete: () -> Void
 
@@ -1331,10 +1308,9 @@ private struct LibraryRecordingDetailsPanel: View {
 
     private var transcribeButton: some View {
         Button(action: onTranscribe) {
-            Label(isTranscribing ? "Transcribing..." : "Transcribe Locally", systemImage: "text.quote")
+            Label(isTranscribing ? "Transcript & Notes · Processing" : "Transcript & Notes", systemImage: "text.quote")
         }
-        .disabled(shareableAudio == nil || isTranscribing || !canTranscribeLocally)
-        .help(transcriptionSetupHint)
+        .help("Read transcripts and notes or process this recording locally")
     }
 
     private var copyPathButton: some View {

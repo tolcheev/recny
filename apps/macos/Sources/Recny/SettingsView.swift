@@ -21,6 +21,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 recordingSection
                 transcriptionSection
+                LocalAISettingsView()
                 autoStartSection
                 storageSection
                 hotkeysSection
