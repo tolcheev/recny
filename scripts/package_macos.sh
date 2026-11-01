@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="Recny"
 LEGACY_APP_NAMES=("ToRec" "TOrbitRecorder")
-PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.8}"
+PACKAGE_VERSION="${PACKAGE_VERSION:-v0.1.9}"
 DMG_VOLUME_NAME="${DMG_VOLUME_NAME:-$APP_NAME $PACKAGE_VERSION}"
 BUILD_APP="$ROOT_DIR/apps/macos/.build/app/$APP_NAME.app"
 DIST_DIR="$ROOT_DIR/dist"
@@ -63,7 +63,7 @@ rm -rf "$DMG_ROOT"
 RECNY_UPDATE_MANIFEST_PATH="$DIST_DIR/latest.json" \
     RECNY_MACOS_VERSION="${PACKAGE_VERSION#v}" \
     RECNY_MACOS_DISPLAY_VERSION="$PACKAGE_VERSION" \
-    RECNY_MACOS_BUILD="${BUILD_NUMBER:-8}" \
+    RECNY_MACOS_BUILD="${BUILD_NUMBER:-12}" \
     "$ROOT_DIR/scripts/write_update_manifest.py" >/dev/null
 
 echo "Version: $PACKAGE_VERSION"

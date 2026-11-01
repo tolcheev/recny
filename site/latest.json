@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-22T11:24:10Z",
+  "generated_at": "2026-11-01T19:04:25Z",
   "macos": {
-    "version": "0.1.8",
-    "display_version": "v0.1.8",
-    "build": "8",
-    "release_url": "https://github.com/tolcheev/recny/releases/tag/v0.1.8",
-    "download_url": "https://github.com/tolcheev/recny/releases/download/v0.1.8/Recny-v0.1.8-macOS.dmg",
-    "sha256_url": "https://github.com/tolcheev/recny/releases/download/v0.1.8/Recny-v0.1.8-macOS.dmg.sha256",
-    "notes": "Public Recny release with local call recording, library tools, and update checks."
+    "version": "0.1.9",
+    "display_version": "v0.1.9",
+    "build": "12",
+    "release_url": "https://github.com/tolcheev/recny/releases/tag/v0.1.9",
+    "download_url": "https://github.com/tolcheev/recny/releases/download/v0.1.9/Recny-v0.1.9-macOS.dmg",
+    "sha256_url": "https://github.com/tolcheev/recny/releases/download/v0.1.9/Recny-v0.1.9-macOS.dmg.sha256",
+    "notes": "Adds optional local transcripts and editable structured notes with timestamp links, queueing, cancellation and Markdown export."
   },
   "windows": {
     "version": "0.2.5-beta",

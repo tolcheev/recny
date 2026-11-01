@@ -8,3 +8,7 @@ xcuserdata/
 *.swp
 bin/
 obj/
+
+# Python worker/test bytecode is generated locally.
+__pycache__/
+*.pyc

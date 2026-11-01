@@ -1,17 +1,18 @@
 # Recny
 
-Recny is a local-first desktop app that records calls automatically. It captures microphone and system audio into separate files, creates a mixed copy, and keeps everything on the computer.
+Recny is a local-first desktop app that records calls automatically. It captures microphone and system audio into separate files, creates a mixed copy, and keeps everything on the computer. On Apple Silicon, optional local models can transcribe a completed recording and generate editable notes.
 
-[Download Recny](https://tolcheev.github.io/recny/) · [Report a bug](https://github.com/tolcheev/recny/issues/new?template=bug_report.yml) · [Read the architecture](docs/ARCHITECTURE.md)
+[Download Recny](https://tolcheev.github.io/recny/) · [Инструкция на русском](https://tolcheev.github.io/recny/guide.html) · [Release 0.1.9](docs/RELEASE_NOTES_V0_1_9.md) · [Report a bug](https://github.com/tolcheev/recny/issues/new?template=bug_report.yml) · [Read the architecture](docs/ARCHITECTURE.md)
 
 ## Platform status
 
 ### macOS
 
-- Current release: `v0.1.8`
-- Apple Silicon, macOS Sequoia
+- Current release: `v0.1.9`
+- Apple Silicon, macOS 15 or newer
 - Native Swift and SwiftUI menu bar app
 - Ad-hoc signed and not Apple-notarized
+- Optional local Parakeet transcription and Qwen3 4B notes, started manually after a recording
 
 ### Windows
 
@@ -19,6 +20,7 @@ Recny is a local-first desktop app that records calls automatically. It captures
 - Windows x64
 - Native .NET 8 tray app
 - Experimental beta distributed as a self-contained ZIP without an installer
+- No local transcription or AI notes in this Windows build
 
 ## What Recny records
 
@@ -33,9 +35,9 @@ Recny can watch supported call apps and start recording after stable call activi
 
 ### macOS
 
-1. Download `Recny-v0.1.8-macOS.dmg` from the [Recny website](https://tolcheev.github.io/recny/).
+1. Download `Recny-v0.1.9-macOS.dmg` from the [Recny website](https://tolcheev.github.io/recny/).
 2. Open the DMG and drag `Recny.app` into Applications.
-3. In Finder, open Applications, right-click Recny, and choose Open.
+3. Launch Recny from Applications.
 4. If macOS still blocks the app, open System Settings > Privacy & Security and choose Open Anyway.
 5. Grant Microphone and Screen & System Audio Recording permissions when Recny asks.
 
@@ -50,6 +52,16 @@ Do not disable Gatekeeper globally. The current free build is ad-hoc signed, so 
 5. Open Recny from the system tray.
 
 The Windows build is a beta. It has no installer and does not yet match every macOS feature.
+
+## Local transcripts and notes on macOS
+
+Open **Records → Transcript & Notes** to search a transcript, play verified timestamps, or generate notes with the **Meeting**, **Interview**, or **Mentoring** preset. **Process Locally** runs both steps; **More → Transcribe Only** recognizes speech, and **More → Regenerate Notes** reuses an existing verified transcript. Notes support source references, Markdown editing, copying, export, and local version history. Jobs are queued and can be cancelled or retried.
+
+Models are not bundled with the app. Prepare Parakeet in **Settings → Local transcription**. For notes, use **Settings → Local Notes → Copy Runtime Install Command**, run the command, select **Check Setup**, then **Download & Prepare Model**. The isolated Python 3.11 runtime uses `mlx-lm==0.32.2` and `lm-format-enforcer==0.11.3`; the notes model is `mlx-community/Qwen3-4B-Instruct-2507-4bit`. Allow at least 10 GiB free for setup and processing, plus space for recordings. Downloads require internet; prepared processing runs offline without API keys or a cloud fallback.
+
+Processing starts only on request. Recognition and generated notes may contain semantic errors or repeated facts; review them against the audio. **Interview** produces structured notes, not a complete expert evaluation. Mixed system audio has no individual speaker identification.
+
+See the [full Russian user guide](https://tolcheev.github.io/recny/guide.html), [local setup and verification](docs/LOCAL_AI.md), and [dated validation report](docs/LOCAL_AI_VALIDATION.md).
 
 ## Local storage
 
@@ -71,7 +83,7 @@ Each completed recording contains separate source tracks, a mixed export, and `m
 
 ## Privacy
 
-Recording, metadata, tags, diagnostics, and optional local transcription stay on the computer. Recny does not upload calls, sync with T-Orbit, or run cloud AI. Read [Security and privacy](docs/SECURITY_PRIVACY.md) before using Recny for sensitive calls.
+Recording, metadata, tags, diagnostics, optional local transcription, and generated notes stay on the computer. Dependency installation and model preparation download files from external repositories. Recny does not upload calls, sync with T-Orbit, or run cloud AI. Read [Security and privacy](docs/SECURITY_PRIVACY.md) before using Recny for sensitive calls.
 
 ## Build and test
 
