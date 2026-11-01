@@ -10,15 +10,15 @@ def env(name: str, default: str) -> str:
 
 
 repository = "https://github.com/tolcheev/recny"
-mac_tag = env("RECNY_MACOS_RELEASE_TAG", "v0.1.8")
+mac_tag = env("RECNY_MACOS_RELEASE_TAG", "v0.1.9")
 windows_tag = env("RECNY_WINDOWS_RELEASE_TAG", "v0.2.5-windows-beta")
 mac_release_base = f"{repository}/releases/download/{mac_tag}"
 windows_release_base = f"{repository}/releases/download/{windows_tag}"
 mac_release_page = f"{repository}/releases/tag/{mac_tag}"
 windows_release_page = f"{repository}/releases/tag/{windows_tag}"
-mac_version = env("RECNY_MACOS_VERSION", "0.1.8")
+mac_version = env("RECNY_MACOS_VERSION", "0.1.9")
 mac_display_version = env("RECNY_MACOS_DISPLAY_VERSION", f"v{mac_version}")
-mac_build = env("RECNY_MACOS_BUILD", "8")
+mac_build = env("RECNY_MACOS_BUILD", "12")
 windows_version = env("RECNY_WINDOWS_VERSION", "0.2.5-beta")
 windows_display_version = env("RECNY_WINDOWS_DISPLAY_VERSION", f"v{windows_version}")
 windows_build = env("RECNY_WINDOWS_BUILD", "5")
@@ -34,7 +34,7 @@ manifest = {
         "release_url": mac_release_page,
         "download_url": f"{mac_release_base}/Recny-v{mac_version}-macOS.dmg",
         "sha256_url": f"{mac_release_base}/Recny-v{mac_version}-macOS.dmg.sha256",
-        "notes": "Public Recny release with local call recording, library tools, and update checks."
+        "notes": "Adds optional local transcripts and editable structured notes with timestamp links, queueing, cancellation and Markdown export."
     },
     "windows": {
         "version": windows_version,

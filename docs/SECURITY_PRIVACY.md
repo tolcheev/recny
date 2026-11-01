@@ -119,3 +119,7 @@ Local file logs are for troubleshooting recorder lifecycle and permission issues
 Local logs must not include raw transcript text, raw audio content, call content, or screen content.
 
 Manual screenshot capture immediately saves a full-screen PNG into the selected recording folder. It is a user-triggered still-image action, not background screen recording, and it does not ask the user to choose an area or window. Screenshots are sensitive local files and are deleted when the whole local recording folder is deleted.
+
+## Optional local structured notes
+
+Manual processing may run a bundled Python helper in a separately installed MLX runtime. Explicit preparation downloads public model weights; inference uses prepared local files, offline flags, and no remote model code. Audio and transcript content remain on the Mac. Temporary job files are removed on completion or cancellation. Logs exclude transcript and generated text. See [local setup and quality limits](LOCAL_AI.md).
