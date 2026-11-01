@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Как пользоваться Recny 0.1.9 на Mac</title>
+    <meta name="description" content="Установка Recny на Mac, разрешения, запись звонка, подготовка Parakeet и Qwen3 4B, локальная расшифровка, редактирование заметок и решение проблем." />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#f4f2ed" />
+    <meta property="og:title" content="Как пользоваться Recny 0.1.9 на Mac" />
+    <meta property="og:description" content="От установки до расшифровки и заметок. Пошаговая инструкция для macOS и Apple Silicon." />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://tolcheev.github.io/recny/guide.html" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="canonical" href="https://tolcheev.github.io/recny/guide.html" />
+    <link rel="sitemap" type="application/xml" href="sitemap.xml" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='24' fill='%23cf2f28'/></svg>" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="guide-page">
+    <a class="skip-link" href="#content">Перейти к инструкции</a>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Recny, главная"><span class="record-dot" aria-hidden="true"></span>Recny</a>
+      <nav class="topnav" aria-label="Основные ссылки"><a class="text-link" href="./">Скачать</a><a class="text-link" href="https://github.com/tolcheev/recny">GitHub</a></nav>
+    </header>
+    <main id="content">
+      <div class="manual-heading">
+        <p class="eyebrow">Инструкция · macOS · версия 0.1.9</p>
+        <h1>Запись встречи.<br /><em>Текст и заметки.</em></h1>
+        <p class="hero-copy">Recny сохраняет звук звонка на Mac. После встречи вы можете запустить распознавание речи и получить редактируемые заметки. Названия кнопок ниже приведены на английском, как в приложении.</p>
+      </div>
+      <div class="manual-layout">
+        <aside class="manual-nav">
+          <nav aria-label="Содержание инструкции">
+            <p class="section-label">Содержание</p>
+            <ol>
+              <li><a href="#requirements">Требования</a></li>
+              <li><a href="#install">Установка</a></li>
+              <li><a href="#permissions">Разрешения</a></li>
+              <li><a href="#first-recording">Первая запись</a></li>
+              <li><a href="#models">Подготовка моделей</a></li>
+              <li><a href="#processing">Расшифровка и заметки</a></li>
+              <li><a href="#editing">Проверка и экспорт</a></li>
+              <li><a href="#jobs">Отмена и повтор</a></li>
+              <li><a href="#storage">Файлы и приватность</a></li>
+              <li><a href="#troubleshooting">Решение проблем</a></li>
+              <li><a href="#updates">Обновления</a></li>
+            </ol>
+          </nav>
+        </aside>
+        <article class="manual-content">
+          <section id="requirements">
+            <p class="section-label">01 / До установки</p>
+            <h2>Что понадобится</h2>
+            <ul>
+              <li>Mac с Apple Silicon и macOS 15 или новее. Intel Mac эта сборка не поддерживает.</li>
+              <li>Доступ к микрофону, системному звуку и папке записей.</li>
+              <li>Для расшифровки и заметок: интернет на время установки зависимостей и загрузки моделей, затем можно работать офлайн.</li>
+              <li>Не менее 10 GiB свободного места для обеих моделей, среды выполнения, временных загрузок и результатов. Место под сами записи нужно дополнительно.</li>
+            </ul>
+            <p>Модели не входят в DMG. Без них запись звонков работает, а локальная обработка остаётся недоступной.</p>
+            <p class="manual-note">Локальные модели проверялись на MacBook с M4 Pro, 24 GiB памяти и macOS 26.5.2. Это отдельная конфигурация проверки, а не замер скорости для всех Mac. Windows 0.2.5 beta не поддерживает функции из разделов о расшифровке и заметках.</p>
+          </section>
+          <section id="install">
+            <p class="section-label">02 / Установка</p>
+            <h2>Перенесите Recny в Applications</h2>
+            <ol>
+              <li>Скачайте <a href="https://github.com/tolcheev/recny/releases/download/v0.1.9/Recny-v0.1.9-macOS.dmg">Recny 0.1.9 для macOS, DMG</a>. Также доступен <a href="https://github.com/tolcheev/recny/releases/download/v0.1.9/Recny-v0.1.9-macOS.zip">ZIP с приложением</a>.</li>
+              <li>Откройте DMG и перетащите <strong>Recny.app</strong> в <strong>Applications</strong> («Программы»). Для ZIP распакуйте архив и перенесите приложение в ту же папку.</li>
+              <li>Запустите Recny из Applications. При предупреждении macOS проверьте, что файл скачан из репозитория <code>tolcheev/recny</code>. Откройте <strong>System Settings › Privacy &amp; Security</strong> («Системные настройки › Конфиденциальность и безопасность»), найдите блок Recny и выберите <strong>Open Anyway</strong> («Всё равно открыть»). Подтвердите запуск в следующем диалоге.</li>
+              <li>Открывайте окно приложения через значок Recny в строке меню и пункт <strong>Show Window</strong>. Настройки доступны там же через <strong>Settings</strong>.</li>
+            </ol>
+            <p class="manual-note">Сборка подписана ad-hoc и не прошла нотариальную проверку Apple. Это причина предупреждения при первом запуске. Глобально отключать Gatekeeper или защиту macOS не нужно. <a href="https://support.apple.com/en-us/102445">Порядок разрешения запуска у Apple</a>.</p>
+          </section>
+          <section id="permissions">
+            <p class="section-label">03 / Доступ к звуку</p>
+            <h2>Разрешите запись</h2>
+            <p>Recny показывает, какой доступ ещё нужен. Пока обязательное разрешение отсутствует, запуск записи заблокирован.</p>
+            <ul>
+              <li><strong>Microphone.</strong> Разрешите микрофон в системном запросе. После отказа включите Recny в разделе Microphone настроек конфиденциальности.</li>
+              <li><strong>Screen &amp; System Audio Recording.</strong> Разрешите Recny доступ к системному звуку. Название раздела зависит от версии и языка macOS. Звонок сохраняется как аудио; видеозаписи экрана нет. В приложении отдельно есть ручная команда для скриншота.</li>
+              <li><strong>Папка записей.</strong> Проверьте доступность папки. При необходимости выберите другую через <strong>Settings › Storage › Change Location</strong>.</li>
+              <li><strong>Перезапуск.</strong> Когда Recny показывает требование перезапуска, нажмите <strong>Restart App</strong> либо завершите приложение и снова откройте его из Applications.</li>
+            </ul>
+            <p>После перезапуска проверьте статус <strong>Recording permissions ready</strong>. Разрешение macOS само по себе не подтверждает, что в записи слышны оба участника: сделайте короткую пробу.</p>
+          </section>
+          <section id="first-recording">
+            <p class="section-label">04 / Проверка звука</p>
+            <h2>Сделайте первую запись</h2>
+            <ol>
+              <li>В <strong>Settings › Recording</strong> проверьте выбранный микрофон. Режим <strong>Auto, recommended</strong> использует внешний или встроенный микрофон. Микрофоны AirPods и других Bluetooth-гарнитур заблокированы для записи; для своего голоса используйте микрофон Mac либо внешний.</li>
+              <li>Предупредите участников о записи. Нажмите <strong>Start Recording</strong>, произнесите несколько фраз и проверьте звук собеседника.</li>
+              <li>Нажмите <strong>Stop Recording</strong>. Дождитесь завершения обработки аудио, затем откройте запись в <strong>Records</strong> и прослушайте её.</li>
+              <li>Для следующих звонков настройте <strong>Settings › Auto-start</strong>: <strong>Off</strong> отключает автостарт, <strong>Ask first</strong> запрашивает подтверждение, <strong>Auto</strong> запускает запись при обнаружении устойчивой активности звонка.</li>
+            </ol>
+            <p>Автостарт зависит от приложения звонка и условий обнаружения. Когда звонок не распознан, используйте ручной запуск. Автостарт записи не включает автоматическую расшифровку.</p>
+          </section>
+          <section id="models">
+            <p class="section-label">05 / Один раз перед обработкой</p>
+            <h2>Подготовьте локальные модели</h2>
+            <p>Parakeet распознаёт речь, Qwen3 4B создаёт заметки по тексту. Обе модели загружаются только по вашей команде в настройках. Recny не скачивает их при открытии записи и не отправляет запросы во внешний AI-сервис.</p>
+            <h3>Parakeet: речь в текст</h3>
+            <ol>
+              <li>Установите <a href="https://brew.sh/">Homebrew по официальной инструкции</a>, если команды <code>brew</code> ещё нет. Этот шаг нужен для установки дополнительных инструментов.</li>
+              <li>Откройте <strong>Settings › Local transcription</strong> и нажмите <strong>Copy Install Command</strong>. Выполните скопированную команду в Terminal:</li>
+            </ol>
+            <pre><code>brew install uv ffmpeg &amp;&amp; uv tool install parakeet-mlx -U</code></pre>
+            <ol start="3">
+              <li>Вернитесь в настройки, нажмите <strong>Refresh</strong>, затем <strong>Prepare Parakeet Model</strong>. Дождитесь окончания загрузки <code>mlx-community/parakeet-tdt-0.6b-v3</code>.</li>
+              <li>Проверьте статус <strong>parakeet-mlx is ready.</strong> и отметку <strong>Ready</strong>. Теперь доступна отдельная расшифровка без заметок.</li>
+            </ol>
+            <h3>Qwen3 4B: текст в заметки</h3>
+            <ol>
+              <li>В <strong>Settings › Local Notes</strong> нажмите <strong>Copy Runtime Install Command</strong>. Выполните скопированную команду в Terminal. Она создаёт отдельную среду Python 3.11 в <code>~/Library/Application Support/Recny/LocalAI/runtime</code> и устанавливает <code>mlx-lm==0.32.2</code> с <code>lm-format-enforcer==0.11.3</code>.</li>
+              <li>Нажмите <strong>Check Setup</strong>. Должен появиться статус <strong>Local runtime installed</strong>. Системный Python эта установка не заменяет; сервер запускать не нужно.</li>
+              <li>Нажмите <strong>Download &amp; Prepare Model</strong>. Recny загрузит <code>mlx-community/Qwen3-4B-Instruct-2507-4bit</code> в <code>~/Library/Application Support/Recny/LocalAI/notes-model</code>. Загрузка может занять несколько минут.</li>
+              <li>Дождитесь статуса <strong>Local notes model ready</strong>. Для проверки или восстановления модели позже используйте <strong>Verify / Repair Model</strong>.</li>
+            </ol>
+            <p class="manual-note">Для одной расшифровки достаточно Parakeet и ffmpeg. Qwen и среда Local Notes нужны только для заметок. Обработка подготовленными моделями работает без интернета и API-ключа. При неполной установке Recny покажет ошибку.</p>
+          </section>
+          <section id="processing">
+            <p class="section-label">06 / После встречи</p>
+            <h2>Получите расшифровку и заметки</h2>
+            <ol>
+              <li>В <strong>Records</strong> выберите завершённую запись и откройте <strong>Transcript &amp; Notes</strong>.</li>
+              <li>В <strong>Notes preset</strong> выберите назначение заметок. <strong>Meeting</strong> собирает темы, решения, задачи и открытые вопросы. <strong>Interview</strong> организует материал собеседования. <strong>Mentoring</strong> подходит для обсуждения на менторской сессии.</li>
+              <li>Нажмите <strong>Process Locally</strong>. Recny сначала распознает аудио, затем создаст заметки. Ход работы отображается в этом же окне.</li>
+              <li>Откройте вкладку <strong>Transcript</strong> для текста или <strong>Notes</strong> для заметок. Сохранённые результаты доступны при следующем открытии записи.</li>
+            </ol>
+            <h3>Нужен только текст</h3>
+            <p>Выберите <strong>More › Transcribe Only</strong>. Модель заметок для этой команды не требуется. Поле <strong>Search transcript</strong> ищет слова в сегментах расшифровки, а кнопка с временем переводит проигрыватель к соответствующему месту.</p>
+            <h3>Нужны заметки другого типа</h3>
+            <p>Выберите другой <strong>Notes preset</strong> и нажмите <strong>More › Regenerate Notes</strong>. Recny использует уже проверенную расшифровку и не повторяет распознавание речи. Старые текстовые расшифровки сначала нужно создать заново через <strong>Transcribe Only</strong>, чтобы связать их с аудио.</p>
+            <p class="manual-note">Interview создаёт структурированный черновик по собеседованию. Он не гарантирует экспертную оценку ответов или корректные исправления. В смешанном системном аудио Recny не определяет отдельных говорящих.</p>
+          </section>
+          <section id="editing">
+            <p class="section-label">07 / Работа с результатом</p>
+            <h2>Проверьте и сохраните заметки</h2>
+            <p>Нажмите ссылку на источник в заметках: Recny откроет фрагмент расшифровки и перейдёт к его времени в аудио. Связь с фрагментом помогает проверке, но не доказывает, что модель верно поняла слова. Она может перепутать ответственного или превратить план в обязательство.</p>
+            <ol>
+              <li>На вкладке <strong>Notes</strong> включите <strong>Edit Markdown</strong> и исправьте текст. Нажмите <strong>Save</strong>, чтобы сохранить изменения в записи.</li>
+              <li>Кнопка <strong>Copy</strong> копирует текст заметок в буфер обмена, включая текущие правки.</li>
+              <li>Нажмите <strong>Export Markdown…</strong> и выберите папку вне папки этой записи. Экспорт создаёт отдельный файл <code>notes.md</code>. Его последующее редактирование не меняет заметки внутри Recny.</li>
+              <li>Перед повторной генерацией сохраните правки. При запросе <strong>Unsaved notes</strong> выберите <strong>Save and Continue</strong>, <strong>Discard Edits and Continue</strong> либо <strong>Keep Editing</strong>. Последний вариант возвращает к редактированию.</li>
+            </ol>
+            <p>Предыдущие сохранённые версии Markdown остаются в <code>transcript/history/</code>. Если аудио или расшифровка изменились, старые ссылки на источники отключаются. Сначала создайте актуальную расшифровку, затем перегенерируйте заметки.</p>
+          </section>
+          <section id="jobs">
+            <p class="section-label">08 / Очередь обработки</p>
+            <h2>Отмена и повторный запуск</h2>
+            <p>Recny обрабатывает задания последовательно, в том числе из разных окон библиотеки. Закрытие окна <strong>Transcript &amp; Notes</strong> оставляет задание в работе. Для остановки нажмите <strong>Cancel Processing</strong>.</p>
+            <p>После ошибки, отмены или прерывания доступна кнопка <strong>Retry</strong>. Устраните указанную причину перед повтором. При ошибке генерации заметок завершённая расшифровка сохраняется; для создания только заметок используйте <strong>More › Regenerate Notes</strong>.</p>
+            <p>После перезапуска приложения незавершённое задание получает статус прерванного. Оно не возобновляется самостоятельно. Длинные записи обрабатываются частями, поэтому требуют больше времени и могут давать длинные заметки с повторяющимися фактами.</p>
+          </section>
+          <section id="storage">
+            <p class="section-label">09 / Хранение</p>
+            <h2>Где лежат файлы</h2>
+            <p>Папка по умолчанию: <code>~/Recordings/TOrbitRecorder/</code>. Историческое название сохранено для совместимости. Откройте её кнопкой <strong>Open Library Folder</strong> в Records или Settings › Storage.</p>
+            <dl class="file-list">
+              <dt><code>source/mic.m4a</code><br /><code>source/system.m4a</code></dt><dd>Исходные дорожки микрофона и системного звука.</dd>
+              <dt><code>export/mixed.m4a</code></dt><dd>Общий аудиофайл для прослушивания.</dd>
+              <dt><code>metadata.json</code></dt><dd>Метаданные записи.</dd>
+              <dt><code>transcript/</code></dt><dd>Текст распознавания, SRT/VTT, сегменты с временем, заметки <code>notes.md</code> и <code>notes.json</code>, история правок и состояние обработки.</dd>
+            </dl>
+            <p>Recny не загружает аудио, расшифровки и заметки в облако и не синхронизирует их с T-Orbit. Установка инструментов и моделей обращается к внешним репозиториям. Подготовленная локальная обработка использует файлы на Mac.</p>
+            <p>Файлы не шифруются самим Recny. Храните их в папке с подходящим доступом. Автоматического удаления записей нет.</p>
+          </section>
+          <section id="troubleshooting">
+            <p class="section-label">10 / Когда что-то не работает</p>
+            <h2>Проверьте причину</h2>
+            <details open>
+              <summary>Кнопка Start Recording недоступна</summary>
+              <p>Проверьте сообщение о блокировке в главном окне. Разрешите микрофон и системный звук, убедитесь в доступности папки и выполните перезапуск, если Recny его запросил. Порядок действий есть в <a href="#permissions">разделе о разрешениях</a>.</p>
+            </details>
+            <details>
+              <summary>В записи не слышно меня или собеседника</summary>
+              <p>Проверьте выбранный микрофон в Settings › Recording и системное разрешение на запись звука. Микрофон Bluetooth-гарнитуры не используется. Прослушайте отдельные файлы <code>source/mic.m4a</code> и <code>source/system.m4a</code>, чтобы определить, в какой дорожке нет звука.</p>
+            </details>
+            <details>
+              <summary>Terminal сообщает command not found</summary>
+              <p>Для <code>brew</code> завершите установку Homebrew и выполните шаги настройки, которые показывает его установщик. Для <code>uv</code> или <code>ffmpeg</code> повторите команду из <strong>Copy Install Command</strong>. После успешной установки нажмите <strong>Refresh</strong> в Local transcription.</p>
+            </details>
+            <details>
+              <summary>Process Locally недоступна</summary>
+              <p>Проверьте, что у записи есть аудиофайл, Parakeet готов и Local Notes показывает <strong>Local notes model ready</strong>. В окне документов нажмите <strong>Check Setup</strong>. Для текста без Qwen используйте <strong>More › Transcribe Only</strong>. На время обработки этой записи повторный запуск блокируется.</p>
+            </details>
+            <details>
+              <summary>Модель не скачалась или установка неполная</summary>
+              <p>Проверьте интернет и свободное место. В Local Notes повторите <strong>Download &amp; Prepare Model</strong> или <strong>Verify / Repair Model</strong>. Для Parakeet используйте <strong>Prepare Parakeet Model</strong>. При ошибке зависимостей повторите соответствующую команду установки, затем проверьте статус. Во время обработки записи подготовка модели заметок недоступна.</p>
+            </details>
+            <details>
+              <summary>Кнопки времени или ссылки на источники не работают</summary>
+              <p>У старой расшифровки может не быть проверенной связи с аудио. Изменение файла также делает прежнюю связь недействительной. Выполните <strong>More › Transcribe Only</strong>, затем <strong>More › Regenerate Notes</strong>.</p>
+            </details>
+            <details>
+              <summary>Заметки неточные, слишком длинные или с повторами</summary>
+              <p>Проверьте спорные фразы по ссылкам на источник и по аудио. Исправьте заметки через <strong>Edit Markdown</strong>. Повторная генерация может изменить формулировки, но не гарантирует правильный смысл. При превышении ограничений обработки Recny сообщает ошибку и не заменяет корректно сохранённые заметки неполным результатом.</p>
+            </details>
+            <details>
+              <summary>Появилось Documents changed on disk</summary>
+              <p>Документы изменены вне текущего окна. Скопируйте нужные несохранённые правки, затем нажмите <strong>Reload</strong> и разберите запрос о сохранении. Не выбирайте <strong>Discard Edits and Continue</strong>, если хотите оставить текущий текст.</p>
+            </details>
+            <details>
+              <summary>Ошибка осталась после проверки</summary>
+              <p>Откройте <strong>Diagnostics</strong> через меню Recny и раздел <strong>Logs</strong>. В <a href="https://github.com/tolcheev/recny/issues/new?template=bug_report.yml">сообщении об ошибке на GitHub</a> укажите версию macOS, модель Mac, версию Recny и шаги до ошибки. Перед публикацией проверьте диагностические данные: GitHub Issues видны всем. Запись разговора и текст расшифровки прикладывать не нужно.</p>
+            </details>
+          </section>
+          <section id="updates">
+            <p class="section-label">11 / Новая версия</p>
+            <h2>Как обновить Recny</h2>
+            <ol>
+              <li>Откройте <strong>Settings › About › Check for Updates</strong>. При доступном обновлении используйте <strong>Download Update</strong> или <strong>Release Page</strong>.</li>
+              <li>Остановите запись и дождитесь окончания локальной обработки. Завершите Recny через <strong>Quit</strong>.</li>
+              <li>Скачайте новую сборку из <a href="https://github.com/tolcheev/recny/releases">GitHub Releases</a>, откройте DMG и замените Recny.app в Applications.</li>
+              <li>Запустите приложение. Проверьте версию в <strong>Settings › About</strong>, доступность записей и состояние моделей. При повторном запросе macOS разрешите нужный доступ.</li>
+            </ol>
+            <p>Замена приложения не требует удаления папки записей или моделей. Обновления macOS и Windows выпускаются отдельно.</p>
+            <a class="text-link" href="https://github.com/tolcheev/recny/releases/tag/v0.1.9">Изменения в Recny 0.1.9</a>
+          </section>
+        </article>
+      </div>
+    </main>
+    <footer>
+      <p>Recny · MIT License · 2026</p>
+      <nav aria-label="Ссылки в подвале"><a href="./">Скачать Recny</a><a href="#content">К началу</a><a href="https://github.com/tolcheev/recny/blob/main/SECURITY.md">Безопасность</a></nav>
+    </footer>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-# Local transcripts and notes — unreleased
+# Local transcripts and notes — macOS v0.1.9
 
 This feature adds optional local processing to completed macOS recordings. Recording behavior remains unchanged.
 
@@ -10,4 +10,4 @@ This feature adds optional local processing to completed macOS recordings. Recor
 
 This is a manually triggered first version. It does not identify speakers, automatically process every recording, synchronize with T-Orbit, or send recordings. Notes may contain recognition or interpretation errors and repeated facts; source links support review. Missing setup produces an error rather than a cloud fallback.
 
-See [local setup and verification](LOCAL_AI.md). This branch has no published application release; the release version has not been incremented.
+See [local setup and verification](LOCAL_AI.md). The feature ships in macOS v0.1.9 (build 12). See the versioned release notes for distribution details.

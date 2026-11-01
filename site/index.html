@@ -3,16 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recny — автоматическая запись созвонов</title>
+    <title>Recny — запись созвонов, расшифровка и заметки</title>
     <meta
       name="description"
-      content="Recny работает в фоне, сам начинает запись звонка и сохраняет только звук на вашем компьютере."
+      content="Recny записывает созвоны на компьютере. На Mac можно локально расшифровать запись и создать заметки по встрече, собеседованию или менторской сессии."
     />
     <meta name="robots" content="index, follow, max-image-preview:large" />
-    <meta property="og:title" content="Recny — автоматическая запись созвонов" />
+    <meta property="og:title" content="Recny — запись созвонов, расшифровка и заметки" />
     <meta
       property="og:description"
-      content="Recny сам начинает запись звонка. Он записывает микрофон и голоса собеседников, но не экран и видео."
+      content="Автоматическая запись звука. Локальная расшифровка и заметки на Mac с Apple Silicon. Бесплатно, с открытым кодом."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://tolcheev.github.io/recny/" />
@@ -36,7 +36,8 @@
         "description": "Приложение для автоматической записи звука во время созвонов. Записи хранятся локально на компьютере.",
         "applicationCategory": "MultimediaApplication",
         "operatingSystem": ["macOS 15 или новее", "Windows 10 или новее"],
-        "downloadUrl": "https://github.com/tolcheev/recny/releases",
+        "downloadUrl": "https://github.com/tolcheev/recny/releases/download/v0.1.9/Recny-v0.1.9-macOS.dmg",
+        "softwareVersion": "0.1.9",
         "license": "https://opensource.org/license/mit",
         "offers": {
           "@type": "Offer",
@@ -54,27 +55,26 @@
         <span class="record-dot" aria-hidden="true"></span>
         Recny
       </a>
-      <a class="text-link" href="https://github.com/tolcheev/recny">Исходный код</a>
+      <nav class="topnav" aria-label="Основные ссылки"><a class="text-link" href="guide.html">Инструкция</a><a class="text-link" href="https://github.com/tolcheev/recny">GitHub</a></nav>
     </header>
 
     <main id="content">
       <section class="hero" aria-labelledby="hero-title">
-        <p class="eyebrow">Бесплатно · Open source · Всё локально</p>
-        <h1 id="hero-title">Автоматическая запись созвонов</h1>
+        <p class="eyebrow">Recny 0.1.9 для macOS · Бесплатно</p>
+        <h1 id="hero-title">Запись созвонов.<br /><em>Текст и заметки.</em></h1>
         <p class="hero-copy">
-          Recny работает в фоне и сам включает запись, когда начинается звонок
-          в поддерживаемом приложении. Он записывает только звук: ваш микрофон и
-          голоса собеседников. Экран и видео не записываются. После звонка
-          аудиофайл остаётся на вашем компьютере.
+          Recny записывает ваш микрофон и голоса собеседников. На Mac запись можно
+          расшифровать и превратить в заметки с помощью локальных моделей.
+          Аудио и текст остаются на компьютере.
         </p>
 
         <div class="downloads" aria-label="Скачать Recny">
           <a
             class="download-link primary"
-            href="https://github.com/tolcheev/recny/releases/download/v0.1.8/Recny-v0.1.8-macOS.dmg"
+            href="https://github.com/tolcheev/recny/releases/download/v0.1.9/Recny-v0.1.9-macOS.dmg"
           >
             <span>Скачать для macOS</span>
-            <small>v0.1.8 · Apple Silicon</small>
+            <small>v0.1.9 · Apple Silicon</small>
           </a>
           <a
             class="download-link"
@@ -84,6 +84,8 @@
             <small>v0.2.5 beta · x64</small>
           </a>
         </div>
+        <p class="download-caption">macOS 15+ · Apple Silicon · Модели устанавливаются отдельно</p>
+        <a class="text-link guide-link" href="guide.html">Установка и первая расшифровка</a>
       </section>
 
       <section class="facts" aria-label="Возможности Recny">
@@ -99,31 +101,47 @@
         </article>
         <article>
           <span class="fact-number">03</span>
-          <h2>Локальные файлы</h2>
-          <p>Приложение не загружает разговоры в облако. Папку хранения можно открыть из Recny.</p>
+          <h2>Расшифровка</h2>
+          <p>Parakeet распознаёт речь на Mac. Ищите слова в тексте и слушайте запись с выбранного времени.</p>
         </article>
         <article>
           <span class="fact-number">04</span>
-          <h2>Открытый код</h2>
-          <p>Клиенты для macOS и Windows опубликованы на GitHub по лицензии MIT.</p>
+          <h2>Заметки</h2>
+          <p>Qwen3 4B собирает заметки по расшифровке. Редактируйте их в приложении и экспортируйте в Markdown.</p>
         </article>
+      </section>
+
+      <section class="local-ai" aria-labelledby="local-ai-title">
+        <div>
+          <p class="section-label">Новое в macOS 0.1.9</p>
+          <h2 id="local-ai-title">Вернуться<br />к сказанному.</h2>
+          <p>Откройте запись, выберите <strong>Transcript &amp; Notes</strong> и запустите обработку. Ссылки в заметках ведут к фрагментам расшифровки и времени в аудио.</p>
+          <a class="text-link" href="guide.html#processing">Как получить текст и заметки</a>
+        </div>
+        <div class="preset-list">
+          <article><p class="preset-label">Meeting</p><h3>Рабочая встреча</h3><p>Темы разговора, решения, задачи и открытые вопросы.</p></article>
+          <article><p class="preset-label">Interview</p><h3>Собеседование</h3><p>Структурированные заметки по ответам. Полноценную экспертную оценку кандидата этот режим не заменяет.</p></article>
+          <article><p class="preset-label">Mentoring</p><h3>Менторская сессия</h3><p>Обсуждение и договорённости, к которым можно вернуться после занятия.</p></article>
+          <p class="ai-limit">Запуск только вручную. Модели могут ошибаться в словах и смысле; проверьте текст по записи перед использованием.</p>
+        </div>
       </section>
 
       <section class="guide" aria-labelledby="macos-title">
         <div class="guide-heading">
           <p class="section-label">Установка</p>
           <h2 id="macos-title">macOS</h2>
-          <p>macOS Sequoia, Mac с Apple Silicon</p>
+          <p>macOS 15 или новее, Mac с Apple Silicon</p>
         </div>
         <ol>
-          <li><span>01</span>Скачайте DMG и перетащите <strong>Recny.app</strong> в Applications.</li>
-          <li><span>02</span>Откройте Finder → Applications. Нажмите на Recny правой кнопкой и выберите Open.</li>
-          <li><span>03</span>Если macOS снова заблокирует запуск, откройте System Settings → Privacy &amp; Security и нажмите Open Anyway.</li>
-          <li><span>04</span>Разрешите доступ к микрофону и Screen &amp; System Audio Recording.</li>
+          <li><span>01</span><div>Скачайте DMG и перетащите <strong>Recny.app</strong> в Applications.</div></li>
+          <li><span>02</span><div>Откройте Recny из папки Applications.</div></li>
+          <li><span>03</span><div>При блокировке первого запуска проверьте источник файла. В System Settings › Privacy &amp; Security разрешите запуск через Open Anyway.</div></li>
+          <li><span>04</span><div>Разрешите доступ к микрофону и Screen &amp; System Audio Recording. <a href="guide.html#permissions">Подробнее о разрешениях</a>.</div></li>
         </ol>
         <p class="notice">
           Сборка подписана ad-hoc и не прошла Apple notarization, поэтому macOS
           показывает предупреждение при первом запуске. Отключать Gatekeeper не нужно.
+          <a href="guide.html#models">Установка моделей</a> нужна только для расшифровки и заметок.
         </p>
       </section>
 
@@ -134,14 +152,15 @@
           <p>Windows x64, экспериментальная beta</p>
         </div>
         <ol>
-          <li><span>01</span>Скачайте ZIP и распакуйте его в постоянную папку.</li>
-          <li><span>02</span>Запустите <strong>Recny.exe</strong>.</li>
-          <li><span>03</span>Если появится SmartScreen, нажмите More info, проверьте источник файла и выберите Run anyway.</li>
-          <li><span>04</span>Открывайте Recny через значок в системном трее.</li>
+          <li><span>01</span><div>Скачайте ZIP и распакуйте его в постоянную папку.</div></li>
+          <li><span>02</span><div>Запустите <strong>Recny.exe</strong>.</div></li>
+          <li><span>03</span><div>Если появится SmartScreen, нажмите More info, проверьте источник файла и выберите Run anyway.</div></li>
+          <li><span>04</span><div>Открывайте Recny через значок в системном трее.</div></li>
         </ol>
         <p class="notice">
           У Windows-версии пока нет установщика. Это beta без полного паритета с macOS;
           запись микрофона и системного звука работает через WASAPI.
+          Локальной расшифровки и AI-заметок в этой Windows-сборке нет.
         </p>
       </section>
 
@@ -156,7 +175,8 @@
           </p>
           <p>
             В приложении нет облачной загрузки, синхронизации с T-Orbit и фоновой
-            аналитики записей. Перед записью предупредите участников созвона.
+            аналитики записей. Для подготовки моделей нужен интернет; после установки
+            обработка работает офлайн и не требует API-ключа. Перед записью предупредите участников созвона.
           </p>
         </div>
       </section>
@@ -165,7 +185,8 @@
     <footer>
       <p>Recny · MIT License · 2026</p>
       <nav aria-label="Ссылки в подвале">
-        <a href="https://github.com/tolcheev/recny">GitHub</a>
+        <a href="guide.html">Инструкция</a>
+        <a href="https://github.com/tolcheev/recny/releases/tag/v0.1.9">Релиз 0.1.9</a>
         <a href="https://github.com/tolcheev/recny/issues/new?template=bug_report.yml">Сообщить об ошибке</a>
         <a href="https://github.com/tolcheev/recny/blob/main/SECURITY.md">Безопасность</a>
       </nav>
